@@ -1,0 +1,103 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    compileSdk 33
+
+    def date = new Date()
+    def formatDate = date.format("yyyyMMdd")
+
+    defaultConfig {
+        applicationId "com.zinhao.chtholly"
+        minSdk 24
+        targetSdk 33
+        versionCode 6
+        versionName "1.2.3"
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        javaCompileOptions {
+            annotationProcessorOptions {
+                compilerArgumentProviders(
+                        new RoomSchemaArgProvider(new File(projectDir, "schemas"))
+                )
+            }
+        }
+    }
+
+    signingConfigs {
+        keystore {
+            Properties properties = new Properties()
+            InputStream inputStream = project.rootProject.file("local.properties").newDataInputStream()
+            properties.load(inputStream)
+            def storeFilePath = properties.getProperty("key.file")
+            storeFile file(storeFilePath)
+            storePassword properties.getProperty("storePassword")
+            keyAlias properties.getProperty("keyAlias")
+            keyPassword properties.getProperty("keyPassword")
+        }
+    }
+
+    flavorDimensions("default")
+    productFlavors{
+        Chtholly{
+            applicationId = "com.zinhao.chtholly"
+            signingConfig signingConfigs.keystore
+            dimension 'default'
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            applicationVariants.all { variant ->
+                variant.outputs.all {
+                    outputFileName = "Android_${variant.name}_${variant.versionCode}_${variant.versionName}_${formatDate}.apk"
+                }
+            }
+        }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+    buildFeatures {
+        viewBinding true
+    }
+}
+
+dependencies {
+    implementation fileTree(dir: 'libs', include: ['*.aar', '*.jar'], exclude: [])
+    implementation 'androidx.appcompat:appcompat:1.6.1'
+    implementation 'com.google.android.material:material:1.8.0'
+    implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
+    testImplementation 'junit:junit:4.13.2'
+    androidTestImplementation 'androidx.test.ext:junit:1.1.5'
+    androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
+
+    implementation 'com.squareup.okhttp3:okhttp:4.10.0'
+    def room_version = "2.5.1"
+    implementation "androidx.room:room-runtime:$room_version"
+    annotationProcessor "androidx.room:room-compiler:$room_version"
+    implementation "androidx.room:room-guava:$room_version"
+    testImplementation "androidx.room:room-testing:$room_version"
+    implementation "androidx.room:room-paging:$room_version"
+}
+
+class RoomSchemaArgProvider implements CommandLineArgumentProvider {
+
+    @InputDirectory
+    @PathSensitive(PathSensitivity.RELATIVE)
+    File schemaDir
+
+    RoomSchemaArgProvider(File schemaDir) {
+        this.schemaDir = schemaDir
+    }
+
+    @Override
+    Iterable<String> asArguments() {
+        // Note: If you're using KSP, you should change the line below to return
+        // ["room.schemaLocation=${schemaDir.path}"]
+        return ["-Aroom.schemaLocation=${schemaDir.path}"]
+    }
+}
