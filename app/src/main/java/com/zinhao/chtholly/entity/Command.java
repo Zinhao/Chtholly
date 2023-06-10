@@ -32,6 +32,8 @@ public class Command implements AskAble {
     private static final String SUMMARIZE_CHAT = "/sc";
     private static final String PRINT_CHARA = "/pc";
     private static final String PRINT_CHATS = "/ph";
+    private static final String CLOSE_AUTO = "/关闭问候功能";
+    private static final String OPEN_AUTO = "/打开问候功能";
 
     private final String packageName;
     private final Message question;
@@ -171,6 +173,18 @@ public class Command implements AskAble {
             }else{
                 getAnswer().setMessage(NekoMessage.DONT_SUPPORT);
             }
+            return true;
+        }
+
+        if(getQuestion().getMessage().equals(CLOSE_AUTO)){
+            NekoChatService.getInstance().autoAsk = false;
+            getAnswer().setMessage("已关闭问候功能");
+            return true;
+        }
+
+        if(getQuestion().getMessage().equals(OPEN_AUTO)){
+            NekoChatService.getInstance().autoAsk = true;
+            getAnswer().setMessage("已打开问候功能");
             return true;
         }
         return false;

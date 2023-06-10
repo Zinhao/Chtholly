@@ -140,7 +140,10 @@ public class OpenAiSession{
         addChat(ROLE_USER,message.getQuestion().getMessage());
 
         data.put("messages",chats);
+        return requestAsk(message);
+    }
 
+    public boolean requestAsk(OpenAiMessage message){
         if(BotApp.getInstance().apiKey.isEmpty()){
             message.getAnswer().setMessage("主人你还没设置api-key喵！");
             message.getDelayReplyListener().onReply(message);

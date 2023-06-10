@@ -61,7 +61,7 @@ public class OpenAiMessage extends Command implements Callback{
     @Override
     public void onFailure(@NotNull Call call, @NotNull IOException e) {
         String speaker = getQuestion().getSpeaker();
-        getAnswer().setMessage(String.format(Locale.CHINA,"主人，对不起，对不起喵！刚刚%s走神了！能重复一遍吗，喵？",BotApp.getInstance().getBotName()));
+        getAnswer().setMessage(String.format(Locale.CHINA,"刚刚%s走神了！能重复一遍吗，喵？",BotApp.getInstance().getBotName()));
         OpenAiSession.getInstance().addAssistantChat(getAnswer().message);
         if(delayReplyListener!=null)
             delayReplyListener.onReply(this);
@@ -92,14 +92,19 @@ public class OpenAiMessage extends Command implements Callback{
                 }
             }
         }else if(response.code() == 400){
-            OpenAiSession.getInstance().autoSummarize();
-            String forgetMessage = String.format(Locale.CHINA,"抱歉，主人。%s刚刚貌似忘记了一些重要的东西，但是，主人不必伤心，%s会永远永远记得主人喵。%s",
-                    BotApp.getInstance().getBotName(),BotApp.getInstance().getBotName(),textSad[0]);
-            getAnswer().setMessage(forgetMessage);
+            int deleteCount = OpenAiSession.getInstance().autoSummarize();
+            if(deleteCount>=2){
+                OpenAiSession.getInstance().requestAsk(this);
+            }else{
+                getAnswer().setMessage("我有点累了，需要休息!("+response.code()+")");
+            }
         }else {
-            OpenAiSession.getInstance().autoSummarize();
-            String sleepMessage = String.format(Locale.CHINA,"嗯？主人，%s...刚刚貌似睡着了。%s",BotApp.getInstance().getBotName(),textSad[0]);
-            getAnswer().setMessage(sleepMessage);
+            int deleteCount = OpenAiSession.getInstance().autoSummarize();
+            if(deleteCount>=2){
+                OpenAiSession.getInstance().requestAsk(this);
+            }else{
+                getAnswer().setMessage("我有点累了，需要休息!("+response.code()+")");
+            }
         }
         if(delayReplyListener!=null)
             delayReplyListener.onReply(this);

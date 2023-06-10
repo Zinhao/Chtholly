@@ -39,6 +39,7 @@ public class NekoChatService extends AccessibilityService implements OpenAiMessa
     private AccessibilityButtonController accessibilityButtonController;
     private boolean mIsAccessibilityButtonAvailable;
 
+    public boolean autoAsk = true;
     private int dayCount = 0;
     private boolean todayMorning = false;
     private boolean todayNoon = false;
@@ -251,6 +252,9 @@ public class NekoChatService extends AccessibilityService implements OpenAiMessa
     }
 
     private void autoMission(String packageName){
+        if(!autoAsk){
+            return;
+        }
         remindMessages.removeIf(new Predicate<RemindMessage>() {
             @Override
             public boolean test(RemindMessage remindMessage) {
@@ -280,7 +284,7 @@ public class NekoChatService extends AccessibilityService implements OpenAiMessa
             todayTest = false;
             dayCount = nowDayCount;
         }
-        if(nowHourCount > 9 && nowHourCount <= 11 && !todayMorning){
+        if(nowHourCount > 8 && nowHourCount <= 10 && !todayMorning){
             long delayMillis = randomTime(3,7);
             autoCommand = new OpenAiMessage(packageName,new Message("system","早上好",System.currentTimeMillis()),this);
             Log.d(TAG, "autoMission:todayMorning will answer at "+ dateTimeFormat.format(System.currentTimeMillis()+delayMillis));
