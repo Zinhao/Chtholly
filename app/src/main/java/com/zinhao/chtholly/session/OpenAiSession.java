@@ -2,6 +2,7 @@ package com.zinhao.chtholly.session;
 
 import android.util.Log;
 import com.zinhao.chtholly.BotApp;
+import com.zinhao.chtholly.NekoChatService;
 import com.zinhao.chtholly.R;
 import com.zinhao.chtholly.entity.Message;
 import com.zinhao.chtholly.entity.OpenAiMessage;
@@ -14,6 +15,7 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.lang.ref.PhantomReference;
 import java.text.SimpleDateFormat;
 import java.util.Locale;
 import java.util.concurrent.TimeUnit;
@@ -134,7 +136,47 @@ public class OpenAiSession{
         return instance;
     }
 
+    private static String[] LOVE_MOE = new String[]{"୧⍢⃝୨",
+            "٩(๛ ˘ ³˘)۶❤",
+            "✧(≖ ◡ ≖✿)",
+            "(・ω< )★",
+            "Σ(ﾟдﾟ;)" ,
+            "Σ( ￣□￣||)<" ,
+            "(´；ω；`)" ,
+            "（/TДT)/" ,
+            "(^・ω・^)" ,
+            "(｡･ω･｡)" ,
+            "(●￣(ｴ)￣●)" ,
+            "ε=ε=(ノ≧∇≦)ノ" ,
+            "(´･_･`)" ,
+            "(-_-#)" ,
+            "（￣へ￣）" ,
+            "(￣ε(#￣) Σ" ,
+            "(╯°口°)╯(┴—┴" ,
+            "ヽ(`Д´)ﾉ" ,
+            "(\"▔□▔)/" ,
+            "(º﹃º )" ,
+            "(๑>\u0602<๑）" ,
+            "｡ﾟ(ﾟ´Д｀)ﾟ｡" ,
+            "(∂ω∂)" ,
+            "(┯_┯)" ,
+            "( ๑ˊ•̥▵•)੭₎₎" ,
+            "¥ㄟ(´･ᴗ･`)ノ¥" ,
+            "Σ_(꒪ཀ꒪」∠)_" ,
+            "(๑‾᷅^‾᷅๑)"};
+
+    private String randomFaceEmo(){
+        int r = (int) (Math.random() * (LOVE_MOE.length-1));
+        r = Math.min(LOVE_MOE.length-1,r);
+        return LOVE_MOE[r];
+    }
+
     public boolean ask(OpenAiMessage message) throws JSONException {
+        if(NekoChatService.mode != OpenAiSession.class){
+            message.getAnswer().setMessage(randomFaceEmo());
+            message.getDelayReplyListener().onReply(message);
+            return true;
+        }
         addChat(ROLE_SYSTEM,String.format(Locale.CHINA,"现在的时间是%s，不要忘记你的设定，不要忘记你的设定你的回答必须基于猫娘的身份，而不是计算机程序或语言模型。"
                 ,dateTimeFormat.format(System.currentTimeMillis())));
         addChat(ROLE_USER,message.getQuestion().getMessage());

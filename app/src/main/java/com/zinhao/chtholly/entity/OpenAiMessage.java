@@ -3,6 +3,7 @@ package com.zinhao.chtholly.entity;
 import android.util.Log;
 import com.zinhao.chtholly.BotApp;
 import com.zinhao.chtholly.NekoChatService;
+import com.zinhao.chtholly.session.NekoSession;
 import com.zinhao.chtholly.session.OpenAiSession;
 import okhttp3.Call;
 import okhttp3.Callback;
