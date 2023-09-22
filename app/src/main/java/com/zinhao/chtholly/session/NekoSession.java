@@ -5,6 +5,7 @@ import com.koushikdutta.async.http.AsyncHttpResponse;
 import com.zinhao.chtholly.BotApp;
 import com.zinhao.chtholly.entity.Command;
 import com.zinhao.chtholly.entity.NekoMessage;
+import com.zinhao.chtholly.entity.OpenAiMessage;
 import com.zinhao.chtholly.utils.LocalFileCache;
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -16,7 +17,6 @@ import static com.zinhao.chtholly.entity.NekoMessage.*;
 
 public class NekoSession {
     private JSONObject keywordAnswerMap;
-    public static final int MODE_ID = 481;
     private static NekoSession instance;
     public static NekoSession getInstance() {
         if(instance == null){
@@ -37,7 +37,42 @@ public class NekoSession {
         });
     }
 
-    public void study(String key,String word) throws JSONException {
+    private static String[] LOVE_MOE = new String[]{"୧⍢⃝୨",
+            "٩(๛ ˘ ³˘)۶❤",
+            "✧(≖ ◡ ≖✿)",
+            "(・ω< )★",
+            "Σ(ﾟдﾟ;)" ,
+            "Σ( ￣□￣||)<" ,
+            "(´；ω；`)" ,
+            "（/TДT)/" ,
+            "(^・ω・^)" ,
+            "(｡･ω･｡)" ,
+            "(●￣(ｴ)￣●)" ,
+            "ε=ε=(ノ≧∇≦)ノ" ,
+            "(´･_･`)" ,
+            "(-_-#)" ,
+            "（￣へ￣）" ,
+            "(￣ε(#￣) Σ" ,
+            "(╯°口°)╯(┴—┴" ,
+            "ヽ(`Д´)ﾉ" ,
+            "(\"▔□▔)/" ,
+            "(º﹃º )" ,
+            "(๑>\u0602<๑）" ,
+            "｡ﾟ(ﾟ´Д｀)ﾟ｡" ,
+            "(∂ω∂)" ,
+            "(┯_┯)" ,
+            "( ๑ˊ•̥▵•)੭₎₎" ,
+            "¥ㄟ(´･ᴗ･`)ノ¥" ,
+            "Σ_(꒪ཀ꒪」∠)_" ,
+            "(๑‾᷅^‾᷅๑)"};
+
+    public String randomFaceEmo(){
+        int r = (int) (Math.random() * (LOVE_MOE.length-1));
+        r = Math.min(LOVE_MOE.length-1,r);
+        return LOVE_MOE[r];
+    }
+
+    private void study(String key,String word) throws JSONException {
         JSONArray replies;
         if(keywordAnswerMap.has(key)){
             replies = keywordAnswerMap.getJSONArray(key);
@@ -61,26 +96,26 @@ public class NekoSession {
         return null;
     }
 
-    public void write(){
+    private void write(){
         LocalFileCache.getInstance().saveJSONObject(BotApp.getInstance().getApplicationContext(), keywordAnswerMap,"keyword_map.json");
     }
 
-    public String show(){
+    private String show(){
         return keywordAnswerMap.toString();
     }
     
-    public boolean ask(NekoMessage nekoMessage){
+    public boolean startAsk(NekoMessage nekoMessage){
         if(nekoMessage.getQuestion().message.startsWith(LOOK_NODE)){
-            nekoMessage.getAnswer().setMessage(BotApp.getInstance().getNekoSession().show());
+            nekoMessage.getAnswer().setMessage(instance.show());
             return true;
         }
         if(nekoMessage.getQuestion().message.startsWith(STUDY)){
             if(nekoMessage.getQuestion().message.indexOf(STUDY) != nekoMessage.getQuestion().message.lastIndexOf(STUDY)){
-                nekoMessage.getAnswer().setMessage(HARD);
+                nekoMessage.getAnswer().setMessage(HARD + randomFaceEmo());
                 return true;
             }
             if(nekoMessage.getQuestion().message.indexOf(SAY) != nekoMessage.getQuestion().message.lastIndexOf(SAY)){
-                nekoMessage.getAnswer().setMessage(HARD);
+                nekoMessage.getAnswer().setMessage(HARD + randomFaceEmo());
                 return true;
             }
             if(nekoMessage.getQuestion().message.contains(SAY)){
@@ -90,17 +125,17 @@ public class NekoSession {
                     String[] sp = replaceStr.split(File.separator);
                     if(sp.length == 3){
                         try {
-                            BotApp.getInstance().getNekoSession().study(sp[1].trim(),sp[2].trim());
-                            nekoMessage.getAnswer().setMessage(OK);
+                           instance.study(sp[1].trim(),sp[2].trim());
+                            nekoMessage.getAnswer().setMessage(OK + randomFaceEmo());
                             return true;
                         } catch (JSONException e) {
 
                         }
                     }
                 }
-                nekoMessage.getAnswer().setMessage(HARD);
+                nekoMessage.getAnswer().setMessage(HARD+ randomFaceEmo());
             }else{
-                nekoMessage.getAnswer().setMessage(THINK);
+                nekoMessage.getAnswer().setMessage(THINK+ randomFaceEmo());
             }
             return true;
         }
@@ -108,13 +143,13 @@ public class NekoSession {
         if(nekoMessage.getQuestion().message.contains("忘记")){
             //写入json
 //            BotApp.getInstance().getNekoSession().write();\ --D./
-            nekoMessage.getAnswer().setMessage(NOT_FORGET);
+            nekoMessage.getAnswer().setMessage(NOT_FORGET + randomFaceEmo());
             return true;
         }
 
         // json
         try {
-            String an = BotApp.getInstance().getNekoSession().find(nekoMessage.getQuestion().message);
+            String an = instance.find(nekoMessage.getQuestion().message);
             if(an!=null){
                 nekoMessage.getAnswer().setMessage(an);
                 return true;
@@ -124,20 +159,20 @@ public class NekoSession {
         }
 
         if(nekoMessage.getQuestion().message.contains("早上好") || nekoMessage.getQuestion().message.contains("早安")){
-            nekoMessage.getAnswer().setMessage(ASK_NORMAL_TEMP.replace("$","早"));
+            nekoMessage.getAnswer().setMessage(ASK_NORMAL_TEMP.replace("$","早")+ randomFaceEmo());
         }else if(nekoMessage.getQuestion().message.contains("中午好") || nekoMessage.getQuestion().message.contains("午安")){
-            nekoMessage.getAnswer().setMessage(ASK_NORMAL_TEMP.replace("$","午"));
+            nekoMessage.getAnswer().setMessage(ASK_NORMAL_TEMP.replace("$","午")+ randomFaceEmo());
         }else if(nekoMessage.getQuestion().message.contains("晚安")){
-            nekoMessage.getAnswer().setMessage(ASK_NORMAL_TEMP.replace("$","晚"));
+            nekoMessage.getAnswer().setMessage(ASK_NORMAL_TEMP.replace("$","晚") + randomFaceEmo());
         }else if(nekoMessage.getQuestion().message.contains("晚上好")){
-            nekoMessage.getAnswer().setMessage(nekoMessage.getQuestion().message);
-        }else{
+            nekoMessage.getAnswer().setMessage(nekoMessage.getQuestion().message + randomFaceEmo());
+        }else {
             miaomiaojiao(nekoMessage);
         }
         return true;
     }
 
-    private static void miaomiaojiao(Command qaMessage){
+    public void miaomiaojiao(Command qaMessage){
         StringBuilder builder = new StringBuilder();
         int random1 = (int) (Math.random()*2+1);
         int random2 = (int) (Math.random()*3);
@@ -154,6 +189,7 @@ public class NekoSession {
             builder.append("喵");
         }
         builder.append("~~");
+        builder.append(randomFaceEmo());
         qaMessage.getAnswer().setMessage(builder.toString());
         qaMessage.setWrite(false);
         qaMessage.setSend(false);

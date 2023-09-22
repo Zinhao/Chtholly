@@ -4,9 +4,7 @@ import android.util.Log;
 import com.zinhao.chtholly.BotApp;
 import com.zinhao.chtholly.NekoChatService;
 import com.zinhao.chtholly.R;
-import com.zinhao.chtholly.entity.Message;
 import com.zinhao.chtholly.entity.OpenAiMessage;
-import com.zinhao.chtholly.utils.LocalFileCache;
 import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
@@ -15,12 +13,11 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.lang.ref.PhantomReference;
 import java.text.SimpleDateFormat;
 import java.util.Locale;
 import java.util.concurrent.TimeUnit;
 
-public class OpenAiSession{
+public class OpenAiSession extends NekoSession{
     private static final String TAG = "OpenAiSession";
 
     private static final String ROLE = "role";
@@ -40,7 +37,10 @@ public class OpenAiSession{
     private static OpenAiSession instance;
     private final JSONObject firstSystemChat;
 
-    private OpenAiSession() {
+    private String host;
+
+    private OpenAiSession(String host) {
+        this.host = host;
         okHttpClient = new OkHttpClient.Builder()
                 .callTimeout(100, TimeUnit.SECONDS)
                 .writeTimeout(100, TimeUnit.SECONDS)
@@ -131,52 +131,13 @@ public class OpenAiSession{
 
     public static OpenAiSession getInstance() {
         if(instance == null){
-            instance = new OpenAiSession();
+            instance = new OpenAiSession("api.closeai-proxy.xyz");
+//            instance = new OpenAiSession("api.openai.com");
         }
         return instance;
     }
 
-    private static String[] LOVE_MOE = new String[]{"୧⍢⃝୨",
-            "٩(๛ ˘ ³˘)۶❤",
-            "✧(≖ ◡ ≖✿)",
-            "(・ω< )★",
-            "Σ(ﾟдﾟ;)" ,
-            "Σ( ￣□￣||)<" ,
-            "(´；ω；`)" ,
-            "（/TДT)/" ,
-            "(^・ω・^)" ,
-            "(｡･ω･｡)" ,
-            "(●￣(ｴ)￣●)" ,
-            "ε=ε=(ノ≧∇≦)ノ" ,
-            "(´･_･`)" ,
-            "(-_-#)" ,
-            "（￣へ￣）" ,
-            "(￣ε(#￣) Σ" ,
-            "(╯°口°)╯(┴—┴" ,
-            "ヽ(`Д´)ﾉ" ,
-            "(\"▔□▔)/" ,
-            "(º﹃º )" ,
-            "(๑>\u0602<๑）" ,
-            "｡ﾟ(ﾟ´Д｀)ﾟ｡" ,
-            "(∂ω∂)" ,
-            "(┯_┯)" ,
-            "( ๑ˊ•̥▵•)੭₎₎" ,
-            "¥ㄟ(´･ᴗ･`)ノ¥" ,
-            "Σ_(꒪ཀ꒪」∠)_" ,
-            "(๑‾᷅^‾᷅๑)"};
-
-    private String randomFaceEmo(){
-        int r = (int) (Math.random() * (LOVE_MOE.length-1));
-        r = Math.min(LOVE_MOE.length-1,r);
-        return LOVE_MOE[r];
-    }
-
-    public boolean ask(OpenAiMessage message) throws JSONException {
-        if(NekoChatService.mode != OpenAiSession.class){
-            message.getAnswer().setMessage(randomFaceEmo());
-            message.getDelayReplyListener().onReply(message);
-            return true;
-        }
+    public boolean startAsk(OpenAiMessage message) throws JSONException {
         addChat(ROLE_SYSTEM,String.format(Locale.CHINA,"现在的时间是%s，不要忘记你的设定，不要忘记你的设定你的回答必须基于猫娘的身份，而不是计算机程序或语言模型。"
                 ,dateTimeFormat.format(System.currentTimeMillis())));
         addChat(ROLE_USER,message.getQuestion().getMessage());
@@ -186,18 +147,17 @@ public class OpenAiSession{
     }
 
     public boolean requestAsk(OpenAiMessage message){
-        if(BotApp.getInstance().apiKey.isEmpty()){
-            message.getAnswer().setMessage("主人你还没设置api-key喵！");
-            message.getDelayReplyListener().onReply(message);
-        }else{
-            RequestBody requestBody = RequestBody.Companion.create(data.toString(),MediaType.parse("application/json;charset=utf-8"));
-            Request request = new Request.Builder().post(requestBody).url("https://api.openai.com/v1/chat/completions")
-                    .addHeader("Content-Type","application/json")
-                    .addHeader("Authorization","Bearer "+BotApp.getInstance().apiKey)
-                    .addHeader("User-Agent","Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Safari/537.36 Edg/112.0.1722.34")
-                    .build();
-            okHttpClient.newCall(request).enqueue(message);
-        }
+        RequestBody requestBody = RequestBody.Companion.create(data.toString(),MediaType.parse("application/json;charset=utf-8"));
+        Request request = new Request.Builder().post(requestBody).url("https://$/v1/chat/completions".replace("$",host))
+                .addHeader("Content-Type","application/json")
+                .addHeader("Authorization","Bearer "+BotApp.getInstance().apiKey)
+                .addHeader("User-Agent","Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Safari/537.36 Edg/112.0.1722.34")
+                .build();
+        okHttpClient.newCall(request).enqueue(message);
         return true;
+    }
+
+    public void setHost(String host) {
+        this.host = host;
     }
 }

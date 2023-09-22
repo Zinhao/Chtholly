@@ -3,13 +3,11 @@ package com.zinhao.chtholly.entity;
 import android.accessibilityservice.AccessibilityService;
 import android.content.Context;
 import android.os.BatteryManager;
-
 import android.os.Build;
 import android.view.accessibility.AccessibilityNodeInfo;
 import androidx.annotation.CallSuper;
 import com.zinhao.chtholly.BotApp;
 import com.zinhao.chtholly.NekoChatService;
-import com.zinhao.chtholly.R;
 import com.zinhao.chtholly.session.NekoSession;
 import com.zinhao.chtholly.session.OpenAiSession;
 import com.zinhao.chtholly.utils.QQUtils;
@@ -27,11 +25,11 @@ public class Command implements AskAble {
     private static final String SEVER_BATTERY = "/电量";
     private static final String FIRST_PIC = "/p";
     private static final String CLICK_ID = "/c";
-    private static final String TAKE_PHOTO = "/tp";
-    private static final String SCREEN_SHOT = "/ss";
+    private static final String TAKE_PHOTO = "/拍照";
+    private static final String SCREEN_SHOT = "/截屏";
     private static final String SUMMARIZE_CHAT = "/sc";
-    private static final String PRINT_CHARA = "/pc";
-    private static final String PRINT_CHATS = "/ph";
+    private static final String PRINT_CHARA = "/性格描述";
+    private static final String PRINT_CHATS = "/历史对话";
     private static final String CLOSE_AUTO = "/关闭问候功能";
     private static final String OPEN_AUTO = "/打开问候功能";
 

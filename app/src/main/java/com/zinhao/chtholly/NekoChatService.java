@@ -286,21 +286,21 @@ public class NekoChatService extends AccessibilityService implements OpenAiMessa
         }
         if(nowHourCount > 8 && nowHourCount <= 10 && !todayMorning){
             long delayMillis = randomTime(3,7);
-            autoCommand = new OpenAiMessage(packageName,new Message("system","早上好",System.currentTimeMillis()),this);
+            autoCommand = new NekoMessage(packageName,new Message("system","早上好",System.currentTimeMillis()));
             Log.d(TAG, "autoMission:todayMorning will answer at "+ dateTimeFormat.format(System.currentTimeMillis()+delayMillis));
             mHandler.postDelayed(delayCheck,delayMillis);
             todayMorning = true;
         }
         if(nowHourCount > 11 && nowHourCount <= 13 && !todayNoon){
             long delayMillis = randomTime(4,15);
-            autoCommand = new OpenAiMessage(packageName,new Message("system","中午好",System.currentTimeMillis()),this);
+            autoCommand = new NekoMessage(packageName,new Message("system","中午好",System.currentTimeMillis()));
             Log.d(TAG, "autoMission:todayNoon will answer at "+ dateTimeFormat.format(System.currentTimeMillis()+delayMillis));
             mHandler.postDelayed(delayCheck,delayMillis);
             todayNoon = true;
         }
         if(nowHourCount > 13 && nowHourCount <= 19 && !todayAfter){
             long delayMillis = randomTime(20,30);
-            autoCommand =new OpenAiMessage(packageName,new Message("system","下午好",System.currentTimeMillis()),this);
+            autoCommand =new NekoMessage(packageName,new Message("system","下午好",System.currentTimeMillis()));
             Log.d(TAG, "autoMission:todayAfter will answer at "+ dateTimeFormat.format(System.currentTimeMillis()+delayMillis));
             mHandler.postDelayed(delayCheck,delayMillis);
             todayAfter = true;
@@ -308,14 +308,14 @@ public class NekoChatService extends AccessibilityService implements OpenAiMessa
         if(nowHourCount > 19 && nowHourCount <= 22 && !todayEvening){
             long delayMillis = randomTime(5,15);
             Log.d(TAG, "autoMission:todayEvening will answer at "+ dateTimeFormat.format(System.currentTimeMillis()+delayMillis));
-            autoCommand = new OpenAiMessage(packageName,new Message("system","晚上好",System.currentTimeMillis()),this);
+            autoCommand = new NekoMessage(packageName,new Message("system","晚上好",System.currentTimeMillis()));
             mHandler.postDelayed(delayCheck,delayMillis);
             todayEvening = true;
         }
         if(nowHourCount > 22 && !todayBedTime){
             long delayMillis = randomTime(5,10);
             Log.d(TAG, "autoMission:todayBedTime will answer at "+ dateTimeFormat.format(System.currentTimeMillis()+delayMillis));
-            autoCommand = new OpenAiMessage(packageName,new Message("system","晚安",System.currentTimeMillis()),this);
+            autoCommand = new NekoMessage(packageName,new Message("system","晚安",System.currentTimeMillis()));
             mHandler.postDelayed(delayCheck,delayMillis);
             todayBedTime = true;
         }
@@ -353,14 +353,17 @@ public class NekoChatService extends AccessibilityService implements OpenAiMessa
                         return;
                     }
                 }else{
-                    if(etInput != null && btSend!=null){
-                        etInput.refresh();
-                        qa.getAnswer().setMessage("不行的，这样不行的喵！");
-                        writeMessage(etInput,qa);
-                        btSend.refresh();
-                        clickButton(btSend,qa);
-                        qa.finish();
+                    if(doAction(source,qa)){
+                        return;
                     }
+//                    if(etInput != null && btSend!=null){
+//                        etInput.refresh();
+//                        qa.getAnswer().setMessage("不行的，这样不行的喵！");
+//                        writeMessage(etInput,qa);
+//                        btSend.refresh();
+//                        clickButton(btSend,qa);
+//                        qa.finish();
+//                    }
                 }
             }else{
                 if(etInput != null && btSend!=null){

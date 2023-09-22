@@ -1,6 +1,8 @@
 package com.zinhao.chtholly.entity;
 
+import com.zinhao.chtholly.NekoChatService;
 import com.zinhao.chtholly.session.NekoSession;
+import com.zinhao.chtholly.session.OpenAiSession;
 
 public class NekoMessage extends Command {
     public static final String LOOK_NODE = "/看看你的本子";
@@ -24,6 +26,13 @@ public class NekoMessage extends Command {
         if(super.ask()){
             return true;
         }
-        return NekoSession.getInstance().ask(this);
+        if(throwQuestion()){
+            return true;
+        }
+        return NekoSession.getInstance().startAsk(this);
+    }
+
+    public boolean throwQuestion(){
+        return false;
     }
 }

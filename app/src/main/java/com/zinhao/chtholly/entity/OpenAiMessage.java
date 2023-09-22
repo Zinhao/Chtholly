@@ -19,7 +19,7 @@ import java.util.Locale;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class OpenAiMessage extends Command implements Callback{
+public class OpenAiMessage extends NekoMessage implements Callback{
     private static final String TAG = "OpenAiMessage";
     private DelayReplyListener delayReplyListener;
 
@@ -51,12 +51,28 @@ public class OpenAiMessage extends Command implements Callback{
         if(super.ask()){
             return true;
         }
-        try {
-            return OpenAiSession.getInstance().ask(this);
-        } catch (JSONException e) {
-            getAnswer().setMessage("JSONException:" + e.getMessage());
+        return beforeAskCheck();
+    }
+
+    private boolean beforeAskCheck(){
+        if(BotApp.getInstance().apiKey.isEmpty()){
+            return NekoSession.getInstance().startAsk(this);
+        }else{
+            if(NekoChatService.mode != OpenAiSession.class){
+                return NekoSession.getInstance().startAsk(this);
+            }
+            try {
+                return OpenAiSession.getInstance().startAsk(this);
+            } catch (JSONException e) {
+                getAnswer().setMessage("JSONException:" + e.getMessage());
+                return true;
+            }
         }
-        return true;
+    }
+
+    @Override
+    public boolean throwQuestion() {
+        return beforeAskCheck();
     }
 
     @Override
@@ -84,9 +100,9 @@ public class OpenAiMessage extends Command implements Callback{
                                 nekoReply = nekoReply.replace(remindCommand,textNoWords[0]);
                             }
                         }
-                        getAnswer().setMessage(nekoReply);
+                        getAnswer().setMessage(String.format("@%s %s",getQuestion().getSpeaker(),nekoReply));
                         BotApp.getInstance().insert(getAnswer());
-                        OpenAiSession.getInstance().addAssistantChat(getAnswer().message);
+                        OpenAiSession.getInstance().addAssistantChat(nekoReply);
                     }
                 } catch (JSONException e) {
                     getAnswer().setMessage(e.getMessage());
@@ -129,6 +145,7 @@ public class OpenAiMessage extends Command implements Callback{
         JSONObject firstChoice = choices.getJSONObject(0);
         JSONObject message = firstChoice.getJSONObject("message");
         String content = message.getString("content");
+
         return content.trim();
     }
 

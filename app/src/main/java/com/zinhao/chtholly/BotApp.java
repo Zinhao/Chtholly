@@ -19,7 +19,6 @@ public class BotApp extends Application {
     public static final String CONFIG_ADMIN_NAME = "";
     private String botName;
     private String adminName;
-    private NekoSession nekoSession;
     private static BotApp instance;
     private SharedPreferences sharedPreferences;
     private AppDatabase database;
@@ -35,7 +34,6 @@ public class BotApp extends Application {
     public void onCreate() {
         super.onCreate();
         instance = this;
-        nekoSession = new NekoSession();
         sharedPreferences = getSharedPreferences("app_data", MODE_PRIVATE);
         apiKey = sharedPreferences.getString(CONFIG_API_KEY,"");
         botName = sharedPreferences.getString(CONFIG_BOT_NAME,"bot name");
@@ -58,10 +56,6 @@ public class BotApp extends Application {
 
     public String getBotName() {
         return botName;
-    }
-
-    public NekoSession getNekoSession() {
-        return nekoSession;
     }
 
     public String getAdminName() {
