@@ -64,6 +64,7 @@ android {
     buildFeatures {
         viewBinding true
     }
+    namespace 'com.zinhao.chtholly'
 }
 
 dependencies {
