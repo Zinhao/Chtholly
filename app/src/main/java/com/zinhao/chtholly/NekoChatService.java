@@ -408,6 +408,10 @@ public class NekoChatService extends AccessibilityService implements OpenAiMessa
                     AccessibilityNodeInfo targetView = findFirstNodeInfo(source,step.getViewId());
                     if(targetView!=null){
                         result = targetView.performAction(step.getActionId());
+                    }else {
+                        // 点击动作失败
+                        Log.e(TAG, "doAction: 寻找视图失败" + step.getViewId());
+//                        result = true;
                     }
                 }
             }

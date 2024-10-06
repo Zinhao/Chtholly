@@ -133,7 +133,7 @@ public class QQUtils {
 
     public static String getPicCheckBoxId(){
         switch (versionCode){
-            case 3898: return QQ_PACKAGE_NAME + ":id/qhq";
+            case 3898: return QQ_PACKAGE_NAME + ":id/qdf";
         }
         return null;
     }

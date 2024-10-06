@@ -132,6 +132,7 @@ public class Command implements AskAble {
             action = ACTION_SEND_PIC;
             // 发送最新一张图 /gnt /qhp /fun_btn /gnt  三星
             // 发送最新一张图 /gnt /qhq /send_btn /gnt  pixel3
+            // 发送最新一张图 /gnt /dpo /send_btn /gnt  ONE PLUS
             steps = new Vector<>();
             steps.add(new Step(QQUtils.QQ_PACKAGE_NAME, QQUtils.getPicButtonId(), AccessibilityNodeInfo.ACTION_CLICK,false));
             steps.add(new Step(QQUtils.QQ_PACKAGE_NAME, QQUtils.getPicCheckBoxId(), AccessibilityNodeInfo.ACTION_CLICK,false,300));
@@ -149,9 +150,9 @@ public class Command implements AskAble {
                 steps.add(new Step(null,null, AccessibilityService.GLOBAL_ACTION_TAKE_SCREENSHOT,true,3000));
                 steps.add(new Step(null,null, AccessibilityService.GLOBAL_ACTION_BACK,true,10000));
                 steps.add(new Step(QQUtils.QQ_PACKAGE_NAME, QQUtils.getPicButtonId(), AccessibilityNodeInfo.ACTION_CLICK,false,300));
-                steps.add(new Step(QQUtils.QQ_PACKAGE_NAME, QQUtils.getPicCheckBoxId(), AccessibilityNodeInfo.ACTION_CLICK,false,300));
-                steps.add(new Step(QQUtils.QQ_PACKAGE_NAME, QQUtils.getSendButtonId(), AccessibilityNodeInfo.ACTION_CLICK,false,300));
-                steps.add(new Step(QQUtils.QQ_PACKAGE_NAME, QQUtils.getPicButtonId(), AccessibilityNodeInfo.ACTION_CLICK,false,300));
+                steps.add(new Step(QQUtils.QQ_PACKAGE_NAME, QQUtils.getPicCheckBoxId(), AccessibilityNodeInfo.ACTION_CLICK,false,600));
+                steps.add(new Step(QQUtils.QQ_PACKAGE_NAME, QQUtils.getSendButtonId(), AccessibilityNodeInfo.ACTION_CLICK,false,600));
+                steps.add(new Step(QQUtils.QQ_PACKAGE_NAME, QQUtils.getPicButtonId(), AccessibilityNodeInfo.ACTION_CLICK,false,600));
                 getAnswer().setMessage(NekoMessage.OK+"请耐心等待");
             }else{
                 getAnswer().setMessage(NekoMessage.DONT_SUPPORT);
@@ -164,9 +165,9 @@ public class Command implements AskAble {
                 steps = new Vector<>();
                 steps.add(new Step(null,null, AccessibilityService.GLOBAL_ACTION_TAKE_SCREENSHOT,true));
                 steps.add(new Step(QQUtils.QQ_PACKAGE_NAME, QQUtils.getPicButtonId(), AccessibilityNodeInfo.ACTION_CLICK,false,3000));
-                steps.add(new Step(QQUtils.QQ_PACKAGE_NAME, QQUtils.getPicCheckBoxId(), AccessibilityNodeInfo.ACTION_CLICK,false,300));
-                steps.add(new Step(QQUtils.QQ_PACKAGE_NAME, QQUtils.getSendButtonId(), AccessibilityNodeInfo.ACTION_CLICK,false,300));
-                steps.add(new Step(QQUtils.QQ_PACKAGE_NAME, QQUtils.getPicButtonId(), AccessibilityNodeInfo.ACTION_CLICK,false,300));
+                steps.add(new Step(QQUtils.QQ_PACKAGE_NAME, QQUtils.getPicCheckBoxId(), AccessibilityNodeInfo.ACTION_CLICK,false,600));
+                steps.add(new Step(QQUtils.QQ_PACKAGE_NAME, QQUtils.getSendButtonId(), AccessibilityNodeInfo.ACTION_CLICK,false,600));
+                steps.add(new Step(QQUtils.QQ_PACKAGE_NAME, QQUtils.getPicButtonId(), AccessibilityNodeInfo.ACTION_CLICK,false,600));
                 getAnswer().setMessage(NekoMessage.OK);
             }else{
                 getAnswer().setMessage(NekoMessage.DONT_SUPPORT);

@@ -28,6 +28,7 @@ public class OpenAiSession extends NekoSession{
     private static final String ROLE_USER = "user";
 
     private static final String MODEL_GPT_3_5_TURBO = "gpt-3.5-turbo";
+    private static final String MODEL_GPT_4_TURBO = "gpt-4-turbo";
 
     private static final SimpleDateFormat dateFormat = new SimpleDateFormat("yyyyMMdd", Locale.CHINA);
     private static final SimpleDateFormat dateTimeFormat = new SimpleDateFormat("yyyy年MM月dd日 HH:mm:ss", Locale.CHINA);
@@ -53,7 +54,7 @@ public class OpenAiSession extends NekoSession{
             firstSystemChat.put(ROLE,ROLE_SYSTEM);
             firstSystemChat.put(CONTENT, BotApp.getInstance().getString(R.string.neko_chara_1).replace("$name",BotApp.getInstance().getBotName()));
             chats.put(firstSystemChat);
-            data.put("model",MODEL_GPT_3_5_TURBO);
+            data.put("model",MODEL_GPT_4_TURBO);
             data.put("messages",chats);
         } catch (JSONException e) {
             throw new RuntimeException(e);
