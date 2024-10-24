@@ -114,30 +114,6 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        binding.spinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-            @Override
-            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                if(position == 0){
-                    binding.textView.setText(R.string.neko_chara_1);
-                    OpenAiSession.getInstance().setChara(getString(R.string.neko_chara_1));
-                }else if(position == 1){
-                    binding.textView.setText(R.string.neko_chara_2);
-                    OpenAiSession.getInstance().setChara(getString(R.string.neko_chara_2));
-                }else if(position == 2){
-                    binding.textView.setText(R.string.neko_chara_3);
-                    OpenAiSession.getInstance().setChara(getString(R.string.neko_chara_3));
-                }else if(position == 3){
-                    binding.textView.setText(R.string.neko_chara_4);
-                    OpenAiSession.getInstance().setChara(getString(R.string.neko_chara_4));
-                }
-            }
-
-            @Override
-            public void onNothingSelected(AdapterView<?> parent) {
-
-            }
-        });
-
         initRoleDialog();
         binding.button2.setEnabled(false);
         BotApp.getInstance().select(new MessageDao.MessageGetAllListener() {
@@ -172,31 +148,29 @@ public class MainActivity extends AppCompatActivity {
             }
         });
     }
-
+    ArrayList<Role> roles = new ArrayList<>();
     private void initRoleDialog(){
-        ArrayList<Role> roles = new ArrayList<>();
-        roles.add(new Role("健忘的猫娘",getString(R.string.neko_chara_1)));
-        roles.add(new Role("允许H的猫娘",getString(R.string.neko_chara_2)));
-        roles.add(new Role("正常的猫娘",getString(R.string.neko_chara_3)));
-        roles.add(new Role("虚拟主播",getString(R.string.neko_chara_4)));
+        roles.clear();
+        roles.add(new Role("健忘的猫娘-3.5",getString(R.string.neko_chara_1)));
+        roles.add(new Role("允许H的猫娘-3.5",getString(R.string.neko_chara_2)));
+        roles.add(new Role("正常的猫娘-3.5",getString(R.string.neko_chara_3)));
+
+        roles.add(new Role("健忘的猫娘-4",getString(R.string.neko_chara_1)));
+        roles.add(new Role("允许H的猫娘-4",getString(R.string.neko_chara_2)));
+        roles.add(new Role("正常的猫娘-4",getString(R.string.neko_chara_3)));
         View dialogContent = getLayoutInflater().inflate(R.layout.bottom_dialog,null,false);
         ListView listView = dialogContent.findViewById(R.id.list);
         listView.setAdapter(new RoleAdapter(this,android.R.layout.simple_list_item_2,roles));
         listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                if(position == 0){
-                    binding.textView.setText(R.string.neko_chara_1);
-                    OpenAiSession.getInstance().setChara(getString(R.string.neko_chara_1));
-                }else if(position == 1){
-                    binding.textView.setText(R.string.neko_chara_2);
-                    OpenAiSession.getInstance().setChara(getString(R.string.neko_chara_2));
-                }else if(position == 2){
-                    binding.textView.setText(R.string.neko_chara_3);
-                    OpenAiSession.getInstance().setChara(getString(R.string.neko_chara_3));
-                }else if(position == 3){
-                    binding.textView.setText(R.string.neko_chara_4);
-                    OpenAiSession.getInstance().setChara(getString(R.string.neko_chara_4));
+                Role role = roles.get(position);
+                binding.textView.setText(role.desc);
+                OpenAiSession.getInstance().setChara(role.desc);
+                if(position<3){
+                    OpenAiSession.getInstance().setModel(OpenAiSession.MODEL_GPT_3_5_TURBO);
+                }else {
+                    OpenAiSession.getInstance().setModel(OpenAiSession.MODEL_GPT_4_TURBO);
                 }
             }
         });

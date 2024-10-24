@@ -46,7 +46,7 @@ public class QQUtils {
     public static Message id2FindLastMessage(AccessibilityNodeInfo nodeInfo){
         emptyMessage = new Message(null,null,System.currentTimeMillis());
         List<AccessibilityNodeInfo> messageNodes = nodeInfo.findAccessibilityNodeInfosByViewId(getChatTextId());
-        if(messageNodes.size()==0)
+        if(messageNodes.isEmpty())
             return emptyMessage;
         for (int i = 0; i < messageNodes.size(); i++) {
             AccessibilityNodeInfo m = messageNodes.get(i);
@@ -132,8 +132,10 @@ public class QQUtils {
     }
 
     public static String getPicCheckBoxId(){
+        //todo 根据手机型号的不同，view id 也许不同
         switch (versionCode){
-            case 3898: return QQ_PACKAGE_NAME + ":id/qdf";
+//            case 3898: return QQ_PACKAGE_NAME + ":id/qdf";
+            case 3898: return QQ_PACKAGE_NAME + ":id/qhq";
         }
         return null;
     }

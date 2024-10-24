@@ -411,7 +411,7 @@ public class NekoChatService extends AccessibilityService implements OpenAiMessa
                     }else {
                         // 点击动作失败
                         Log.e(TAG, "doAction: 寻找视图失败" + step.getViewId());
-//                        result = true;
+                        result = true;
                     }
                 }
             }
@@ -454,7 +454,7 @@ public class NekoChatService extends AccessibilityService implements OpenAiMessa
     private @Nullable AccessibilityNodeInfo findFirstNodeInfo(AccessibilityNodeInfo source, String viewId){
         List<AccessibilityNodeInfo> targets = source.findAccessibilityNodeInfosByViewId(viewId);
         AccessibilityNodeInfo inputNode = null;
-        if(targets.size()!=0){
+        if(!targets.isEmpty()){
             inputNode = targets.get(0);
         }
         return inputNode;
