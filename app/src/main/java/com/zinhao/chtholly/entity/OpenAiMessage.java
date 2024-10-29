@@ -23,10 +23,6 @@ public class OpenAiMessage extends NekoMessage implements Callback{
     private static final String TAG = "OpenAiMessage";
     private DelayReplyListener delayReplyListener;
 
-    private static String[] textHappy = new String[]{"(⌯︎¤̴̶̷̀ω¤̴̶̷́)✧","❛˓◞˂̵✧","( ˉ͈̀꒳ˉ͈́ )✧"};
-    private static String[] textNoWords = new String[]{" ୧⍢⃝୨","←_←","┐(´-｀)┌","(*￣rǒ￣)"};
-    private static String[] textSad = new String[]{"˃ ˄ ˂̥̥ "};
-
     private final Pattern remind = Pattern.compile("\\[remind \\d{1,12} .*?]");
 
     public OpenAiMessage(String packageName, Message question, DelayReplyListener delayReplyListener) {

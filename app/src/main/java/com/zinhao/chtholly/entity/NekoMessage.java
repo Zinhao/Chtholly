@@ -16,6 +16,10 @@ public class NekoMessage extends Command {
     public static final String ASK_NORMAL_TEMP = "主人，$安喵~";
     public static final String TOO_HIGH = "墙太高爬不出去喵，我尽力吧。";
     public static final String KOU_WAI = "还以为永远都见不到你了呢？";
+    public static final String COME_BACK = "瓦达西诺~ 又回来了喵~ ( ˉ͈̀꒳ˉ͈́ )✧";
+    public static String[] textHappy = new String[]{"(⌯︎¤̴̶̷̀ω¤̴̶̷́)✧","❛˓◞˂̵✧","( ˉ͈̀꒳ˉ͈́ )✧"};
+    public static String[] textNoWords = new String[]{" ୧⍢⃝୨","←_←","┐(´-｀)┌","(*￣rǒ￣)"};
+    public static String[] textSad = new String[]{"˃ ˄ ˂̥̥ "};
 
     public NekoMessage(String packageName, Message question) {
         super(packageName, question);

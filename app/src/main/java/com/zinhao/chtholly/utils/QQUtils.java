@@ -6,6 +6,7 @@ import android.view.accessibility.AccessibilityNodeInfo;
 
 import com.zinhao.chtholly.BotApp;
 import com.zinhao.chtholly.BuildConfig;
+import com.zinhao.chtholly.NekoChatService;
 import com.zinhao.chtholly.entity.Message;
 
 import java.util.List;
@@ -19,26 +20,25 @@ public class QQUtils {
     public static final String QQ_RL_TITLE_ID = ":id/rlCommenTitle";
 
     private static Message emptyMessage;
-    private static StringBuilder builder;
-    private static final Rect bound = new Rect();
+
+
 
     public static Message id2FindGroupLastMessage(AccessibilityNodeInfo nodeInfo){
         emptyMessage = new Message(null,null,System.currentTimeMillis());
         List<AccessibilityNodeInfo> nickNodes = nodeInfo.findAccessibilityNodeInfosByViewId(getChatNickId());
         List<AccessibilityNodeInfo> messageNodes = nodeInfo.findAccessibilityNodeInfosByViewId(getChatTextId());
-        if(nickNodes.size() == messageNodes.size() && nickNodes.size()!=0){
-            Log.d(TAG, String.format(Locale.US,"id2FindGroupLastMessage: nikc:%d m:%d ============>",nickNodes.size(),messageNodes.size()));
+        if(nickNodes.size() == messageNodes.size() && !nickNodes.isEmpty()){
+            Log.i(TAG, String.format(Locale.US,"id2FindGroupLastMessage: nikc:%d m:%d ====================================>",nickNodes.size(),messageNodes.size()));
+            for (int i = 0; i < Math.min(messageNodes.size(),nickNodes.size()); i++) {
+                AccessibilityNodeInfo n = nickNodes.get(i);
+                AccessibilityNodeInfo m = messageNodes.get(i);
+                Log.i(TAG, String.format(Locale.CHINA,"id2FindGroupLastMessage: nick:%s : %s",n.getText(),m.getText()));
+            }
             int lastIndex = nickNodes.size()-1;
             emptyMessage.setSpeaker(nickNodes.get(lastIndex).getText() + "");
             emptyMessage.setMessage(messageNodes.get(lastIndex).getText() + "");
-            return emptyMessage;
         }else{
             Log.e(TAG, String.format(Locale.US,"id2FindGroupLastMessage: nikc:%d m:%d err ============>",nickNodes.size(),messageNodes.size()));
-        }
-        for (int i = 0; i < Math.min(messageNodes.size(),nickNodes.size()); i++) {
-            AccessibilityNodeInfo n = nickNodes.get(i);
-            AccessibilityNodeInfo m = messageNodes.get(i);
-            Log.d(TAG, String.format(Locale.CHINA,"id2FindGroupLastMessage: nick:%s : %s",n.getText(),m.getText()));
         }
         return emptyMessage;
     }
@@ -55,53 +55,6 @@ public class QQUtils {
         int lastIndex = messageNodes.size()-1;
         emptyMessage.setSpeaker(BotApp.getInstance().getAdminName());
         emptyMessage.setMessage(messageNodes.get(lastIndex).getText() + "");
-        return emptyMessage;
-    }
-
-    public static Message treeFindLastMessage(AccessibilityNodeInfo nodeInfo, int treeIndex){
-        if(treeIndex == 0){
-            emptyMessage = new Message(null,null,System.currentTimeMillis());
-            builder = new StringBuilder();
-            if(BuildConfig.DEBUG){
-                Log.d(TAG, "treeInfo=========================================================");
-            }
-        }else{
-            builder.append("|——");
-        }
-        if(BuildConfig.DEBUG){
-            nodeInfo.getBoundsInScreen(bound);
-            Log.d(TAG, String.format(Locale.US,"treeInfo:%s%s class:%s, desc:%s bound:%s click:%s",
-                    builder,nodeInfo.getViewIdResourceName(),nodeInfo.getClassName(),nodeInfo.getText(),
-                    bound,nodeInfo.isClickable()));
-        }
-        for (int i = 0; i < nodeInfo.getChildCount(); i++) {
-            AccessibilityNodeInfo child = nodeInfo.getChild(i);
-            if(child == null)
-                continue;
-            if(child.getChildCount()!=0){
-                treeFindLastMessage(child,treeIndex+1);
-            }else {
-                if(getChatTextId().equals(child.getViewIdResourceName())){
-                    // 这是一条聊天记录
-                    if(child.getText() ==null)
-                        continue;
-                    emptyMessage.message = child.getText().toString();
-                }
-                if(getChatNickId().equals(child.getViewIdResourceName())){
-                    if(child.getText() == null)
-                        continue;
-                    emptyMessage.speaker = child.getText().toString();
-                }
-                if(BuildConfig.DEBUG){
-                    child.getBoundsInScreen(bound);
-                    Log.d(TAG, String.format(Locale.US,"treeInfo:%s%s class:%s, desc:%s bound:%s click:%s desc:%s",
-                            builder,child.getViewIdResourceName(),child.getClassName(),child.getText(),
-                            bound,child.isClickable(),child.describeContents()));
-                }
-            }
-        }
-        if(builder.length()>=3)
-            builder.delete(builder.length()-3,builder.length());
         return emptyMessage;
     }
 
@@ -131,20 +84,16 @@ public class QQUtils {
         return null;
     }
 
-    public static String getPicCheckBoxId(){
-        //todo 根据手机型号的不同，view id 也许不同
-        switch (versionCode){
-//            case 3898: return QQ_PACKAGE_NAME + ":id/qdf";
-            case 3898: return QQ_PACKAGE_NAME + ":id/qhq";
-        }
-        return null;
-    }
+    // 图片的选择框
+    public static final String[] PIC_CHECKBOX_IDS  = new String[]{
+            ":id/qdf",
+            ":id/qhq",
+    };
 
     // 发送按钮
-    public static String getSendButtonId(){
-        switch (versionCode){
-            case 3898: return QQ_PACKAGE_NAME + ":id/fun_btn";
-            default: return QQ_PACKAGE_NAME + ":id/send_btn";
-        }
-    }
+    public static final String[] SEND_BTN_IDS  = new String[]{
+            ":id/send_btn",
+            ":id/fun_btn",
+    };
+
 }

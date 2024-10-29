@@ -1,7 +1,11 @@
 package com.zinhao.chtholly.entity;
 
 import android.accessibilityservice.AccessibilityService;
+import android.accessibilityservice.GestureDescription;
 import android.content.Context;
+import android.graphics.Path;
+import android.graphics.PointF;
+import android.graphics.Rect;
 import android.os.BatteryManager;
 import android.os.Build;
 import android.view.accessibility.AccessibilityNodeInfo;
@@ -10,12 +14,11 @@ import com.zinhao.chtholly.BotApp;
 import com.zinhao.chtholly.NekoChatService;
 import com.zinhao.chtholly.session.NekoSession;
 import com.zinhao.chtholly.session.OpenAiSession;
+import com.zinhao.chtholly.utils.ChatPageViewIds;
 import com.zinhao.chtholly.utils.QQUtils;
+import org.jetbrains.annotations.NotNull;
 
-import java.util.List;
-import java.util.Locale;
-import java.util.Objects;
-import java.util.Vector;
+import java.util.*;
 import java.util.regex.Pattern;
 
 public class Command implements AskAble {
@@ -23,7 +26,8 @@ public class Command implements AskAble {
     private static final String SWITCH_COMMAND_EN = "/switch to";
 
     private static final String SEVER_BATTERY = "/电量";
-    private static final String FIRST_PIC = "/p";
+    private static final String COMMAND_LIST = "/help";
+    private static final String FIRST_PIC = "/send_first_pic";
     private static final String CLICK_ID = "/c";
     private static final String TAKE_PHOTO = "/拍照";
     private static final String SCREEN_SHOT = "/截屏";
@@ -32,6 +36,11 @@ public class Command implements AskAble {
     private static final String PRINT_CHATS = "/历史对话";
     private static final String CLOSE_AUTO = "/关闭问候功能";
     private static final String OPEN_AUTO = "/打开问候功能";
+    private static final String VIDEO_CALL_F = "/前置视频通话";
+    private static final String VIDEO_CALL_M = "/后置视频通话";
+    private static final String EVERY_DAY_CHECK = "/打卡";
+    private static final String SWITCH_CHATS = "/切换聊天";
+    private static final String SEND_GALLERY = "/发送相册图片";
 
     private final String packageName;
     private final Message question;
@@ -40,18 +49,17 @@ public class Command implements AskAble {
     private boolean send = false;
     private boolean outTime = false;
 
-    public static final int ACTION_SEND_PIC = 290;
-    public static final int ACTION_CLICK_ID = 291;
-    public static final int ACTION_TAKE_PHOTO = 292;
-    public static final int ACTION_SCREEN_SHOT = 293;
-    public static final int ACTION_SEND_TEXT = 0;
-
     private List<Step> steps;
-    private int action = 0;
 
     public Command(String packageName, Message question) {
         this.packageName = packageName;
         this.question = question;
+    }
+
+    public Command(String packageName, Message question, List<Step> steps) {
+        this.packageName = packageName;
+        this.question = question;
+        this.steps = steps;
     }
 
     @Override
@@ -75,12 +83,13 @@ public class Command implements AskAble {
     }
 
     public boolean actionSuccess(){
-        return steps == null || steps.size() == 0;
+        return steps == null || steps.isEmpty();
     }
 
     @CallSuper
     @Override
     public boolean ask() {
+        ChatPageViewIds cpvi = NekoChatService.chatPageViewIds;
         if(answer == null){
             answer = new Message(BotApp.getInstance().getBotName(),null,System.currentTimeMillis());
         }
@@ -118,41 +127,48 @@ public class Command implements AskAble {
             return true;
         }
         if(getQuestion().getMessage().startsWith(CLICK_ID) && getQuestion().getMessage().contains(" ")){
-            action = ACTION_CLICK_ID;
             steps = new Vector<>();
             String[] ids = getQuestion().getMessage().split(" ");
             for (int i = 1; i < ids.length; i++) {
-                steps.add(new Step(QQUtils.QQ_PACKAGE_NAME,":id"+ids[i], AccessibilityNodeInfo.ACTION_CLICK,false));
+                steps.add(new Step(QQUtils.QQ_PACKAGE_NAME,":id"+ids[i], AccessibilityNodeInfo.ACTION_CLICK,false,500));
             }
             getAnswer().setMessage(NekoMessage.OK);
             return true;
         }
 
         if(getQuestion().getMessage().equals(FIRST_PIC)){
-            action = ACTION_SEND_PIC;
             // 发送最新一张图 /gnt /qhp /fun_btn /gnt  三星
             // 发送最新一张图 /gnt /qhq /send_btn /gnt  pixel3
             // 发送最新一张图 /gnt /dpo /send_btn /gnt  ONE PLUS
             steps = new Vector<>();
             steps.add(new Step(QQUtils.QQ_PACKAGE_NAME, QQUtils.getPicButtonId(), AccessibilityNodeInfo.ACTION_CLICK,false));
-            steps.add(new Step(QQUtils.QQ_PACKAGE_NAME, QQUtils.getPicCheckBoxId(), AccessibilityNodeInfo.ACTION_CLICK,false,300));
-            steps.add(new Step(QQUtils.QQ_PACKAGE_NAME, QQUtils.getSendButtonId(), AccessibilityNodeInfo.ACTION_CLICK,false,300));
+            steps.add(new Step(QQUtils.QQ_PACKAGE_NAME, cpvi.getFirstPicCheckBoxViewId(), AccessibilityNodeInfo.ACTION_CLICK,false,300));
+            steps.add(new Step(QQUtils.QQ_PACKAGE_NAME, cpvi.getSendBtnViewId(), AccessibilityNodeInfo.ACTION_CLICK,false,300));
             steps.add(new Step(QQUtils.QQ_PACKAGE_NAME, QQUtils.getPicButtonId(), AccessibilityNodeInfo.ACTION_CLICK,false,300));
             getAnswer().setMessage(NekoMessage.OK);
             return true;
         }
         if(getQuestion().getMessage().equals(TAKE_PHOTO)){
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                action = ACTION_TAKE_PHOTO;
                 steps = new Vector<>();
                 steps.add(new Step(QQUtils.QQ_PACKAGE_NAME,":id/go6", AccessibilityNodeInfo.ACTION_CLICK,false));
-                steps.add(new Step(QQUtils.QQ_PACKAGE_NAME+".aelight_impl",":id/pv", AccessibilityNodeInfo.ACTION_CLICK,false));
-                steps.add(new Step(null,null, AccessibilityService.GLOBAL_ACTION_TAKE_SCREENSHOT,true,3000));
-                steps.add(new Step(null,null, AccessibilityService.GLOBAL_ACTION_BACK,true,10000));
-                steps.add(new Step(QQUtils.QQ_PACKAGE_NAME, QQUtils.getPicButtonId(), AccessibilityNodeInfo.ACTION_CLICK,false,300));
-                steps.add(new Step(QQUtils.QQ_PACKAGE_NAME, QQUtils.getPicCheckBoxId(), AccessibilityNodeInfo.ACTION_CLICK,false,600));
-                steps.add(new Step(QQUtils.QQ_PACKAGE_NAME, QQUtils.getSendButtonId(), AccessibilityNodeInfo.ACTION_CLICK,false,600));
-                steps.add(new Step(QQUtils.QQ_PACKAGE_NAME, QQUtils.getPicButtonId(), AccessibilityNodeInfo.ACTION_CLICK,false,600));
+                //打开闪光灯
+                steps.add(new Step(QQUtils.QQ_PACKAGE_NAME+".aelight_impl",":id/py", AccessibilityNodeInfo.ACTION_CLICK,false,500));
+                // 切换前置
+                steps.add(new Step(QQUtils.QQ_PACKAGE_NAME+".aelight_impl",":id/pv", AccessibilityNodeInfo.ACTION_CLICK,false,500));
+                // 拍照
+                Step gestureStep = new Step(QQUtils.QQ_PACKAGE_NAME+".aelight_impl",":id/a74",AccessibilityNodeInfo.ACTION_SCROLL_FORWARD,false,500);
+                gestureStep.setNeedGesture(SCROLL_DOWN);
+                steps.add(gestureStep);
+                //发送
+//                Step gestureStep1 = new Step(QQUtils.QQ_PACKAGE_NAME+".aelight_impl",":id/ut",AccessibilityNodeInfo.ACTION_SCROLL_FORWARD,false,1500);
+//                gestureStep1.setNeedGesture(CLICK);
+//                steps.add(gestureStep1);
+                steps.add(new Step(QQUtils.QQ_PACKAGE_NAME+".aelight_impl",":id/ut", AccessibilityNodeInfo.ACTION_CLICK,false,1500));
+//                steps.add(new Step(QQUtils.QQ_PACKAGE_NAME, QQUtils.getPicButtonId(), AccessibilityNodeInfo.ACTION_CLICK,false,500));
+//                steps.add(new Step(QQUtils.QQ_PACKAGE_NAME, cpvi.getFirstPicCheckBoxViewId(), AccessibilityNodeInfo.ACTION_CLICK,false,500));
+//                steps.add(new Step(QQUtils.QQ_PACKAGE_NAME, cpvi.getSendBtnViewId(), AccessibilityNodeInfo.ACTION_CLICK,false,500));
+//                steps.add(new Step(QQUtils.QQ_PACKAGE_NAME, QQUtils.getPicButtonId(), AccessibilityNodeInfo.ACTION_CLICK,false,500));
                 getAnswer().setMessage(NekoMessage.OK+"请耐心等待");
             }else{
                 getAnswer().setMessage(NekoMessage.DONT_SUPPORT);
@@ -161,17 +177,99 @@ public class Command implements AskAble {
         }
         if(getQuestion().getMessage().equals(SCREEN_SHOT)){
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                action = ACTION_SCREEN_SHOT;
                 steps = new Vector<>();
                 steps.add(new Step(null,null, AccessibilityService.GLOBAL_ACTION_TAKE_SCREENSHOT,true));
-                steps.add(new Step(QQUtils.QQ_PACKAGE_NAME, QQUtils.getPicButtonId(), AccessibilityNodeInfo.ACTION_CLICK,false,3000));
-                steps.add(new Step(QQUtils.QQ_PACKAGE_NAME, QQUtils.getPicCheckBoxId(), AccessibilityNodeInfo.ACTION_CLICK,false,600));
-                steps.add(new Step(QQUtils.QQ_PACKAGE_NAME, QQUtils.getSendButtonId(), AccessibilityNodeInfo.ACTION_CLICK,false,600));
-                steps.add(new Step(QQUtils.QQ_PACKAGE_NAME, QQUtils.getPicButtonId(), AccessibilityNodeInfo.ACTION_CLICK,false,600));
+                steps.add(new Step(QQUtils.QQ_PACKAGE_NAME, QQUtils.getPicButtonId(), AccessibilityNodeInfo.ACTION_CLICK,false,500));
+                steps.add(new Step(QQUtils.QQ_PACKAGE_NAME, cpvi.getFirstPicCheckBoxViewId(), AccessibilityNodeInfo.ACTION_CLICK,false,500));
+                steps.add(new Step(QQUtils.QQ_PACKAGE_NAME, cpvi.getSendBtnViewId(), AccessibilityNodeInfo.ACTION_CLICK,false,500));
+                steps.add(new Step(QQUtils.QQ_PACKAGE_NAME, QQUtils.getPicButtonId(), AccessibilityNodeInfo.ACTION_CLICK,false,500));
                 getAnswer().setMessage(NekoMessage.OK);
             }else{
                 getAnswer().setMessage(NekoMessage.DONT_SUPPORT);
             }
+            return true;
+        }
+
+        if(getQuestion().getMessage().equals(VIDEO_CALL_F)){
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                //todo VIDEO CALL F
+                // :id/gny [:id/icon_viewPager 1->2] :id/bbt
+                steps = new Vector<>();
+                steps.add(new Step(QQUtils.QQ_PACKAGE_NAME,":id/gny", AccessibilityNodeInfo.ACTION_CLICK,false));
+                steps.add(new Step(QQUtils.QQ_PACKAGE_NAME,":id/icon_viewPager", AccessibilityNodeInfo.ACTION_CLICK,false,500,true,new int[]{0,1}));
+                steps.add(new Step(QQUtils.QQ_PACKAGE_NAME, ":id/bbt", AccessibilityNodeInfo.ACTION_CLICK,false,300));
+                steps.add(new Step(QQUtils.QQ_PACKAGE_NAME, ":id/g76", AccessibilityNodeInfo.ACTION_CLICK,false,5500));
+                getAnswer().setMessage(NekoMessage.OK);
+            }
+            return true;
+        }
+
+        if(getQuestion().getMessage().equals(VIDEO_CALL_M)){
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                //todo VIDEO CALL M
+                steps = new Vector<>();
+                steps.add(new Step(QQUtils.QQ_PACKAGE_NAME,":id/gny", AccessibilityNodeInfo.ACTION_CLICK,false));
+                steps.add(new Step(QQUtils.QQ_PACKAGE_NAME,":id/icon_viewPager", AccessibilityNodeInfo.ACTION_CLICK,false,500,true,new int[]{0,1}));
+                steps.add(new Step(QQUtils.QQ_PACKAGE_NAME, ":id/bbt", AccessibilityNodeInfo.ACTION_CLICK,false,300));
+                steps.add(new Step(QQUtils.QQ_PACKAGE_NAME, ":id/gd7", AccessibilityNodeInfo.ACTION_CLICK,false,5500));
+                steps.add(new Step(QQUtils.QQ_PACKAGE_NAME, ":id/g76", AccessibilityNodeInfo.ACTION_CLICK,false,500));
+                getAnswer().setMessage(NekoMessage.OK);
+            }
+            return true;
+        }
+
+        if(getQuestion().getMessage().equals(EVERY_DAY_CHECK)){
+            steps = new Vector<>();
+            steps.add(new Step(QQUtils.QQ_PACKAGE_NAME,":id/qn4",AccessibilityNodeInfo.ACTION_CLICK,false));
+            steps.add(new Step(QQUtils.QQ_PACKAGE_NAME,":id/nfz",AccessibilityNodeInfo.ACTION_CLICK,false,500));
+            steps.add(new Step(null,null,AccessibilityService.GLOBAL_ACTION_BACK,true,500));
+            getAnswer().setMessage(NekoMessage.OK);
+            return true;
+        }
+
+        if(getQuestion().getMessage().startsWith(SWITCH_CHATS)){
+            String[] ids = getQuestion().getMessage().split(" ");
+            int position = 0;
+            if(ids.length == 2){
+                try{
+                    position = Integer.parseInt(ids[1]);
+                }catch (Exception e){
+                    return true;
+                }
+            }
+            steps = new Vector<>();
+            steps.add(new Step(null,null,AccessibilityService.GLOBAL_ACTION_BACK,true));
+            steps.add(new Step(QQUtils.QQ_PACKAGE_NAME,":id/recent_chat_list", AccessibilityNodeInfo.ACTION_CLICK,false,1500,true,new int[]{position+1}));
+            getAnswer().setMessage(NekoMessage.COME_BACK);
+            return true;
+        }
+
+        if(getQuestion().getMessage().startsWith(SEND_GALLERY)){
+//           /c /gnt /p2 /lmy
+            String[] ids = getQuestion().getMessage().split(" ");
+            int position = 0;
+            if(ids.length == 2){
+                try{
+                    position = Integer.parseInt(ids[1]);
+                }catch (Exception e){
+                    return true;
+                }
+            }
+            steps = new Vector<>();
+            steps.add(new Step(QQUtils.QQ_PACKAGE_NAME,":id/gnt",AccessibilityNodeInfo.ACTION_CLICK,false));
+            steps.add(new Step(QQUtils.QQ_PACKAGE_NAME,":id/p2",AccessibilityNodeInfo.ACTION_CLICK,false,500));
+            steps.add(new Step(QQUtils.QQ_PACKAGE_NAME,":id/photo_list_gv",AccessibilityNodeInfo.ACTION_CLICK,false,500,true,new int[]{position,1}));
+            Step gestureStep = new Step(QQUtils.QQ_PACKAGE_NAME,":id/photo_list_gv",AccessibilityNodeInfo.ACTION_SCROLL_FORWARD,false,500);
+            gestureStep.setNeedGesture(SCROLL_DOWN);
+            steps.add(gestureStep);
+            steps.add(new Step(QQUtils.QQ_PACKAGE_NAME,":id/photo_list_gv",AccessibilityNodeInfo.ACTION_CLICK,false,1500,true,new int[]{position,1}));
+            steps.add(new Step(QQUtils.QQ_PACKAGE_NAME,":id/send_btn",AccessibilityNodeInfo.ACTION_CLICK,false,500));
+            getAnswer().setMessage(NekoMessage.OK);
+        }
+
+        if(getQuestion().getMessage().equals(COMMAND_LIST)){
+            StringBuilder stringBuilder = getHelpStringBuilder();
+            getAnswer().setMessage(stringBuilder.toString());
             return true;
         }
 
@@ -187,6 +285,59 @@ public class Command implements AskAble {
             return true;
         }
         return false;
+    }
+
+    public static final Step.NeedGesture SCROLL_DOWN = new Step.NeedGesture() {
+        @Override
+        public GestureDescription onGesture(AccessibilityNodeInfo targetView) {
+            GestureDescription.Builder gb = new GestureDescription.Builder();
+            Rect r = new Rect();
+            targetView.getBoundsInScreen(r);
+            Path path = new Path();
+            PointF p = new PointF((r.left+r.right)/2f,(r.top+r.bottom)/2f);
+            path.moveTo(p.x,p.y);
+            path.lineTo(p.x,0);
+            gb.addStroke(new GestureDescription.StrokeDescription(path,0,400));
+            return  gb.build();
+        }
+    };
+
+    public static final Step.NeedGesture CLICK = new Step.NeedGesture() {
+        @Override
+        public GestureDescription onGesture(AccessibilityNodeInfo targetView) {
+            GestureDescription.Builder gb = new GestureDescription.Builder();
+            Rect r = new Rect();
+            targetView.getBoundsInScreen(r);
+            Path path = new Path();
+            PointF p = new PointF((r.left+r.right)/2f,(r.top+r.bottom)/2f);
+            path.moveTo(p.x,p.y);
+            path.lineTo(p.x,p.y);
+            gb.addStroke(new GestureDescription.StrokeDescription(path,0,50));
+            return  gb.build();
+        }
+    };
+
+    @NotNull
+    private static StringBuilder getHelpStringBuilder() {
+        StringBuilder stringBuilder = new StringBuilder();
+        stringBuilder.append(BotApp.getInstance().getBotName()).append("帮助如下,请多多指教:").append('\n');
+        stringBuilder.append(COMMAND_LIST).append('\n');
+        stringBuilder.append(SWITCH_COMMAND_EN).append('\n');
+        stringBuilder.append(SWITCH_COMMAND_CH).append('\n');
+        stringBuilder.append(SEVER_BATTERY).append('\n');
+        stringBuilder.append(FIRST_PIC).append('\n');
+        stringBuilder.append(CLICK_ID).append('\n');
+        stringBuilder.append(TAKE_PHOTO).append('\n');
+        stringBuilder.append(SCREEN_SHOT).append('\n');
+        stringBuilder.append(SUMMARIZE_CHAT).append('\n');
+        stringBuilder.append(PRINT_CHARA).append('\n');
+        stringBuilder.append(PRINT_CHATS).append('\n');
+        stringBuilder.append(CLOSE_AUTO).append('\n');
+        stringBuilder.append(OPEN_AUTO).append('\n');
+        stringBuilder.append(VIDEO_CALL_F).append('\n');
+        stringBuilder.append(VIDEO_CALL_M).append('\n');
+        stringBuilder.append(EVERY_DAY_CHECK).append('\n');
+        return stringBuilder;
     }
 
     public static final Pattern openaiIgnoreCase = Pattern.compile("(?i)openai");
@@ -234,15 +385,11 @@ public class Command implements AskAble {
         this.send = send;
     }
 
-    public int getAction() {
-        return action;
-    }
-
-    public void setAction(int action) {
-        this.action = action;
-    }
-
     public String getPackageName() {
         return packageName;
+    }
+
+    public boolean haveAction(){
+        return steps!=null && !steps.isEmpty();
     }
 }

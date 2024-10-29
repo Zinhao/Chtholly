@@ -3,9 +3,11 @@ package com.zinhao.chtholly;
 import android.accessibilityservice.AccessibilityButtonController;
 import android.accessibilityservice.AccessibilityService;
 import android.accessibilityservice.AccessibilityServiceInfo;
+import android.accessibilityservice.GestureDescription;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
+import android.graphics.Rect;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
@@ -16,15 +18,18 @@ import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
 import com.zinhao.chtholly.entity.*;
 import com.zinhao.chtholly.session.OpenAiSession;
+import com.zinhao.chtholly.utils.ChatPageViewIds;
+import com.zinhao.chtholly.utils.LocalFileCache;
 import com.zinhao.chtholly.utils.QQUtils;
+import org.jetbrains.annotations.NotNull;
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
 
 import java.text.SimpleDateFormat;
-import java.util.Calendar;
-import java.util.List;
-import java.util.Locale;
-import java.util.Vector;
+import java.util.*;
+import java.util.function.BiConsumer;
 import java.util.function.Predicate;
-import java.util.regex.Pattern;
 
 import static com.zinhao.chtholly.utils.QQUtils.*;
 
@@ -56,7 +61,6 @@ public class NekoChatService extends AccessibilityService implements OpenAiMessa
     public static NekoChatService getInstance() {
         return instance;
     }
-
 
     private final List<RemindMessage> remindMessages = new Vector<>();
     // 等待回复的消息
@@ -112,35 +116,67 @@ public class NekoChatService extends AccessibilityService implements OpenAiMessa
     private AccessibilityNodeInfo btPic;
     private AccessibilityNodeInfo tvTitle;
 
+    public static final ChatPageViewIds chatPageViewIds = new ChatPageViewIds();
+
     private boolean isQQChatPage(AccessibilityNodeInfo nodeInfo){
-        Log.d(TAG, "checkPage: ================================================");
+
+//        Log.d(TAG, "checkPage: ================================================");
         if(nodeInfo == null){
-            Log.d(TAG, "checkPage:nodeInfo null!");
+            Log.e(TAG, "checkPage:nodeInfo null!");
             return false;
         }
         if(!QQ_PACKAGE_NAME.equals(nodeInfo.getPackageName().toString())){
-            Log.d(TAG, "checkPage:package name err!");
+            Log.e(TAG, "checkPage:only support mobile qq!");
             return false;
         }
+        //输入文本框
         AccessibilityNodeInfo input = findFirstNodeInfo(nodeInfo,QQUtils.getInputId());
-        AccessibilityNodeInfo send = findFirstNodeInfo(nodeInfo,QQUtils.getSendButtonId());
-        AccessibilityNodeInfo pic = findFirstNodeInfo(nodeInfo,QQUtils.getPicButtonId());
-        AccessibilityNodeInfo title = findFirstNodeInfo(nodeInfo,QQUtils.getChatTitleId());
+        chatPageViewIds.setInputViewId(QQUtils.getInputId());
 
-        Log.d(TAG, "checkPage: |-input:"+input);
-        Log.d(TAG, "checkPage: |-send:"+send);
-        Log.d(TAG, "checkPage: |-pic:"+pic);
-        Log.d(TAG, "checkPage: |-title:"+title);
-        Log.d(TAG, "checkPage: ================================================");
-        if(input==null || send==null || pic==null || title == null){
+        // 发送按钮
+        AccessibilityNodeInfo send = null;
+        for (String viewId : SEND_BTN_IDS) {
+            send = findFirstNodeInfo(nodeInfo,QQUtils.QQ_PACKAGE_NAME+viewId);
+            if(send!=null){
+                chatPageViewIds.setSendBtnViewId(viewId);
+                break;
+            }
+        }
+
+        AccessibilityNodeInfo pic = findFirstNodeInfo(nodeInfo,QQUtils.getPicButtonId());
+
+        // 聊天标题
+        AccessibilityNodeInfo title = findFirstNodeInfo(nodeInfo,QQUtils.getChatTitleId());
+        chatPageViewIds.setTitleViewId(QQUtils.getChatTitleId());
+
+        // 选择第一张图片的选择框
+        AccessibilityNodeInfo firstPicCheckBox = null;
+        for (String viewId : PIC_CHECKBOX_IDS) {
+            firstPicCheckBox = findFirstNodeInfo(nodeInfo,QQUtils.QQ_PACKAGE_NAME+viewId);
+            if(firstPicCheckBox!=null){
+                chatPageViewIds.setFirstPicCheckBoxViewId(viewId);
+
+                break;
+            }
+        }
+
+//        Log.d(TAG, "checkPage: |-input:"+input);
+//        Log.d(TAG, "checkPage: |-send:"+send);
+//        Log.d(TAG, "checkPage: |-pic:"+pic);
+//        Log.d(TAG, "checkPage: |-title:"+title);
+//        Log.d(TAG, "checkPage: |-first_pic_checkbox:"+firstPicCheckBox);
+//        Log.d(TAG, "checkPage: ================================================");
+        if(input==null || send==null){
             return false;
         }
         etInput = input;
         btSend = send;
         btPic = pic;
         tvTitle = title;
-        chatTitle = tvTitle.getText().toString();
-        Log.d(TAG, "isQQChatPage: "+tvTitle.getText());
+        if(tvTitle!=null){
+            chatTitle = tvTitle.getText().toString();
+            Log.d(TAG, "isQQChatPage: "+tvTitle.getText());
+        }
         return true;
     }
 
@@ -178,6 +214,84 @@ public class NekoChatService extends AccessibilityService implements OpenAiMessa
                 accessibilityButtonCallback, null);
     }
 
+    private static StringBuilder builder;
+    private static final Rect bound = new Rect();
+    public static JSONObject treeAndPrintLayout(AccessibilityNodeInfo nodeInfo, int treeIndex) throws JSONException {
+        JSONObject root = new JSONObject();
+        root.put("id",nodeInfo.getViewIdResourceName());
+//        root.put("class",nodeInfo.getClassName());
+//        root.put("click",nodeInfo.isClickable());
+//        root.put("longClick",nodeInfo.isLongClickable());
+        root.put("desc",nodeInfo.getContentDescription());
+        root.put("text",nodeInfo.getText());
+        if(treeIndex == 0){
+//            emptyMessage = new Message(null,null,System.currentTimeMillis());
+            builder = new StringBuilder();
+            if(BuildConfig.DEBUG){
+                Log.d(TAG, "treeInfo:=========================================================>"+nodeInfo.getPackageName());
+            }
+            builder.append("|__");
+        }else{
+            builder.append("|  ");
+        }
+        JSONArray children = new JSONArray();
+        for (int i = 0; i < nodeInfo.getChildCount(); i++) {
+            AccessibilityNodeInfo child = nodeInfo.getChild(i);
+            if(child == null){
+                continue;
+            }
+            builder.delete(builder.length()-2,builder.length());
+            if(child.isClickable() || child.isCheckable() || child.isLongClickable()){
+                NekoChatService.chatPageViewIds.addActionableId(child);
+            }
+            JSONObject childObject;
+            if(child.getChildCount()!=0){
+                builder.append("__");
+                if(BuildConfig.DEBUG){
+                    child.getBoundsInScreen(bound);
+                    Log.d(TAG, String.format(Locale.US,"treeInfo:%s%s class:%s, text:%s bound:%s click:%s longClick:%s check:%s desc:%s",
+                            builder,child.getViewIdResourceName(),child.getClassName(),child.getText(),
+                            bound,child.isClickable(),child.isLongClickable(),child.isCheckable(),child.describeContents()));
+                }
+                builder.delete(builder.length()-2,builder.length());
+                builder.append("  ");
+                childObject = treeAndPrintLayout(child,treeIndex+1);
+            }else {
+                childObject = new JSONObject();
+                childObject.put("id",child.getViewIdResourceName());
+//                childObject.put("class",child.getClassName());
+//                childObject.put("click",child.isClickable());
+//                childObject.put("longClick",child.isLongClickable());
+                childObject.put("desc",child.getContentDescription());
+                childObject.put("text",child.getText());
+                builder.append("__");
+                if(getChatTextId().equals(child.getViewIdResourceName())){
+                    // 这是一条聊天记录
+                    if(child.getText() ==null)
+                        continue;
+//                    emptyMessage.message = child.getText().toString();
+                }
+                if(getChatNickId().equals(child.getViewIdResourceName())){
+                    if(child.getText() == null)
+                        continue;
+//                    emptyMessage.speaker = child.getText().toString();
+                }
+                if(BuildConfig.DEBUG){
+                    child.getBoundsInScreen(bound);
+                    Log.d(TAG, String.format(Locale.US,"treeInfo:%s%s class:%s, text:%s bound:%s click:%s longClick:%s check:%s desc:%s",
+                            builder,child.getViewIdResourceName(),child.getClassName(),child.getText(),
+                            bound,child.isClickable(),child.isLongClickable(),child.isCheckable(),child.describeContents()));
+                }
+            }
+            children.put(childObject);
+            root.put("children",children);
+        }
+        if(builder.length()>=3)
+            builder.delete(builder.length()-3,builder.length());
+
+        return root;
+    }
+
     @Override
     public void onAccessibilityEvent(AccessibilityEvent event) {
         botName = BotApp.getInstance().getBotName();
@@ -189,12 +303,34 @@ public class NekoChatService extends AccessibilityService implements OpenAiMessa
         autoMission(event.getPackageName().toString());
         
         AccessibilityNodeInfo root = getRootInActiveWindow();
+        if(BuildConfig.DEBUG){
+            StringBuilder stringBuilder = getStringBuilder(event);
+            Log.d(TAG, stringBuilder +": package:"+event.getPackageName() + ", text: "+event.getText() + ", desc: "+event.getContentDescription());
+        }
 
+        if(event.getSource()!=null){
+            try {
+                JSONObject layoutTree = treeAndPrintLayout(event.getSource(),0);
+                //com.tencent.mobileqq:id/listView1
+                String idString = event.getSource().getViewIdResourceName();
+                String fileName;
+                if(idString == null){
+                    fileName = "_null";
+                }else{
+                    fileName = event.getSource().getViewIdResourceName().replace(event.getPackageName()+":id/","_")
+                            .replace("/","_")
+                            .replace(":","_");
+                }
+                LocalFileCache.getInstance().saveJSONObject(getApplicationContext(),layoutTree,"tree"+fileName+".json");
+            } catch (JSONException e) {
+                throw new RuntimeException(e);
+            }
+        }
         if((event.getContentChangeTypes()&AccessibilityEvent.CONTENT_CHANGE_TYPE_TEXT) == AccessibilityEvent.CONTENT_CHANGE_TYPE_TEXT){
-            Log.d(TAG, "onAccessibilityEvent: package:"+event.getPackageName() + ", text: "+event.getText() + ", desc: "+event.getContentDescription());
             if((event.getContentChangeTypes()&AccessibilityEvent.CONTENT_CHANGE_TYPE_SUBTREE) == AccessibilityEvent.CONTENT_CHANGE_TYPE_SUBTREE){
                 // chat 文本消息
                 if(isQQChatPage(root)){
+
                     Command qaMessage = findAddNewQA(root);
                     if(qaMessage!=null){
                         qaMessage.ask();
@@ -205,31 +341,52 @@ public class NekoChatService extends AccessibilityService implements OpenAiMessa
 
             }
         }else{
-            Log.d(TAG, "onAccessibilityEvent: "+event);
             if((event.getContentChangeTypes()&AccessibilityEvent.CONTENT_CHANGE_TYPE_SUBTREE) == AccessibilityEvent.CONTENT_CHANGE_TYPE_SUBTREE){
                 // 拍一拍，欢迎消息，撤回消息
                 if(isQQChatPage(root)){
 //                    QQUtils.id2FindLastMessage(root);
 //                    Log.d(TAG, "onAccessibilityEvent: 滚动list 拍一拍，欢迎消息，撤回消息");
                     if(event.getSource()!=null){
-                        QQUtils.treeFindLastMessage(event.getSource(),0);
+                        Log.d("chatPageViewIds", "============================================");
+                        chatPageViewIds.actionableIdMap.forEach(new BiConsumer<String, AccessibilityNodeInfo>() {
+                            @Override
+                            public void accept(String s, AccessibilityNodeInfo info) {
+
+                                Log.d("chatPageViewIds", String.format("action id: %s %s %s",s,info.getClassName(),info.getText()));
+                            }
+                        });
+
                     }
                 }else{
                     // 聊天列表页面
-                    if(event.getSource()!=null){
-                        QQUtils.treeFindLastMessage(event.getSource(),0);
-                    }
                 }
             }else{
-                if(event.getSource()!=null){
-                    QQUtils.treeFindLastMessage(event.getSource(),0);
-                }
+
             }
             if(waitQAs.isEmpty())
                 return;
         }
         doSomething(root);
         removeSuccessMessage();
+    }
+
+    @NotNull
+    private static StringBuilder getStringBuilder(AccessibilityEvent event) {
+        StringBuilder stringBuilder = new StringBuilder();
+        if((event.getContentChangeTypes()&AccessibilityEvent.CONTENT_CHANGE_TYPE_TEXT) == AccessibilityEvent.CONTENT_CHANGE_TYPE_TEXT){
+            stringBuilder.append("CONTENT_CHANGE_TYPE_TEXT");
+        }
+        if((event.getContentChangeTypes()&AccessibilityEvent.CONTENT_CHANGE_TYPE_SUBTREE) == AccessibilityEvent.CONTENT_CHANGE_TYPE_SUBTREE){
+            if(stringBuilder.length()!=0)
+                stringBuilder.append(' ');
+            stringBuilder.append("CONTENT_CHANGE_TYPE_SUBTREE");
+        }
+        if((event.getContentChangeTypes()&AccessibilityEvent.CONTENT_CHANGE_TYPE_CONTENT_DESCRIPTION) == AccessibilityEvent.CONTENT_CHANGE_TYPE_CONTENT_DESCRIPTION){
+            if(stringBuilder.length()!=0)
+                stringBuilder.append(' ');
+            stringBuilder.append("CONTENT_CHANGE_TYPE_CONTENT_DESCRIPTION");
+        }
+        return stringBuilder;
     }
 
     private void removeSuccessMessage(){
@@ -297,6 +454,16 @@ public class NekoChatService extends AccessibilityService implements OpenAiMessa
             Log.d(TAG, "autoMission:todayNoon will answer at "+ dateTimeFormat.format(System.currentTimeMillis()+delayMillis));
             mHandler.postDelayed(delayCheck,delayMillis);
             todayNoon = true;
+
+            List<Step> steps = new ArrayList<>();
+            steps.add(new Step(getPackageName(),":id/qn4",AccessibilityNodeInfo.ACTION_CLICK,false));
+            steps.add(new Step(getPackageName(),":id/nfz",AccessibilityNodeInfo.ACTION_CLICK,false,500));
+            Command command = new Command(
+                    getPackageName(),
+                    new Message("SYSTEM","打卡任务",System.currentTimeMillis()),
+                    steps);
+            command.ask();
+            waitQAs.add(command);
         }
         if(nowHourCount > 13 && nowHourCount <= 19 && !todayAfter){
             long delayMillis = randomTime(20,30);
@@ -340,14 +507,13 @@ public class NekoChatService extends AccessibilityService implements OpenAiMessa
             etInput = findInputNodeInfo(source);
         if(btSend == null)
             btSend = findSendNodeInfo(source);
-
         for (int i = 0; i < waitQAs.size(); i++) {
             Command qa = waitQAs.get(i);
             if(qa.getAnswer() == null || qa.getAnswer().getMessage() == null || (qa.sendSuccess() && qa.actionSuccess())){
                 continue;
             }
 
-            if(ENABLE_ACTION && qa.getAction()!=0){
+            if(ENABLE_ACTION && qa.haveAction()){
                 if(BotApp.getInstance().getAdminName().equals(chatTitle)){
                     if(doAction(source,qa)){
                         return;
@@ -394,11 +560,15 @@ public class NekoChatService extends AccessibilityService implements OpenAiMessa
             if(step.getDaley()!=0){
                 qa.back(step);
                 result = true;
+                if(step.isWaiting()){
+                    return false;
+                }
+                // 延后执行,先放回队列,时间到之后设置daley为0,获取出来执行
                 mHandler.postDelayed(new Runnable() {
                     @Override
                     public void run() {
                         step.setDaley(0);
-                        doSomething(source);
+                        doSomething(getRootInActiveWindow());
                     }
                 },step.getDaley());
             }else{
@@ -406,23 +576,51 @@ public class NekoChatService extends AccessibilityService implements OpenAiMessa
                     result = performGlobalAction(step.getActionId());
                 }else{
                     AccessibilityNodeInfo targetView = findFirstNodeInfo(source,step.getViewId());
+                    if(step.isFindChildByPosition() && targetView!=null){
+                        for (int i = 0; i < step.getFindPosition().length; i++) {
+                            targetView = targetView.getChild(step.getFindPosition()[i]);
+                            if(targetView == null){
+                                break;
+                            }
+                        }
+                    }
                     if(targetView!=null){
-                        result = targetView.performAction(step.getActionId());
+                        if(step.getActionId() == AccessibilityNodeInfo.ACTION_SCROLL_FORWARD){
+                            result = doGesture(targetView,step);
+                        }else{
+                            result = targetView.performAction(step.getActionId());
+                        }
                     }else {
                         // 点击动作失败
                         Log.e(TAG, "doAction: 寻找视图失败" + step.getViewId());
-                        result = true;
+                        result = false;
                     }
                 }
             }
-
-            Log.d(TAG, String.format(Locale.US,"doAction: action:%s result:%s ",step,result));
+            Log.w(TAG, String.format(Locale.US,"doAction: %s result:%s ",step,result));
             if(!result){
                 qa.back(step);
             }
             return true;
         }
         return false;
+    }
+
+    public boolean doGesture(AccessibilityNodeInfo targetView, Step step){
+        GestureDescription gb = step.getNeedGesture().onGesture(targetView);
+        return dispatchGesture(gb, new GestureResultCallback() {
+            @Override
+            public void onCompleted(GestureDescription gestureDescription) {
+                super.onCompleted(gestureDescription);
+                Log.w(TAG, String.format(Locale.US,"dispatchGesture: onCompleted"));
+            }
+
+            @Override
+            public void onCancelled(GestureDescription gestureDescription) {
+                super.onCancelled(gestureDescription);
+                Log.w(TAG, String.format(Locale.US,"dispatchGesture: onCancelled"));
+            }
+        },mHandler);
     }
 
     private boolean writeMessage(AccessibilityNodeInfo inputEditText, Command qaMessage){
@@ -444,11 +642,11 @@ public class NekoChatService extends AccessibilityService implements OpenAiMessa
     }
 
     private @Nullable AccessibilityNodeInfo findInputNodeInfo(AccessibilityNodeInfo source){
-        return findFirstNodeInfo(source,QQUtils.getInputId());
+        return findFirstNodeInfo(source,chatPageViewIds.getInputViewId());
     }
 
     private @Nullable AccessibilityNodeInfo findSendNodeInfo(AccessibilityNodeInfo source){
-        return findFirstNodeInfo(source, QQUtils.getSendButtonId());
+        return findFirstNodeInfo(source, chatPageViewIds.getSendBtnViewId());
     }
 
     private @Nullable AccessibilityNodeInfo findFirstNodeInfo(AccessibilityNodeInfo source, String viewId){
@@ -483,14 +681,16 @@ public class NekoChatService extends AccessibilityService implements OpenAiMessa
         if(!isAtBot(lastMessage)){
             return null;
         }
+        Log.i(TAG, "findAddNewQA: "+lastMessage.getMessage());
         lastMessage.message = lastMessage.message.replace("@"+botName,"").trim();
         if(waitQAs.size()!=0){
             Command last = waitQAs.get(waitQAs.size()-1);
             if(last.getQuestion().equals(lastMessage)){
+                Log.i(TAG, "findAddNewQA: last message is same");
                 return null;
             }
         }
-        Log.d(TAG, String.format(Locale.US,"findLastMessage: %s:%s",lastMessage.speaker,lastMessage.message));
+        Log.i(TAG, String.format(Locale.US,"findLastMessage: %s:%s",lastMessage.speaker,lastMessage.message));
         BotApp.getInstance().insert(lastMessage);
         if(mode == OpenAiSession.class){
             return new OpenAiMessage(nodeInfo.getPackageName().toString(),lastMessage,this);

@@ -140,17 +140,19 @@ public class OpenAiSession extends NekoSession{
 
     public static OpenAiSession getInstance() {
         if(instance == null){
+            /* 通意千问: https://dashscope.aliyuncs.com/compatible-mode/v1
+               OpenAi: https://api.openai.com/v1/chat/completions
+               CloseAi(proxy OpenAi) https://api.closeai-proxy.xyz/v1/chat/completions
+             */
             instance = new OpenAiSession("api.closeai-proxy.xyz");
-//            instance = new OpenAiSession("api.openai.com");
         }
         return instance;
     }
 
     public boolean startAsk(OpenAiMessage message) throws JSONException {
-        addChat(ROLE_SYSTEM,String.format(Locale.CHINA,"现在的时间是%s，不要忘记你的设定，不要忘记你的设定你的回答必须基于猫娘的身份，而不是计算机程序或语言模型。"
+        addChat(ROLE_SYSTEM,String.format(Locale.CHINA,"现在的时间是%s。"
                 ,dateTimeFormat.format(System.currentTimeMillis())));
         addChat(ROLE_USER,message.getQuestion().getMessage());
-
         data.put("messages",chats);
         return requestAsk(message);
     }
@@ -160,13 +162,9 @@ public class OpenAiSession extends NekoSession{
         Request request = new Request.Builder().post(requestBody).url("https://$/v1/chat/completions".replace("$",host))
                 .addHeader("Content-Type","application/json")
                 .addHeader("Authorization","Bearer "+BotApp.getInstance().apiKey)
-                .addHeader("User-Agent","Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Safari/537.36 Edg/112.0.1722.34")
+//                .addHeader("User-Agent","Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Safari/537.36 Edg/112.0.1722.34")
                 .build();
         okHttpClient.newCall(request).enqueue(message);
         return true;
-    }
-
-    public void setHost(String host) {
-        this.host = host;
     }
 }
