@@ -119,7 +119,6 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        initRoleDialog();
         binding.button2.setEnabled(false);
         BotApp.getInstance().select(new MessageDao.MessageGetAllListener() {
             @Override
@@ -133,6 +132,13 @@ public class MainActivity extends AppCompatActivity {
                 });
             }
         });
+
+        binding.button4.setOnClickListener(this::toVoiceSetting);
+    }
+
+    private void toVoiceSetting(View view) {
+        Intent i = new Intent(view.getContext(), VoiceServerSettingActivity.class);
+        startActivity(i);
     }
 
     private void initMessageDialog(){
@@ -152,44 +158,11 @@ public class MainActivity extends AppCompatActivity {
                         .show();
             }
         });
-    }
-    ArrayList<Role> roles = new ArrayList<>();
-    private void initRoleDialog(){
-        roles.clear();
-        roles.add(new Role("健忘的猫娘-3.5",getString(R.string.neko_chara_1)));
-        roles.add(new Role("允许H的猫娘-3.5",getString(R.string.neko_chara_2)));
-        roles.add(new Role("正常的猫娘-3.5",getString(R.string.neko_chara_3)));
-
-        roles.add(new Role("健忘的猫娘-4",getString(R.string.neko_chara_1)));
-        roles.add(new Role("允许H的猫娘-4",getString(R.string.neko_chara_2)));
-        roles.add(new Role("正常的猫娘-4",getString(R.string.neko_chara_3)));
-        View dialogContent = getLayoutInflater().inflate(R.layout.bottom_dialog,null,false);
-        ListView listView = dialogContent.findViewById(R.id.list);
-        listView.setAdapter(new RoleAdapter(this,android.R.layout.simple_list_item_2,roles));
-        listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-            @Override
-            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                Role role = roles.get(position);
-                binding.textView.setText(role.desc);
-                OpenAiSession.getInstance().setChara(role.desc);
-                if(position<3){
-                    OpenAiSession.getInstance().setModel(OpenAiSession.MODEL_GPT_3_5_TURBO);
-                }else {
-                    OpenAiSession.getInstance().setModel(OpenAiSession.MODEL_GPT_4_TURBO);
-                }
-            }
-        });
-
         binding.button.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                new DialogLayer(MainActivity.this)
-                        .setContentView(dialogContent)
-                        .setGravity(Gravity.BOTTOM)
-                        .setSwipeDismiss(SwipeLayout.Direction.BOTTOM)
-                        .setBackgroundDimDefault()
-                        .setContentAnimator(AnimStyle.BOTTOM)
-                        .show();
+                Intent intent = new Intent(v.getContext(),CharacterActivity.class);
+                startActivity(intent);
             }
         });
     }
@@ -208,6 +181,7 @@ public class MainActivity extends AppCompatActivity {
     protected void onResume() {
         super.onResume();
         binding.toggleButton.setChecked(isAccessibilitySettingsOn(this));
+        binding.textView.setText(OpenAiSession.getInstance().getChara());
     }
 
     private boolean isAccessibilitySettingsOn(Context mContext){
@@ -236,41 +210,6 @@ public class MainActivity extends AppCompatActivity {
             }
         }
         return false;
-    }
-
-    public static class Role{
-        private final String name;
-        private final String desc;
-
-        public Role(String name, String desc) {
-            this.name = name;
-            this.desc = desc;
-        }
-    }
-
-    public static class RoleAdapter extends ArrayAdapter<Role>{
-
-        public RoleAdapter(@NonNull Context context, int resource, @NonNull List<Role> objects) {
-            super(context, resource, objects);
-        }
-
-        @NonNull
-        @Override
-        public View getView(int position, @Nullable View convertView, @NonNull ViewGroup parent) {
-            if(convertView == null)
-                convertView = LayoutInflater.from(parent.getContext()).inflate(android.R.layout.simple_list_item_2, parent, false);
-
-            if(convertView!=null){
-                TextView tvTitle = convertView.findViewById(android.R.id.text1);
-                tvTitle.setText(getItem(position).name);
-
-                TextView tvResult = convertView.findViewById(android.R.id.text2);
-                tvResult.setSingleLine();
-                tvResult.setText(getItem(position).desc);
-            }
-            assert convertView != null;
-            return convertView;
-        }
     }
 
     public static class MessageAdapter extends ArrayAdapter<Message>{

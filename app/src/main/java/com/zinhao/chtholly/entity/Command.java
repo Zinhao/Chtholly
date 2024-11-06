@@ -155,20 +155,13 @@ public class Command implements AskAble {
                 //打开闪光灯
                 steps.add(new Step(QQUtils.QQ_PACKAGE_NAME+".aelight_impl",":id/py", AccessibilityNodeInfo.ACTION_CLICK,false,500));
                 // 切换前置
-                steps.add(new Step(QQUtils.QQ_PACKAGE_NAME+".aelight_impl",":id/pv", AccessibilityNodeInfo.ACTION_CLICK,false,500));
+//                steps.add(new Step(QQUtils.QQ_PACKAGE_NAME+".aelight_impl",":id/pv", AccessibilityNodeInfo.ACTION_CLICK,false,500));
                 // 拍照
                 Step gestureStep = new Step(QQUtils.QQ_PACKAGE_NAME+".aelight_impl",":id/a74",AccessibilityNodeInfo.ACTION_SCROLL_FORWARD,false,500);
-                gestureStep.setNeedGesture(SCROLL_DOWN);
+                gestureStep.setNeedGesture(CLICK);
                 steps.add(gestureStep);
                 //发送
-//                Step gestureStep1 = new Step(QQUtils.QQ_PACKAGE_NAME+".aelight_impl",":id/ut",AccessibilityNodeInfo.ACTION_SCROLL_FORWARD,false,1500);
-//                gestureStep1.setNeedGesture(CLICK);
-//                steps.add(gestureStep1);
                 steps.add(new Step(QQUtils.QQ_PACKAGE_NAME+".aelight_impl",":id/ut", AccessibilityNodeInfo.ACTION_CLICK,false,1500));
-//                steps.add(new Step(QQUtils.QQ_PACKAGE_NAME, QQUtils.getPicButtonId(), AccessibilityNodeInfo.ACTION_CLICK,false,500));
-//                steps.add(new Step(QQUtils.QQ_PACKAGE_NAME, cpvi.getFirstPicCheckBoxViewId(), AccessibilityNodeInfo.ACTION_CLICK,false,500));
-//                steps.add(new Step(QQUtils.QQ_PACKAGE_NAME, cpvi.getSendBtnViewId(), AccessibilityNodeInfo.ACTION_CLICK,false,500));
-//                steps.add(new Step(QQUtils.QQ_PACKAGE_NAME, QQUtils.getPicButtonId(), AccessibilityNodeInfo.ACTION_CLICK,false,500));
                 getAnswer().setMessage(NekoMessage.OK+"请耐心等待");
             }else{
                 getAnswer().setMessage(NekoMessage.DONT_SUPPORT);
@@ -228,19 +221,40 @@ public class Command implements AskAble {
         }
 
         if(getQuestion().getMessage().startsWith(SWITCH_CHATS)){
-            String[] ids = getQuestion().getMessage().split(" ");
-            int position = 0;
-            if(ids.length == 2){
-                try{
-                    position = Integer.parseInt(ids[1]);
-                }catch (Exception e){
+            if(getQuestion().getMessage().contains(" ")){
+                String[] ids = getQuestion().getMessage().split(" ");
+                int position = 0;
+                if(ids.length == 2){
+                    try{
+                        position = Integer.parseInt(ids[1]);
+                    }catch (Exception e){
+                        getAnswer().setMessage(NekoMessage.HARD);
+                        return true;
+                    }
+                    NekoChatService.getInstance().setChatsIndex(position);
+                    steps = new Vector<>();
+                    steps.add(new Step(null,null,AccessibilityService.GLOBAL_ACTION_BACK,true));
+                    steps.add(new Step(QQUtils.QQ_PACKAGE_NAME,":id/recent_chat_list", AccessibilityNodeInfo.ACTION_CLICK,false,1500,true,new int[]{position+1}));
+                    getAnswer().setMessage(NekoMessage.COME_BACK);
+                }
+            }else {
+                //截图聊天列表并发送截图
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                    int position = NekoChatService.getInstance().getChatsIndex();
+                    steps = new Vector<>();
+                    steps.add(new Step(null, null, AccessibilityService.GLOBAL_ACTION_BACK, true));
+                    steps.add(new Step(null, null, AccessibilityService.GLOBAL_ACTION_TAKE_SCREENSHOT, true,500));
+                    steps.add(new Step(QQUtils.QQ_PACKAGE_NAME,":id/recent_chat_list", AccessibilityNodeInfo.ACTION_CLICK,false,500,true,new int[]{position+1}));
+                    steps.add(new Step(QQUtils.QQ_PACKAGE_NAME, QQUtils.getPicButtonId(), AccessibilityNodeInfo.ACTION_CLICK,false,500));
+                    steps.add(new Step(QQUtils.QQ_PACKAGE_NAME, cpvi.getFirstPicCheckBoxViewId(), AccessibilityNodeInfo.ACTION_CLICK,false,500));
+                    steps.add(new Step(QQUtils.QQ_PACKAGE_NAME, cpvi.getSendBtnViewId(), AccessibilityNodeInfo.ACTION_CLICK,false,500));
+                    steps.add(new Step(QQUtils.QQ_PACKAGE_NAME, QQUtils.getPicButtonId(), AccessibilityNodeInfo.ACTION_CLICK,false,500));
+                    getAnswer().setMessage("看好需要切换的聊天的位置，使用“/切换聊天 0”切换至第一个聊天，数字表示聊天的索引。");
+                }else {
+                    getAnswer().setMessage(NekoMessage.HARD);
                     return true;
                 }
             }
-            steps = new Vector<>();
-            steps.add(new Step(null,null,AccessibilityService.GLOBAL_ACTION_BACK,true));
-            steps.add(new Step(QQUtils.QQ_PACKAGE_NAME,":id/recent_chat_list", AccessibilityNodeInfo.ACTION_CLICK,false,1500,true,new int[]{position+1}));
-            getAnswer().setMessage(NekoMessage.COME_BACK);
             return true;
         }
 
@@ -317,10 +331,25 @@ public class Command implements AskAble {
         }
     };
 
+    public static final Step.NeedGesture DOUBLE_CLICK = new Step.NeedGesture() {
+        @Override
+        public GestureDescription onGesture(AccessibilityNodeInfo targetView) {
+            GestureDescription.Builder gb = new GestureDescription.Builder();
+            Rect r = new Rect();
+            targetView.getBoundsInScreen(r);
+            Path path = new Path();
+            PointF p = new PointF((r.left+r.right)/2f,(r.top+r.bottom)/2f);
+            path.moveTo(p.x,p.y);
+            path.lineTo(p.x,p.y);
+            gb.addStroke(new GestureDescription.StrokeDescription(path,0,50));
+            gb.addStroke(new GestureDescription.StrokeDescription(path,75,50));
+            return  gb.build();
+        }
+    };
+
     @NotNull
-    private static StringBuilder getHelpStringBuilder() {
+    public static StringBuilder getHelpStringBuilder() {
         StringBuilder stringBuilder = new StringBuilder();
-        stringBuilder.append(BotApp.getInstance().getBotName()).append("帮助如下,请多多指教:").append('\n');
         stringBuilder.append(COMMAND_LIST).append('\n');
         stringBuilder.append(SWITCH_COMMAND_EN).append('\n');
         stringBuilder.append(SWITCH_COMMAND_CH).append('\n');
@@ -337,6 +366,8 @@ public class Command implements AskAble {
         stringBuilder.append(VIDEO_CALL_F).append('\n');
         stringBuilder.append(VIDEO_CALL_M).append('\n');
         stringBuilder.append(EVERY_DAY_CHECK).append('\n');
+        stringBuilder.append(SWITCH_CHATS).append('\n');
+        stringBuilder.append(SEND_GALLERY).append('\n');
         return stringBuilder;
     }
 

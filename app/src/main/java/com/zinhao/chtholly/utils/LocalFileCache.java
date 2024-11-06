@@ -4,6 +4,7 @@ import android.content.Context;
 import android.util.Log;
 import com.koushikdutta.async.http.AsyncHttpClient;
 import com.zinhao.chtholly.BotApp;
+import com.zinhao.chtholly.R;
 import org.json.JSONObject;
 
 import java.io.*;
@@ -161,8 +162,11 @@ public class LocalFileCache implements Runnable, Closeable {
         running = true;
         while (running) {
             synchronized (mission) {
-                if (mission.size() != 0) {
-                    mission.get(0).run();
+                if (!mission.isEmpty()) {
+                    Runnable runnable = mission.get(0);
+                    if(runnable!=null){
+                        runnable.run();
+                    }
                     mission.remove(0);
                     Log.d(TAG, "run: mission success!");
                 }

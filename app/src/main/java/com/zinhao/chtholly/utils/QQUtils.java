@@ -21,8 +21,6 @@ public class QQUtils {
 
     private static Message emptyMessage;
 
-
-
     public static Message id2FindGroupLastMessage(AccessibilityNodeInfo nodeInfo){
         emptyMessage = new Message(null,null,System.currentTimeMillis());
         List<AccessibilityNodeInfo> nickNodes = nodeInfo.findAccessibilityNodeInfosByViewId(getChatNickId());
@@ -35,8 +33,9 @@ public class QQUtils {
                 Log.i(TAG, String.format(Locale.CHINA,"id2FindGroupLastMessage: nick:%s : %s",n.getText(),m.getText()));
             }
             int lastIndex = nickNodes.size()-1;
-            emptyMessage.setSpeaker(nickNodes.get(lastIndex).getText() + "");
-            emptyMessage.setMessage(messageNodes.get(lastIndex).getText() + "");
+            emptyMessage.setSpeaker(nickNodes.get(lastIndex).getText()+"");
+            emptyMessage.setMessage(messageNodes.get(lastIndex).getText()+"");
+            emptyMessage.setNodeInfo(messageNodes.get(lastIndex));
         }else{
             Log.e(TAG, String.format(Locale.US,"id2FindGroupLastMessage: nikc:%d m:%d err ============>",nickNodes.size(),messageNodes.size()));
         }
@@ -71,6 +70,7 @@ public class QQUtils {
     public static String getChatTextId(){
         return QQ_PACKAGE_NAME + ":id/chat_item_content_layout";
     }
+
     public static String getNewUserId(){
         return QQ_PACKAGE_NAME + ":id/ae0";
     }

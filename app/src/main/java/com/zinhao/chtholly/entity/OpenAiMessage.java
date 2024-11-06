@@ -1,7 +1,10 @@
 package com.zinhao.chtholly.entity;
 
 import android.util.Log;
+import com.koushikdutta.async.http.AsyncHttpClient;
+import com.koushikdutta.async.http.AsyncHttpResponse;
 import com.zinhao.chtholly.BotApp;
+import com.zinhao.chtholly.CallAble;
 import com.zinhao.chtholly.NekoChatService;
 import com.zinhao.chtholly.session.NekoSession;
 import com.zinhao.chtholly.session.OpenAiSession;
@@ -15,7 +18,12 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Locale;
+import java.util.Map;
+import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -73,9 +81,7 @@ public class OpenAiMessage extends NekoMessage implements Callback{
 
     @Override
     public void onFailure(@NotNull Call call, @NotNull IOException e) {
-        String speaker = getQuestion().getSpeaker();
-        getAnswer().setMessage(String.format(Locale.CHINA,"刚刚%s走神了！能重复一遍吗，喵？",BotApp.getInstance().getBotName()));
-        OpenAiSession.getInstance().addAssistantChat(getAnswer().message);
+        getAnswer().setMessage(String.format(Locale.CHINA,"\uD83D\uDE44发生错误了:%s %s",e.getMessage(),e.getCause()));
         if(delayReplyListener!=null)
             delayReplyListener.onReply(this);
     }
@@ -87,62 +93,79 @@ public class OpenAiMessage extends NekoMessage implements Callback{
             if(body!=null){
                 try {
                     if(getAnswer() != null){
-                        String nekoReply = parseResponse(body.string());
-                        Matcher m = remind.matcher(nekoReply);
-                        if(m.find()){
-                            String remindCommand = m.group(0);
-                            if(remindCommand!=null && !remindCommand.isEmpty()){
-                                parseRemindMessage(remindCommand);
-                                nekoReply = nekoReply.replace(remindCommand,textNoWords[0]);
+                        try {
+                            Choice nekoReply = parseResponse(body.string());
+                            String content = nekoReply.getMessage().getContent();
+                            if(content != null && !content.trim().equals("null")){
+                                doTextReply(content);
+                                doTTSReply(content);
                             }
+                            doToolCall(nekoReply);
+                        }catch (IllegalStateException e){
+                            Log.e(TAG, "onResponse: ", e);
                         }
-                        getAnswer().setMessage(String.format("@%s %s",getQuestion().getSpeaker(),nekoReply));
-                        BotApp.getInstance().insert(getAnswer());
-                        OpenAiSession.getInstance().addAssistantChat(nekoReply);
                     }
                 } catch (JSONException e) {
                     getAnswer().setMessage(e.getMessage());
                 }
             }
-        }else if(response.code() == 400){
-            int deleteCount = OpenAiSession.getInstance().autoSummarize();
-            if(deleteCount>=2){
-                OpenAiSession.getInstance().requestAsk(this);
-            }else{
-                getAnswer().setMessage("我有点累了，需要休息!("+response.code()+")");
-            }
-        }else {
-            int deleteCount = OpenAiSession.getInstance().autoSummarize();
-            if(deleteCount>=2){
-                OpenAiSession.getInstance().requestAsk(this);
-            }else{
-                getAnswer().setMessage("我有点累了，需要休息!("+response.code()+")");
-            }
         }
+//        else if(response.code() == 400){
+//            int deleteCount = OpenAiSession.getInstance().autoSummarize();
+//            if(deleteCount>=2){
+//                OpenAiSession.getInstance().requestAsk(this);
+//            }else{
+//                getAnswer().setMessage("我有点累了，需要休息!("+response.code()+")");
+//            }
+//        }else {
+//            int deleteCount = OpenAiSession.getInstance().autoSummarize();
+//            if(deleteCount>=2){
+//                OpenAiSession.getInstance().requestAsk(this);
+//            }else{
+//                getAnswer().setMessage("我有点累了，需要休息!("+response.code()+")");
+//            }
+//        }
         if(delayReplyListener!=null)
             delayReplyListener.onReply(this);
         response.close();
     }
 
-    private void parseRemindMessage(String remindCommand){
-        Log.d(TAG, "parseRemindMessage: "+remindCommand);
-        remindCommand = remindCommand.replace('[',' ').trim();
-        remindCommand = remindCommand.replace(']',' ').trim();
-        String[] sp = remindCommand.split(" ");
-        if(sp.length == 3){
-            long secondL = Long.parseLong(sp[1]);
-            NekoChatService.getInstance().addRemind(secondL,sp[2],getQuestion().getSpeaker());
-        }
+    public void doTextReply(String content){
+        getAnswer().setMessage(content);
+        BotApp.getInstance().insert(getAnswer());
+        OpenAiSession.getInstance().addAssistantChat(content);
     }
 
-    private String parseResponse(String response) throws JSONException {
+    public void doTTSReply(String text){
+        NekoChatService.getInstance().speakMessage(text);
+    }
+
+    public void doToolCall(Choice nekoReply){
+        nekoReply.getMessage().getToolCalls().forEach(new Consumer<Choice.ToolCall>() {
+            @Override
+            public void accept(Choice.ToolCall toolCall) {
+                String methodName = toolCall.getFunction().getName();
+                try {
+                    AIMethodTool aiMethodTool = AIMethodTool.TOTAL_TOOL.get(methodName);
+                    assert aiMethodTool!=null;
+                    CallAble callAble = aiMethodTool.getCallAble();
+                    if(callAble!=null){
+                        Map<String, Object> argsMap = toolCall.getArgsMap();
+                        argsMap.put(OpenAiMessage.this.getClass().getName(),OpenAiMessage.this);
+                        callAble.call(argsMap);
+                    }
+                } catch (JSONException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+        });
+    }
+
+    private Choice parseResponse(String response) throws JSONException {
         JSONObject jsonResponse = new JSONObject(response);
         JSONArray choices = jsonResponse.getJSONArray("choices");
-        JSONObject firstChoice = choices.getJSONObject(0);
-        JSONObject message = firstChoice.getJSONObject("message");
-        String content = message.getString("content");
-
-        return content.trim();
+        JSONObject choice = choices.getJSONObject(0);
+        return Choice.fromJson(choice.toString());
     }
 
     public interface DelayReplyListener{

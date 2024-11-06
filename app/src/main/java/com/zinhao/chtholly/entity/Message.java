@@ -1,7 +1,11 @@
 package com.zinhao.chtholly.entity;
 
+import android.view.accessibility.AccessibilityNodeInfo;
+import androidx.room.Embedded;
 import androidx.room.Entity;
+import androidx.room.Ignore;
 import androidx.room.PrimaryKey;
+import kotlin.jvm.Transient;
 
 import java.util.Objects;
 
@@ -12,6 +16,8 @@ public class Message {
     public String message;
     public String speaker;
     public long timeStamp;
+    @Ignore
+    public AccessibilityNodeInfo nodeInfo;
 
     public Message(String speaker, String message, long timeStamp) {
         this.message = message;
@@ -67,5 +73,13 @@ public class Message {
         result = 31 * result + (speaker != null ? speaker.hashCode() : 0);
         result = 31 * result + (int) (timeStamp ^ (timeStamp >>> 32));
         return result;
+    }
+
+    public void setNodeInfo(AccessibilityNodeInfo nodeInfo) {
+        this.nodeInfo = nodeInfo;
+    }
+
+    public AccessibilityNodeInfo getNodeInfo() {
+        return nodeInfo;
     }
 }

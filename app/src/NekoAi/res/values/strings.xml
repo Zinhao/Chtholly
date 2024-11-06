@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">NeKoAi</string>
+    <string name="neko_support">角色扮演服务(NeKoAi)</string>
+    <string name="neko_details">无障碍将操作你的聊天界面,使用@botName 召唤,使用/help查看支持的命令.</string>
+</resources>

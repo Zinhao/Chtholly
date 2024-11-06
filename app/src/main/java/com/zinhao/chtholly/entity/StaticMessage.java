@@ -15,8 +15,7 @@ public class StaticMessage extends Command{
     @Override
     public boolean ask() {
         super.ask();
-        getAnswer().setMessage(String.format(Locale.CHINA,"@%s %s",getQuestion().getSpeaker(),staticAnswer));
-        OpenAiSession.getInstance().addAssistantChat(staticAnswer);
+        getAnswer().setMessage(staticAnswer);
         return true;
     }
 }
