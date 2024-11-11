@@ -168,13 +168,12 @@ public class LocalFileCache implements Runnable, Closeable {
                         runnable.run();
                     }
                     mission.remove(0);
-                    Log.d(TAG, "run: mission success!");
                 }
             }
             try {
                 Thread.sleep(1);
             } catch (InterruptedException e) {
-                e.printStackTrace();
+                Log.e(TAG, "run: ", e);
             }
         }
     }

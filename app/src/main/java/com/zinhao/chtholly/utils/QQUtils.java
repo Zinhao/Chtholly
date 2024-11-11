@@ -1,12 +1,9 @@
 package com.zinhao.chtholly.utils;
 
-import android.graphics.Rect;
 import android.util.Log;
 import android.view.accessibility.AccessibilityNodeInfo;
 
 import com.zinhao.chtholly.BotApp;
-import com.zinhao.chtholly.BuildConfig;
-import com.zinhao.chtholly.NekoChatService;
 import com.zinhao.chtholly.entity.Message;
 
 import java.util.List;
@@ -15,6 +12,8 @@ import java.util.Locale;
 public class QQUtils {
     private static final String TAG = "QQUtils";
     public static final String QQ_PACKAGE_NAME = "com.tencent.mobileqq";
+    public static final String MESSAGE_PAGE = "com.tencent.mobileqq.message_list";
+    public static final String UNKNOWN_PAGE = "com.tencent.mobileqq.unknown";
     // 提示信息
     public static final String QQ_TIP_MESSAGE_ID = ":id/graybar";
     public static final String QQ_RL_TITLE_ID = ":id/rlCommenTitle";
@@ -42,7 +41,7 @@ public class QQUtils {
         return emptyMessage;
     }
 
-    public static Message id2FindLastMessage(AccessibilityNodeInfo nodeInfo){
+    public static Message id2FindAdminLastMessage(AccessibilityNodeInfo nodeInfo){
         emptyMessage = new Message(null,null,System.currentTimeMillis());
         List<AccessibilityNodeInfo> messageNodes = nodeInfo.findAccessibilityNodeInfosByViewId(getChatTextId());
         if(messageNodes.isEmpty())
@@ -55,6 +54,26 @@ public class QQUtils {
         emptyMessage.setSpeaker(BotApp.getInstance().getAdminName());
         emptyMessage.setMessage(messageNodes.get(lastIndex).getText() + "");
         return emptyMessage;
+    }
+
+    private static final String[] MESSAGE_PAGE_ID = new String[]{":id/ba1",":id/wjj",":id/wk0",":id/kbi",":id/eqe"};
+
+    public static boolean hasAllId(AccessibilityNodeInfo nodeInfo,String... ids){
+        for (String s : ids) {
+            List<AccessibilityNodeInfo> nodeInfoList = nodeInfo
+                    .findAccessibilityNodeInfosByViewId(nodeInfo.getPackageName() + s);
+            if(nodeInfoList.isEmpty()){
+                return false;
+            }
+        }
+        return true;
+    }
+
+    public static String checkWhatPage(AccessibilityNodeInfo root){
+        if(hasAllId(root,MESSAGE_PAGE_ID)){
+            return MESSAGE_PAGE;
+        }
+        return UNKNOWN_PAGE;
     }
 
     //qq version code

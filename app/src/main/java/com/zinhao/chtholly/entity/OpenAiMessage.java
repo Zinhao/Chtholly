@@ -140,7 +140,18 @@ public class OpenAiMessage extends NekoMessage implements Callback{
         NekoChatService.getInstance().speakMessage(text);
     }
 
+    /**
+     * getFinishReason
+     * 模型停止生成令牌的原因。如果模型达到自然停止点或提供的停止序列，则这将stop；
+     * 如果达到请求中指定的最大令牌数，则将length；
+     * 如果由于内容过滤器中的标志而省略内容，则为 content_filter；
+     * 如果模型达到 tool_calls，则为 tool_calls称为工具。
+     * @param nekoReply
+     */
     public void doToolCall(Choice nekoReply){
+        if(nekoReply.getFinishReason().equals("length")){
+            OpenAiSession.getInstance().requestChatSummarize();
+        }
         nekoReply.getMessage().getToolCalls().forEach(new Consumer<Choice.ToolCall>() {
             @Override
             public void accept(Choice.ToolCall toolCall) {

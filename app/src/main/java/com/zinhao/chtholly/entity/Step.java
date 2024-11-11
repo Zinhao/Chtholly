@@ -5,6 +5,7 @@ import android.accessibilityservice.GestureDescription;
 import android.graphics.Path;
 import android.graphics.Rect;
 import android.view.accessibility.AccessibilityNodeInfo;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.Arrays;
 
@@ -65,7 +66,7 @@ public class Step {
     }
 
     @Override
-    public String toString() {
+    public @NotNull String toString() {
         return actionDesc(actionId) + " " +(isGlobalAction()?"🟧":viewId)+ (isFindChildByPosition()?Arrays.toString(findPosition):"_") + ",daley "+daley;
     }
 
@@ -73,9 +74,8 @@ public class Step {
         switch (id){
             case AccessibilityNodeInfo.ACTION_CLICK:return "Click";
             case AccessibilityNodeInfo.ACTION_LONG_CLICK:return "Long Click";
-            case AccessibilityNodeInfo.ACTION_SCROLL_FORWARD:return "Scroll Forward";
-            case AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD:return "Scroll Backward";
-            case AccessibilityService.GLOBAL_ACTION_TAKE_SCREENSHOT:return "Screen Shot";
+            case AccessibilityNodeInfo.ACTION_SCROLL_FORWARD:return "Custom Gesture";
+            case AccessibilityService.GLOBAL_ACTION_TAKE_SCREENSHOT:return "Global Screen Shot";
             case AccessibilityService.GLOBAL_ACTION_BACK:return "Global back";
             default:return "UnKnow";
         }

@@ -9,32 +9,36 @@ import com.zinhao.chtholly.entity.Message;
 import com.zinhao.chtholly.utils.LocalFileCache;
 
 import java.util.List;
-import java.util.Locale;
 
 public class BotApp extends Application {
     public String apiKey;
     public static final String CONFIG_API_KEY = "api_kye_config";
-    public static final String CONFIG_BOT_NAME = "bot name";
+    public static final String CONFIG_BOT_NAME = "bot_name";
     public static final String CONFIG_CURRENT_CHARACTER_ID = "current_character_id";
-    public static final String CONFIG_ADMIN_NAME = "";
+    public static final String CONFIG_ADMIN_NAME = "admin_name";
+    public static final String CONFIG_CHAT_URL = "chat_url";
+    public static final String CONFIG_TTS_URL = "tts_url";
     private String botName;
     private String adminName;
     private long characterId;
+    private String chatUrl;
     private AICharacter currentCharacter;
+    private String ttsUrl;
+
     private static BotApp instance;
     private SharedPreferences sharedPreferences;
     private AppDatabase database;
     private MessageDao messageDao;
     private AICharacterDao aiCharacterDao;
-    private String voiceServerHost = "http://192.168.31.253";
+
     private int speakerId = 0;
 
-    public void setVoiceServerHost(String voiceServerHost) {
-        this.voiceServerHost = voiceServerHost;
+    public void setTtsUrl(String ttsUrl) {
+        this.ttsUrl = ttsUrl;
     }
 
-    public String getVoiceServerHost() {
-        return voiceServerHost;
+    public String getTtsUrl() {
+        return ttsUrl;
     }
 
     public void setSpeakerId(int speakerId) {
@@ -60,6 +64,9 @@ public class BotApp extends Application {
         botName = sharedPreferences.getString(CONFIG_BOT_NAME,"bot name");
         adminName = sharedPreferences.getString(CONFIG_ADMIN_NAME,"");
         characterId = sharedPreferences.getLong(CONFIG_CURRENT_CHARACTER_ID,0);
+        chatUrl = sharedPreferences.getString(CONFIG_CHAT_URL,"https://api.openai.com/v1/chat/completions");
+        ttsUrl = sharedPreferences.getString(CONFIG_TTS_URL,"http://localhost");
+
         database = Room.databaseBuilder(this,AppDatabase.class,"app_data")
                 .build();
         messageDao = database.messageDao();
@@ -112,6 +119,14 @@ public class BotApp extends Application {
 
     public void setAdminName(String adminName) {
         this.adminName = adminName;
+    }
+
+    public String getChatUrl() {
+        return chatUrl;
+    }
+
+    public void setChatUrl(String chatUrl) {
+        this.chatUrl = chatUrl;
     }
 
     public void insert(Message message){

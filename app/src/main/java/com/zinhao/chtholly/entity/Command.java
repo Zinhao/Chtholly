@@ -273,12 +273,13 @@ public class Command implements AskAble {
             steps.add(new Step(QQUtils.QQ_PACKAGE_NAME,":id/gnt",AccessibilityNodeInfo.ACTION_CLICK,false));
             steps.add(new Step(QQUtils.QQ_PACKAGE_NAME,":id/p2",AccessibilityNodeInfo.ACTION_CLICK,false,500));
             steps.add(new Step(QQUtils.QQ_PACKAGE_NAME,":id/photo_list_gv",AccessibilityNodeInfo.ACTION_CLICK,false,500,true,new int[]{position,1}));
-            Step gestureStep = new Step(QQUtils.QQ_PACKAGE_NAME,":id/photo_list_gv",AccessibilityNodeInfo.ACTION_SCROLL_FORWARD,false,500);
-            gestureStep.setNeedGesture(SCROLL_DOWN);
-            steps.add(gestureStep);
-            steps.add(new Step(QQUtils.QQ_PACKAGE_NAME,":id/photo_list_gv",AccessibilityNodeInfo.ACTION_CLICK,false,1500,true,new int[]{position,1}));
+//            Step gestureStep = new Step(QQUtils.QQ_PACKAGE_NAME,":id/photo_list_gv",AccessibilityNodeInfo.ACTION_SCROLL_FORWARD,false,500);
+//            gestureStep.setNeedGesture(SCROLL_DOWN);
+//            steps.add(gestureStep);
+//            steps.add(new Step(QQUtils.QQ_PACKAGE_NAME,":id/photo_list_gv",AccessibilityNodeInfo.ACTION_CLICK,false,1500,true,new int[]{position,1}));
             steps.add(new Step(QQUtils.QQ_PACKAGE_NAME,":id/send_btn",AccessibilityNodeInfo.ACTION_CLICK,false,500));
             getAnswer().setMessage(NekoMessage.OK);
+            return true;
         }
 
         if(getQuestion().getMessage().equals(COMMAND_LIST)){
@@ -350,38 +351,41 @@ public class Command implements AskAble {
     @NotNull
     public static StringBuilder getHelpStringBuilder() {
         StringBuilder stringBuilder = new StringBuilder();
-        stringBuilder.append(COMMAND_LIST).append('\n');
-        stringBuilder.append(SWITCH_COMMAND_EN).append('\n');
-        stringBuilder.append(SWITCH_COMMAND_CH).append('\n');
-        stringBuilder.append(SEVER_BATTERY).append('\n');
-        stringBuilder.append(FIRST_PIC).append('\n');
-        stringBuilder.append(CLICK_ID).append('\n');
-        stringBuilder.append(TAKE_PHOTO).append('\n');
-        stringBuilder.append(SCREEN_SHOT).append('\n');
-        stringBuilder.append(SUMMARIZE_CHAT).append('\n');
-        stringBuilder.append(PRINT_CHARA).append('\n');
-        stringBuilder.append(PRINT_CHATS).append('\n');
-        stringBuilder.append(CLOSE_AUTO).append('\n');
-        stringBuilder.append(OPEN_AUTO).append('\n');
-        stringBuilder.append(VIDEO_CALL_F).append('\n');
-        stringBuilder.append(VIDEO_CALL_M).append('\n');
-        stringBuilder.append(EVERY_DAY_CHECK).append('\n');
-        stringBuilder.append(SWITCH_CHATS).append('\n');
-        stringBuilder.append(SEND_GALLERY).append('\n');
+        stringBuilder.append(COMMAND_LIST).append(' ').append("查看帮助").append('\n');
+        stringBuilder.append(SWITCH_COMMAND_EN).append(' ').append("切换模式，openai或者其他(只会喵喵叫)").append('\n');
+        stringBuilder.append(SWITCH_COMMAND_CH).append(' ').append("同上").append('\n');
+        stringBuilder.append(SEVER_BATTERY).append(' ').append("宿主手机电量").append('\n');
+        stringBuilder.append(FIRST_PIC).append(' ').append("发送最新得一张图片").append('\n');
+        stringBuilder.append(CLICK_ID).append(' ').append("点击界面元素，开发用").append('\n');
+        stringBuilder.append(TAKE_PHOTO).append(' ').append("拍一张照片并发送").append('\n');
+        stringBuilder.append(SCREEN_SHOT).append(' ').append("截图并发送").append('\n');
+        stringBuilder.append(SUMMARIZE_CHAT).append(' ').append("开始总结对话，一般不用手动调用").append('\n');
+        stringBuilder.append(PRINT_CHARA).append(' ').append("AI得性格描述").append('\n');
+        stringBuilder.append(PRINT_CHATS).append(' ').append("消息上下文").append('\n');
+        stringBuilder.append(CLOSE_AUTO).append(' ').append("开启早中晚定时问侯").append('\n');
+        stringBuilder.append(OPEN_AUTO).append(' ').append("关闭早中晚定时问侯").append('\n');
+        stringBuilder.append(VIDEO_CALL_F).append(' ').append("开启前置视频全群通话").append('\n');
+        stringBuilder.append(VIDEO_CALL_M).append(' ').append("开启后置视频全群通话").append('\n');
+        stringBuilder.append(EVERY_DAY_CHECK).append(' ').append("会打卡，并无什么用处").append('\n');
+        stringBuilder.append(SWITCH_CHATS).append(' ').append("切换聊天群").append('\n');
+        stringBuilder.append(SEND_GALLERY).append(' ').append("切换聊天").append('\n');
         return stringBuilder;
     }
 
     public static final Pattern openaiIgnoreCase = Pattern.compile("(?i)openai");
 
     public Step getNextStep(){
-        if(steps == null || steps.size() == 0){
+        if(steps == null || steps.isEmpty()){
             return null;
         }
         return steps.remove(0);
     }
 
-    public void finish(){
+    public void finishStepAction(){
         steps.clear();
+    }
+
+    public void finishTextReply(){
         setSend(true);
         setWrite(true);
     }

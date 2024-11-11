@@ -4,6 +4,7 @@ import android.util.Log;
 import com.zinhao.chtholly.BotApp;
 import com.zinhao.chtholly.LoggingInterceptor;
 import com.zinhao.chtholly.entity.AIMethodTool;
+import com.zinhao.chtholly.entity.Message;
 import com.zinhao.chtholly.entity.OpenAiMessage;
 import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
@@ -14,9 +15,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.text.SimpleDateFormat;
-import java.util.HashMap;
 import java.util.Locale;
-import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 public class OpenAiSession extends NekoSession{
@@ -78,9 +77,9 @@ public class OpenAiSession extends NekoSession{
     private OpenAiSession(String chatUrl) {
         this.chatUrl = chatUrl;
         okHttpClient = new OkHttpClient.Builder()
-                .callTimeout(10, TimeUnit.SECONDS)
-                .writeTimeout(10, TimeUnit.SECONDS)
-                .readTimeout(10, TimeUnit.SECONDS)
+                .callTimeout(100, TimeUnit.SECONDS)
+                .writeTimeout(100, TimeUnit.SECONDS)
+                .readTimeout(100, TimeUnit.SECONDS)
 //                .sslSocketFactory()
                 .addInterceptor(new LoggingInterceptor())
                 .build();
@@ -97,9 +96,9 @@ public class OpenAiSession extends NekoSession{
             tools.put(TOOL_1.toJson());
             tools.put(TOOL_2.toJson());
 
-            data.put("model",MODEL_GPT_4O);
-            data.put("temperature",0.7);
-            data.put("max_tokens",64);
+            data.put("model",MODEL_GPT_4O_MINI);
+            data.put("temperature",1);
+            data.put("max_completion_tokens", 16384);
             data.put("top_p",1);
             data.put("messages",chats);
             data.put("tools",tools);
@@ -154,7 +153,7 @@ public class OpenAiSession extends NekoSession{
         return len;
     }
 
-    public int autoSummarize(){
+    public int deleteChatContext(){
         int deleteCount = chats.length()/2;
         for (int i = 0; i < deleteCount; i++) {
             chats.remove(1);
@@ -187,7 +186,7 @@ public class OpenAiSession extends NekoSession{
 
     public static OpenAiSession getInstance() {
         if(instance == null){
-            instance = new OpenAiSession("https://api.openai-proxy.org/v1/chat/completions");
+            instance = new OpenAiSession(BotApp.getInstance().getChatUrl());
         }
         return instance;
     }
@@ -195,14 +194,31 @@ public class OpenAiSession extends NekoSession{
     public boolean startAsk(OpenAiMessage message) throws JSONException {
         addChat(ROLE_USER,message.getQuestion().getMessage());
         data.put("messages",chats);
-        return requestAsk(message);
+        return requestChatCompletions(message);
     }
 
     public void setChatUrl(String chatUrl) {
         this.chatUrl = chatUrl;
     }
 
-    public boolean requestAsk(OpenAiMessage message){
+    public String getChatUrl() {
+        return chatUrl;
+    }
+
+    public void requestChatSummarize(){
+        Message question = new Message("system","使用不超过50字总结对话",System.currentTimeMillis());
+        OpenAiMessage summarizeMessage = new OpenAiMessage(BotApp.getInstance().getPackageName(), question, new OpenAiMessage.DelayReplyListener() {
+            @Override
+            public void onReply(OpenAiMessage message) {
+                chats = new JSONArray();
+                chats.put(firstSystemChat);
+                addChat(ROLE_SYSTEM,message.getAnswer().getMessage());
+            }
+        });
+        summarizeMessage.ask();
+    }
+
+    public boolean requestChatCompletions(OpenAiMessage message){
         RequestBody requestBody = RequestBody.Companion.create(data.toString(),MediaType.parse("application/json;charset=utf-8"));
         Log.d(TAG, "requestAsk: "+data);
         Request request = new Request.Builder().post(requestBody).url(chatUrl)

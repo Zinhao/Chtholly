@@ -1,43 +1,32 @@
 package com.zinhao.chtholly;
 
-import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.graphics.Color;
-import android.net.Uri;
-import android.os.Build;
-import android.provider.MediaStore;
+import android.os.Bundle;
 import android.provider.Settings;
 import android.text.Editable;
 import android.text.TextUtils;
 import android.text.TextWatcher;
-import android.util.Log;
 import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.EditText;
-
+import android.widget.ListView;
+import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
-import android.os.Bundle;
-import android.widget.ListView;
-import android.widget.TextView;
-
 import com.zinhao.chtholly.databinding.ActivityMainBinding;
 import com.zinhao.chtholly.entity.Message;
 import com.zinhao.chtholly.session.OpenAiSession;
-
-import java.util.ArrayList;
-import java.util.List;
-
 import per.goweii.layer.core.anim.AnimStyle;
 import per.goweii.layer.core.widget.SwipeLayout;
 import per.goweii.layer.dialog.DialogLayer;
+
+import java.util.List;
 
 
 public class MainActivity extends AppCompatActivity {
@@ -137,7 +126,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void toVoiceSetting(View view) {
-        Intent i = new Intent(view.getContext(), VoiceServerSettingActivity.class);
+        Intent i = new Intent(view.getContext(), ServerSettingActivity.class);
         startActivity(i);
     }
 

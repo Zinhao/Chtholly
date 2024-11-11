@@ -25,4 +25,6 @@
         VTuber指的是Virtual YouTuber，
         泛指在YouTube上， 使用动漫人物形象， 也就是我们常说的虚拟形象， 进行直播或者投稿创作的 YouTuber。
     </string>
+    <string name="tts_api_desc">
+        <![CDATA[文本转语音服务，接口信息请查看代码]]></string>
 </resources>

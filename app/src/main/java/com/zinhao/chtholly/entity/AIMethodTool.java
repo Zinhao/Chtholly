@@ -23,8 +23,9 @@ public class AIMethodTool{
     public static final Map<String, AIMethodTool.Property> REMIND_ARG_MAP = new HashMap<>();
     static {
         EMPTY_ARG_MAP.put("text",new Property("string","可选参数，热情的话语"));
+
         REMIND_ARG_MAP.put("time",new AIMethodTool.Property("string","触发时间，相对于现在的时间，单位是秒"));
-        REMIND_ARG_MAP.put("action",new AIMethodTool.Property("string","提醒的事件"));
+        REMIND_ARG_MAP.put("action",new AIMethodTool.Property("string","需要提醒的事情，口语化表达，通常以“要记得”或者“不要忘了”开头，语气调皮而不失温馨"));
     }
 
     public static final AIMethodTool REMIND_TOOL = new AIMethodTool(
