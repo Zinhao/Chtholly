@@ -185,7 +185,6 @@ public class Command implements AskAble {
 
         if(getQuestion().getMessage().equals(VIDEO_CALL_F)){
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                //todo VIDEO CALL F
                 // :id/gny [:id/icon_viewPager 1->2] :id/bbt
                 steps = new Vector<>();
                 steps.add(new Step(QQUtils.QQ_PACKAGE_NAME,":id/gny", AccessibilityNodeInfo.ACTION_CLICK,false));
@@ -199,7 +198,6 @@ public class Command implements AskAble {
 
         if(getQuestion().getMessage().equals(VIDEO_CALL_M)){
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                //todo VIDEO CALL M
                 steps = new Vector<>();
                 steps.add(new Step(QQUtils.QQ_PACKAGE_NAME,":id/gny", AccessibilityNodeInfo.ACTION_CLICK,false));
                 steps.add(new Step(QQUtils.QQ_PACKAGE_NAME,":id/icon_viewPager", AccessibilityNodeInfo.ACTION_CLICK,false,500,true,new int[]{0,1}));
