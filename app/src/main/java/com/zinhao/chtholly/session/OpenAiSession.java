@@ -207,7 +207,7 @@ public class OpenAiSession extends NekoSession{
 
     public void requestChatSummarize(){
         Message question = new Message("system","使用不超过50字总结对话",System.currentTimeMillis());
-        OpenAiMessage summarizeMessage = new OpenAiMessage(BotApp.getInstance().getPackageName(), question, new OpenAiMessage.DelayReplyListener() {
+        OpenAiMessage summarizeMessage = new OpenAiMessage(BotApp.getInstance().getPackageName(), question, new OpenAiMessage.DelayReplyCallback() {
             @Override
             public void onReply(OpenAiMessage message) {
                 chats = new JSONArray();

@@ -13,10 +13,13 @@ public class QQUtils {
     private static final String TAG = "QQUtils";
     public static final String QQ_PACKAGE_NAME = "com.tencent.mobileqq";
     public static final String MESSAGE_PAGE = "com.tencent.mobileqq.message_list";
+    public static final String CHAT_PAGE = "com.tencent.mobileqq.chat";
+    private static final String DRAWER_PAGE = "com.tencent.mobileqq.chat_list_drawer";
     public static final String UNKNOWN_PAGE = "com.tencent.mobileqq.unknown";
     // 提示信息
     public static final String QQ_TIP_MESSAGE_ID = ":id/graybar";
     public static final String QQ_RL_TITLE_ID = ":id/rlCommenTitle";
+
 
     private static Message emptyMessage;
 
@@ -57,6 +60,8 @@ public class QQUtils {
     }
 
     private static final String[] MESSAGE_PAGE_ID = new String[]{":id/ba1",":id/wjj",":id/wk0",":id/kbi",":id/eqe"};
+    private static final String[] CHAT_PAGE_ID = new String[]{":id/title",":id/input",":id/gnt",":id/fun_btn"};
+    private static final String[] DRAWER_PAGE_ID = new String[]{":id/ny3",":id/nxp",":id/gnt",":id/r1c"};
 
     public static boolean hasAllId(AccessibilityNodeInfo nodeInfo,String... ids){
         for (String s : ids) {
@@ -72,7 +77,12 @@ public class QQUtils {
     public static String checkWhatPage(AccessibilityNodeInfo root){
         if(hasAllId(root,MESSAGE_PAGE_ID)){
             return MESSAGE_PAGE;
+        }else if(hasAllId(root,CHAT_PAGE_ID)){
+            return CHAT_PAGE;
+        }else if(hasAllId(root,DRAWER_PAGE_ID)){
+            return DRAWER_PAGE;
         }
+
         return UNKNOWN_PAGE;
     }
 

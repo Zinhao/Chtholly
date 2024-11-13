@@ -30,7 +30,7 @@ import java.util.*;
 
 import static com.zinhao.chtholly.utils.QQUtils.*;
 
-public class NekoChatService extends AccessibilityService implements OpenAiMessage.DelayReplyListener {
+public class NekoChatService extends AccessibilityService implements OpenAiMessage.DelayReplyCallback {
     private static final String TAG = "NekoChatService";
     public static Class<?> mode = OpenAiSession.class;
     private static final SimpleDateFormat dateTimeFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss", Locale.CHINA);
@@ -111,15 +111,15 @@ public class NekoChatService extends AccessibilityService implements OpenAiMessa
     private AccessibilityNodeInfo etInput;
     private AccessibilityNodeInfo btSend;
     public static final ChatPageViewIds chatPageViewIds = new ChatPageViewIds();
-    private boolean isChatPage(AccessibilityNodeInfo nodeInfo) {
+    private void initChatPage(AccessibilityNodeInfo nodeInfo) {
         if (nodeInfo == null) {
-            Log.e(TAG, "checkPage:nodeInfo null!");
-            return false;
+            Log.e(TAG, "initChatPage:nodeInfo null!");
+            return;
         }
         //todo 目前只是适配qq聊天界面
         if (!QQ_PACKAGE_NAME.equals(nodeInfo.getPackageName().toString())) {
-            Log.e(TAG, "checkPage:only support mobile qq!");
-            return false;
+            Log.e(TAG, "initChatPage:only support mobile qq!");
+            return;
         }
         //输入文本框id
         AccessibilityNodeInfo input = findFirstNodeInfo(nodeInfo, QQUtils.getInputId());
@@ -150,16 +150,15 @@ public class NekoChatService extends AccessibilityService implements OpenAiMessa
         }
 
         if (input == null || send == null) {
-            Log.d(TAG, "checkPage:非聊天界面");
-            return false;
+            Log.d(TAG, "initChatPage:非聊天界面");
+            return;
         }
         etInput = input;
         btSend = send;
         if (title != null) {
             chatTitle = title.getText().toString();
-            Log.d(TAG, "checkPage:聊天界面:" + title.getText());
+            Log.d(TAG, "initChatPage:聊天界面:" + title.getText());
         }
-        return true;
     }
 
 
@@ -195,7 +194,7 @@ public class NekoChatService extends AccessibilityService implements OpenAiMessa
 
     private static StringBuilder builder;
     private static final Rect bound = new Rect();
-    private static final boolean printTree = false;
+    private static final boolean printTree = true;
     public static JSONObject treeAndPrintLayout(AccessibilityNodeInfo nodeInfo, int treeIndex) throws JSONException {
         JSONObject root = new JSONObject();
         root.put("id", nodeInfo.getViewIdResourceName());
@@ -207,7 +206,7 @@ public class NekoChatService extends AccessibilityService implements OpenAiMessa
         if (treeIndex == 0) {
             builder = new StringBuilder();
             if (BuildConfig.DEBUG && printTree) {
-                Log.d(TAG, "treeInfo:=========================================================>" + nodeInfo.getPackageName());
+                Log.d("TREE", "treeInfo:=========================================================>" + nodeInfo.getPackageName());
             }
             builder.append("|__");
         } else {
@@ -228,7 +227,7 @@ public class NekoChatService extends AccessibilityService implements OpenAiMessa
                 builder.append("__");
                 if (BuildConfig.DEBUG && printTree) {
                     child.getBoundsInScreen(bound);
-                    Log.d(TAG, String.format(Locale.US, "treeInfo:%s%s class:%s, text:%s bound:%s click:%s longClick:%s check:%s desc:%s",
+                    Log.d("TREE", String.format(Locale.US, "treeInfo:%s%s class:%s, text:%s bound:%s click:%s longClick:%s check:%s desc:%s",
                             builder, child.getViewIdResourceName(), child.getClassName(), child.getText(),
                             bound, child.isClickable(), child.isLongClickable(), child.isCheckable(), child.describeContents()));
                 }
@@ -255,7 +254,7 @@ public class NekoChatService extends AccessibilityService implements OpenAiMessa
                 }
                 if (BuildConfig.DEBUG && printTree) {
                     child.getBoundsInScreen(bound);
-                    Log.d(TAG, String.format(Locale.US, "treeInfo:%s%s class:%s, text:%s bound:%s click:%s longClick:%s check:%s desc:%s",
+                    Log.d("TREE", String.format(Locale.US, "treeInfo:%s%s class:%s, text:%s bound:%s click:%s longClick:%s check:%s desc:%s",
                             builder, child.getViewIdResourceName(), child.getClassName(), child.getText(),
                             bound, child.isClickable(), child.isLongClickable(), child.isCheckable(), child.describeContents()));
                 }
@@ -281,9 +280,9 @@ public class NekoChatService extends AccessibilityService implements OpenAiMessa
         AccessibilityNodeInfo root = getRootInActiveWindow();
         if (BuildConfig.DEBUG) {
             StringBuilder stringBuilder = getStringBuilder(event);
-            Log.d(TAG, stringBuilder + ": package:" + event.getPackageName() + ", text: " + event.getText() + ", desc: " + event.getContentDescription());
+            Log.d("TREE", stringBuilder + ": package:" + event.getPackageName() + ", text: " + event.getText() + ", desc: " + event.getContentDescription());
         }
-
+        String pageName = UNKNOWN_PAGE;
         if (event.getSource() != null && BuildConfig.DEBUG) {
             try {
                 JSONObject layoutTree = treeAndPrintLayout(event.getSource(), 0);
@@ -301,37 +300,42 @@ public class NekoChatService extends AccessibilityService implements OpenAiMessa
             } catch (JSONException e) {
                 throw new RuntimeException(e);
             }
+            pageName = processNotChatPage(event.getSource());
+            Log.d(TAG, "onAccessibilityEvent: " + pageName);
         }
         if ((event.getContentChangeTypes() & AccessibilityEvent.CONTENT_CHANGE_TYPE_TEXT) == AccessibilityEvent.CONTENT_CHANGE_TYPE_TEXT) {
             if ((event.getContentChangeTypes() & AccessibilityEvent.CONTENT_CHANGE_TYPE_SUBTREE) == AccessibilityEvent.CONTENT_CHANGE_TYPE_SUBTREE) {
                 // chat 文本消息
-                if (isChatPage(root)) {
+                if (QQUtils.CHAT_PAGE.equals(pageName)) {
+                    initChatPage(root);
                     Command qaMessage = findAddNewChatMessage(root);
                     if (qaMessage != null) {
                         qaMessage.ask();
                         waitQAs.add(qaMessage);
                     }
-                }else {
-                    Log.d(TAG, "onAccessibilityEvent: " + processNotChatPage(root));
                 }
             }
         } else {
             if ((event.getContentChangeTypes() & AccessibilityEvent.CONTENT_CHANGE_TYPE_SUBTREE) == AccessibilityEvent.CONTENT_CHANGE_TYPE_SUBTREE) {
                 //todo 目前还没处理这类消息 拍一拍，欢迎消息，撤回消息
-                Log.d(TAG, "onAccessibilityEvent: 拍一拍，欢迎消息，撤回消息");
-                if(!isChatPage(root)){
-                    Log.d(TAG, "onAccessibilityEvent: " + processNotChatPage(root));
-                }
+//                Log.d(TAG, "onAccessibilityEvent: 拍一拍，欢迎消息，撤回消息");
             }
         }
-        if (waitQAs.isEmpty())
+        if (waitQAs.isEmpty()){
+            if(MESSAGE_PAGE.equals(pageName)){
+
+            }
             return;
+        }
         doSomething(root);
         removeSuccessMessage();
     }
 
     private String processNotChatPage(AccessibilityNodeInfo root){
-        if(!root.getPackageName().equals(QQ_PACKAGE_NAME)){
+        if(root==null){
+            return UNKNOWN_PAGE;
+        }
+        if(!QQ_PACKAGE_NAME.contentEquals(root.getPackageName())){
             return "only process qq page";
         }
         return QQUtils.checkWhatPage(root);
@@ -484,7 +488,7 @@ public class NekoChatService extends AccessibilityService implements OpenAiMessa
                         btSend.refresh();
                         boolean result = clickButton(btSend, qa);
                         if(!result){
-                            Log.e(TAG, "doSomething: ", new RuntimeException("点击发送按钮失败"));
+                            Log.e(TAG, "doSomething: id["+btSend.getViewIdResourceName()+']', new RuntimeException("点击发送按钮失败"));
                         }
                     }
                 }

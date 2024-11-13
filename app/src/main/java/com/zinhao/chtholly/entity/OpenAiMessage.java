@@ -1,8 +1,6 @@
 package com.zinhao.chtholly.entity;
 
 import android.util.Log;
-import com.koushikdutta.async.http.AsyncHttpClient;
-import com.koushikdutta.async.http.AsyncHttpResponse;
 import com.zinhao.chtholly.BotApp;
 import com.zinhao.chtholly.CallAble;
 import com.zinhao.chtholly.NekoChatService;
@@ -18,36 +16,32 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.Iterator;
 import java.util.Locale;
 import java.util.Map;
-import java.util.function.BiConsumer;
 import java.util.function.Consumer;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class OpenAiMessage extends NekoMessage implements Callback{
     private static final String TAG = "OpenAiMessage";
-    private DelayReplyListener delayReplyListener;
+    private DelayReplyCallback delayReplyCallback;
 
     private final Pattern remind = Pattern.compile("\\[remind \\d{1,12} .*?]");
 
-    public OpenAiMessage(String packageName, Message question, DelayReplyListener delayReplyListener) {
+    public OpenAiMessage(String packageName, Message question, DelayReplyCallback delayReplyCallback) {
         super(packageName, question);
-        this.delayReplyListener = delayReplyListener;
+        this.delayReplyCallback = delayReplyCallback;
     }
 
     public OpenAiMessage(String packageName, Message question) {
         super(packageName, question);
     }
 
-    public DelayReplyListener getDelayReplyListener() {
-        return delayReplyListener;
+    public DelayReplyCallback getDelayReplyCallback() {
+        return delayReplyCallback;
     }
 
-    public void setDelayReplyListener(DelayReplyListener delayReplyListener) {
-        this.delayReplyListener = delayReplyListener;
+    public void setDelayReplyCallback(DelayReplyCallback delayReplyCallback) {
+        this.delayReplyCallback = delayReplyCallback;
     }
 
     @Override
@@ -82,8 +76,8 @@ public class OpenAiMessage extends NekoMessage implements Callback{
     @Override
     public void onFailure(@NotNull Call call, @NotNull IOException e) {
         getAnswer().setMessage(String.format(Locale.CHINA,"\uD83D\uDE44发生错误了:%s %s",e.getMessage(),e.getCause()));
-        if(delayReplyListener!=null)
-            delayReplyListener.onReply(this);
+        if(delayReplyCallback !=null)
+            delayReplyCallback.onReply(this);
     }
 
     @Override
@@ -125,8 +119,8 @@ public class OpenAiMessage extends NekoMessage implements Callback{
 //                getAnswer().setMessage("我有点累了，需要休息!("+response.code()+")");
 //            }
 //        }
-        if(delayReplyListener!=null)
-            delayReplyListener.onReply(this);
+        if(delayReplyCallback !=null)
+            delayReplyCallback.onReply(this);
         response.close();
     }
 
@@ -179,7 +173,7 @@ public class OpenAiMessage extends NekoMessage implements Callback{
         return Choice.fromJson(choice.toString());
     }
 
-    public interface DelayReplyListener{
+    public interface DelayReplyCallback {
         void onReply(OpenAiMessage message);
     }
 }
