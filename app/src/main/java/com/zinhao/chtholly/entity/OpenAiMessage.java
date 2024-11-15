@@ -131,7 +131,7 @@ public class OpenAiMessage extends NekoMessage implements Callback{
     }
 
     public void doTTSReply(String text){
-        NekoChatService.getInstance().speakMessage(text);
+        NekoChatService.getInstance().playTTSVoiceFromNetWork(text);
     }
 
     /**
