@@ -132,18 +132,29 @@ public class Command implements AskAble {
 
     private boolean sendGallery() {
         // /c /gnt /p2 /lmy
-        int position = 0;
-        try {
-            position = Integer.parseInt(args[0]);
-        } catch (Exception e) {
-            return true;
-        }
         steps = new Vector<>();
         steps.add(new Step(QQUtils.QQ_PACKAGE_NAME,":id/gnt",AccessibilityNodeInfo.ACTION_CLICK,false));
         steps.add(new Step(QQUtils.QQ_PACKAGE_NAME,":id/p2",AccessibilityNodeInfo.ACTION_CLICK,false,500));
-        steps.add(new Step(QQUtils.QQ_PACKAGE_NAME,":id/photo_list_gv",AccessibilityNodeInfo.ACTION_CLICK,false,500,true,new int[]{position,1}));
-        steps.add(new Step(QQUtils.QQ_PACKAGE_NAME,":id/send_btn",AccessibilityNodeInfo.ACTION_CLICK,false,500));
-        getAnswer().setMessage(NekoMessage.OK);
+        if(args == null || args.length == 0){
+            // todo 发送最近照片截图，尚未测试
+            steps.add(new Step(QQUtils.QQ_PACKAGE_NAME,null,AccessibilityService.GLOBAL_ACTION_TAKE_SCREENSHOT,true,500));
+            steps.add(new Step(QQUtils.QQ_PACKAGE_NAME,null,AccessibilityService.GLOBAL_ACTION_BACK,true,500));
+            steps.add(new Step(QQUtils.QQ_PACKAGE_NAME, QQUtils.getPicButtonId(), AccessibilityNodeInfo.ACTION_CLICK,false));
+            steps.add(new Step(QQUtils.QQ_PACKAGE_NAME, NekoChatService.chatPageViewIds.getFirstPicCheckBoxViewId(), AccessibilityNodeInfo.ACTION_CLICK,false,300));
+            steps.add(new Step(QQUtils.QQ_PACKAGE_NAME, NekoChatService.chatPageViewIds.getSendBtnViewId(), AccessibilityNodeInfo.ACTION_CLICK,false,300));
+            steps.add(new Step(QQUtils.QQ_PACKAGE_NAME, QQUtils.getPicButtonId(), AccessibilityNodeInfo.ACTION_CLICK,false,300));
+            getAnswer().setMessage("需要发送具体照片，请在按一下格式发送,如发送第一张照片("+SEND_GALLERY+" 0),");
+        }else{
+            int position = 0;
+            try {
+                position = Integer.parseInt(args[0]);
+            } catch (Exception e) {
+                return true;
+            }
+            steps.add(new Step(QQUtils.QQ_PACKAGE_NAME,":id/photo_list_gv",AccessibilityNodeInfo.ACTION_CLICK,false,500,true,new int[]{position,1}));
+            steps.add(new Step(QQUtils.QQ_PACKAGE_NAME,":id/send_btn",AccessibilityNodeInfo.ACTION_CLICK,false,500));
+            getAnswer().setMessage(NekoMessage.OK);
+        }
         return true;
     }
 
@@ -177,7 +188,7 @@ public class Command implements AskAble {
                 steps.add(new Step(QQUtils.QQ_PACKAGE_NAME, cpvi.getFirstPicCheckBoxViewId(), AccessibilityNodeInfo.ACTION_CLICK,false,500));
                 steps.add(new Step(QQUtils.QQ_PACKAGE_NAME, cpvi.getSendBtnViewId(), AccessibilityNodeInfo.ACTION_CLICK,false,500));
                 steps.add(new Step(QQUtils.QQ_PACKAGE_NAME, QQUtils.getPicButtonId(), AccessibilityNodeInfo.ACTION_CLICK,false,500));
-                getAnswer().setMessage("看好需要切换的聊天的位置，使用“/切换聊天 0”切换至第一个聊天，数字表示聊天的索引。");
+                getAnswer().setMessage("看好需要切换的聊天的位置，使用("+SWITCH_CHATS+" 0)切换至第一个聊天，数字表示聊天的索引。");
             }else {
                 getAnswer().setMessage(NekoMessage.HARD);
                 return true;
@@ -386,7 +397,7 @@ public class Command implements AskAble {
         stringBuilder.append(VIDEO_CALL).append(' ').append("视频全群通话").append('\n');
         stringBuilder.append(EVERY_DAY_CHECK).append(' ').append("会打卡，并无什么用处").append('\n');
         stringBuilder.append(SWITCH_CHATS).append(' ').append("切换聊天群").append('\n');
-        stringBuilder.append(SEND_GALLERY).append(' ').append("切换聊天").append('\n');
+        stringBuilder.append(SEND_GALLERY).append(' ').append("发送相册截图").append('\n');
         Method[] methods = Command.class.getMethods();
         for (Method method : methods) {
             // 检查方法的修饰符是否为私有
