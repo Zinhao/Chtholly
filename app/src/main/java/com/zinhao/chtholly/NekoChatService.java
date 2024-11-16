@@ -16,19 +16,16 @@ import androidx.media3.common.Player;
 import androidx.media3.exoplayer.ExoPlayer;
 import com.zinhao.chtholly.entity.*;
 import com.zinhao.chtholly.session.OpenAiSession;
-import com.zinhao.chtholly.utils.ChatPageViewIds;
-import com.zinhao.chtholly.utils.LayoutTreeUtils;
-import com.zinhao.chtholly.utils.LocalFileCache;
-import com.zinhao.chtholly.utils.QQUtils;
+import com.zinhao.chtholly.utils.*;
 import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.text.SimpleDateFormat;
 import java.util.*;
 
-import static com.zinhao.chtholly.utils.QQUtils.*;
+import static com.zinhao.chtholly.utils.QQChatHandler.*;
 
-public class NekoChatService extends AccessibilityService implements OpenAiMessage.DelayReplyCallback {
+public class NekoChatService extends AccessibilityService implements OpenAiAskAble.DelayReplyCallback, MessageCallback {
     private static final String TAG = "NekoChatService";
     public static Class<?> mode = OpenAiSession.class;
     private static final SimpleDateFormat dateTimeFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss", Locale.CHINA);
@@ -50,11 +47,12 @@ public class NekoChatService extends AccessibilityService implements OpenAiMessa
     private boolean todayBedTime = false;
     private Command autoCommand;
 
-    /***
-     * 机器人信息和聊天信息
-     */
-    private String chatTitle = "";
-    private int chatsIndex = 0;
+    public ChatPageViewIds currentChatPageIds(String packageName){
+        if(qqChatHandler.getPackageName().equals(packageName)){
+            return qqChatHandler.getChatPageViewIds();
+        }
+        return null;
+    }
 
     public static NekoChatService getInstance() {
         return instance;
@@ -64,7 +62,7 @@ public class NekoChatService extends AccessibilityService implements OpenAiMessa
 
     private final List<Command> waitQAs = new Vector<>();
     private Calendar calendar;
-
+    private QQChatHandler qqChatHandler;
     @Override
     public void onCreate() {
         super.onCreate();
@@ -73,6 +71,7 @@ public class NekoChatService extends AccessibilityService implements OpenAiMessa
         calendar = Calendar.getInstance();
         dayCount = calendar.get(Calendar.DAY_OF_MONTH);
         mediaPlayer = new ExoPlayer.Builder(this).build();
+        qqChatHandler = new QQChatHandler(this);
         speakStartVoice();
     }
 
@@ -84,55 +83,52 @@ public class NekoChatService extends AccessibilityService implements OpenAiMessa
             return;
 
         autoMission(event.getPackageName().toString());
-
         AccessibilityNodeInfo root = getRootInActiveWindow();
         if (BuildConfig.DEBUG) {
-            StringBuilder stringBuilder = LayoutTreeUtils.getEventStringBuilder(event);
-            Log.d(TAG, stringBuilder + ": package:" + event.getPackageName() + ", text: " + event.getText() + ", desc: " + event.getContentDescription());
-        }
-        String pageName = UNKNOWN_PAGE;
-        if (event.getSource() != null && BuildConfig.DEBUG) {
-            try {
-                JSONObject layoutTree = LayoutTreeUtils.treeAndPrintLayout(event.getSource(), 0);
-                //com.tencent.mobileqq:id/listView1
-                String idString = event.getSource().getViewIdResourceName();
-                String fileName;
-                if (idString == null) {
-                    fileName = "_null";
-                } else {
-                    fileName = event.getSource().getViewIdResourceName().replace(event.getPackageName() + ":id/", "_")
-                            .replace("/", "_")
-                            .replace(":", "_");
-                }
-                LocalFileCache.getInstance().saveJSONObject(getApplicationContext(), layoutTree, "tree" + fileName + ".json");
-            } catch (JSONException e) {
-                throw new RuntimeException(e);
+            LayoutTreeUtils.getEventStringBuilder(event);
+            //EventType: TYPE_WINDOW_CONTENT_CHANGED; EventTime: 338363649;
+            // PackageName: com.android.systemui; MovementGranularity: 0; Action: 0;
+            // ContentChangeTypes: [CONTENT_CHANGE_TYPE_CONTENT_DESCRIPTION];
+            // WindowChangeTypes: [] [ ClassName: android.widget.ImageView; Text: []; ContentDescription: QQ通知：二次元入口 (2条新消息);
+            // ItemCount: -1; CurrentItemIndex: -1; Ena
+            // : package:com.tencent.mobileqq, text: [[有人@我]景皓(二次元入口):@丛雨 最近有点低迷，我想你说点鼓励的话语], desc: null
+            if(!event.getText().isEmpty() || event.getContentDescription()!=null){
+                Log.i(TAG, "package:" + event.getPackageName() + ", class:"+event.getClassName()+", text: " + event.getText() + ", desc: " + event.getContentDescription());
             }
-            pageName = processNotChatPage(event.getSource());
-            Log.d(TAG, "onAccessibilityEvent: " + pageName);
         }
-        if ((event.getContentChangeTypes() & AccessibilityEvent.CONTENT_CHANGE_TYPE_TEXT) == AccessibilityEvent.CONTENT_CHANGE_TYPE_TEXT) {
-            if ((event.getContentChangeTypes() & AccessibilityEvent.CONTENT_CHANGE_TYPE_SUBTREE) == AccessibilityEvent.CONTENT_CHANGE_TYPE_SUBTREE) {
-                // chat 文本消息
-                if (QQUtils.CHAT_PAGE.equals(pageName)) {
-                    initChatPage(root);
-                    Command qaMessage = filterNewChatMessage(root);
-                    if (qaMessage != null) {
-                        qaMessage.ask();
-                        waitQAs.add(qaMessage);
+        String pageName = processNotChatPage(event.getSource());
+        Log.d(TAG, "onAccessibilityEvent: " + pageName);
+
+        if (event.getSource() != null) {
+            if(BuildConfig.DEBUG){
+                try {
+                    if("com.android.systemui:id/clock".equals(event.getSource().getViewIdResourceName())){
+//                        Log.d(TAG, "onAccessibilityEvent: " + "s");
+                    }else{
+                        JSONObject layoutTree = LayoutTreeUtils.treeAndPrintLayout(root, 0);
+                        //com.tencent.mobileqq:id/listView1
+                        String idString = event.getSource().getViewIdResourceName();
+                        String fileName;
+                        if (idString == null) {
+                            fileName = "_null";
+                        } else {
+                            fileName = event.getSource().getViewIdResourceName().replace(event.getPackageName() + ":id/", "_")
+                                    .replace("/", "_")
+                                    .replace(":", "_");
+                        }
+                        LocalFileCache.getInstance().saveJSONObject(getApplicationContext(), layoutTree, "tree" + fileName + ".json");
                     }
+
+                } catch (JSONException e) {
+                    throw new RuntimeException(e);
                 }
             }
-        } else {
-            if ((event.getContentChangeTypes() & AccessibilityEvent.CONTENT_CHANGE_TYPE_SUBTREE) == AccessibilityEvent.CONTENT_CHANGE_TYPE_SUBTREE) {
-                //todo 目前还没处理这类消息 拍一拍，欢迎消息，撤回消息
-//                Log.d(TAG, "onAccessibilityEvent: 拍一拍，欢迎消息，撤回消息");
-            }
+
+        }
+        if(QQ_PACKAGE_NAME.equals(event.getPackageName().toString())){
+            qqChatHandler.handle(event);
         }
         if (waitQAs.isEmpty()) {
-            if (MESSAGE_PAGE.equals(pageName)) {
-                //
-            }
             return;
         }
         handleQAs(root);
@@ -141,12 +137,9 @@ public class NekoChatService extends AccessibilityService implements OpenAiMessa
 
     private String processNotChatPage(AccessibilityNodeInfo root) {
         if (root == null) {
-            return UNKNOWN_PAGE;
+            return NULL_ROOT;
         }
-        if (!QQ_PACKAGE_NAME.contentEquals(root.getPackageName())) {
-            return "only process qq page";
-        }
-        return QQUtils.checkWhatPage(root);
+        return QQChatHandler.checkWhatPage(root);
     }
 
     private void removeSuccessMessage() {
@@ -160,10 +153,10 @@ public class NekoChatService extends AccessibilityService implements OpenAiMessa
         remindMessages.removeIf(remindMessage -> {
             if (remindMessage.getSendTime() < System.currentTimeMillis()) {
                 Message message = new Message(remindMessage.getMaster(), "/SYSTEM MESSAGE", System.currentTimeMillis());
-                StaticMessage staticMessage = new StaticMessage(getPackageName(), message, remindMessage.message);
+                StaticAskAble staticAskAble = new StaticAskAble(getPackageName(), message, remindMessage.message);
                 playTTSVoiceFromNetWork(remindMessage.message);
-                staticMessage.ask();
-                waitQAs.add(staticMessage);
+                staticAskAble.ask();
+                waitQAs.add(staticAskAble);
                 return true;
             }
             return false;
@@ -185,14 +178,14 @@ public class NekoChatService extends AccessibilityService implements OpenAiMessa
         }
         if (nowHourCount > 8 && nowHourCount <= 10 && !todayMorning) {
             long delayMillis = randomTime(3, 7);
-            autoCommand = new NekoMessage(packageName, new Message("system", "早上好", System.currentTimeMillis()));
+            autoCommand = new NekoAskAble(packageName, new Message("system", "早上好", System.currentTimeMillis()));
             Log.d(TAG, "autoMission:todayMorning will answer at " + dateTimeFormat.format(System.currentTimeMillis() + delayMillis));
             mHandler.postDelayed(delayCheck, delayMillis);
             todayMorning = true;
         }
         if (nowHourCount > 11 && nowHourCount <= 13 && !todayNoon) {
             long delayMillis = randomTime(4, 15);
-            autoCommand = new NekoMessage(packageName, new Message("system", "中午好", System.currentTimeMillis()));
+            autoCommand = new NekoAskAble(packageName, new Message("system", "中午好", System.currentTimeMillis()));
             Log.d(TAG, "autoMission:todayNoon will answer at " + dateTimeFormat.format(System.currentTimeMillis() + delayMillis));
             mHandler.postDelayed(delayCheck, delayMillis);
             todayNoon = true;
@@ -209,7 +202,7 @@ public class NekoChatService extends AccessibilityService implements OpenAiMessa
         }
         if (nowHourCount > 13 && nowHourCount <= 19 && !todayAfter) {
             long delayMillis = randomTime(20, 30);
-            autoCommand = new NekoMessage(packageName, new Message("system", "下午好", System.currentTimeMillis()));
+            autoCommand = new NekoAskAble(packageName, new Message("system", "下午好", System.currentTimeMillis()));
             Log.d(TAG, "autoMission:todayAfter will answer at " + dateTimeFormat.format(System.currentTimeMillis() + delayMillis));
             mHandler.postDelayed(delayCheck, delayMillis);
             todayAfter = true;
@@ -217,14 +210,14 @@ public class NekoChatService extends AccessibilityService implements OpenAiMessa
         if (nowHourCount > 19 && nowHourCount <= 22 && !todayEvening) {
             long delayMillis = randomTime(5, 15);
             Log.d(TAG, "autoMission:todayEvening will answer at " + dateTimeFormat.format(System.currentTimeMillis() + delayMillis));
-            autoCommand = new NekoMessage(packageName, new Message("system", "晚上好", System.currentTimeMillis()));
+            autoCommand = new NekoAskAble(packageName, new Message("system", "晚上好", System.currentTimeMillis()));
             mHandler.postDelayed(delayCheck, delayMillis);
             todayEvening = true;
         }
         if (nowHourCount > 22 && !todayBedTime) {
             long delayMillis = randomTime(5, 10);
             Log.d(TAG, "autoMission:todayBedTime will answer at " + dateTimeFormat.format(System.currentTimeMillis() + delayMillis));
-            autoCommand = new NekoMessage(packageName, new Message("system", "晚安", System.currentTimeMillis()));
+            autoCommand = new NekoAskAble(packageName, new Message("system", "晚安", System.currentTimeMillis()));
             mHandler.postDelayed(delayCheck, delayMillis);
             todayBedTime = true;
         }
@@ -249,15 +242,14 @@ public class NekoChatService extends AccessibilityService implements OpenAiMessa
                     return;
                 }
             } else {
-                if (etInput == null)
-                    etInput = findInputNodeInfo(source);
-                if (btSend == null)
-                    btSend = findSendNodeInfo(source);
+                AccessibilityNodeInfo etInput,btSend;
+                etInput = qqChatHandler.getEtInput();
+                btSend = qqChatHandler.getBtSend();
                 if (etInput != null && btSend != null) {
                     etInput.refresh();
-                    if (writeMessage(etInput, qa)) {
+                    if (qqChatHandler.writeMessage(etInput, qa)) {
                         btSend.refresh();
-                        boolean result = clickButton(btSend, qa);
+                        boolean result = BaseChatHandler.clickButton(btSend, qa);
                         if (!result) {
                             Log.e(TAG, "doSomething: id[" + btSend.getViewIdResourceName() + ']', new RuntimeException("点击发送按钮失败"));
                         }
@@ -395,87 +387,7 @@ public class NekoChatService extends AccessibilityService implements OpenAiMessa
         }, mHandler);
     }
 
-    private boolean writeMessage(AccessibilityNodeInfo inputEditText, Command qaMessage) {
-        if (!qaMessage.isWrite()) {
-            Bundle arg = new Bundle();
-            String atMessage = String.format("@%s %s", qaMessage.getQuestion().getSpeaker(), qaMessage.getAnswer().getMessage());
-            arg.putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, atMessage);
-            boolean result = inputEditText.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, arg);
-            qaMessage.setWrite(result);
-        }
-        return qaMessage.isWrite();
-    }
 
-    private boolean clickButton(AccessibilityNodeInfo sendButton, Command commandMessage) {
-        if (!commandMessage.isSend() && commandMessage.isWrite()) {
-            boolean result = sendButton.performAction(AccessibilityNodeInfo.ACTION_CLICK);
-            commandMessage.setSend(result);
-        }
-        return commandMessage.isSend();
-    }
-
-    private @Nullable AccessibilityNodeInfo findInputNodeInfo(AccessibilityNodeInfo source) {
-        return findFirstNodeInfo(source, chatPageViewIds.getInputViewId());
-    }
-
-    private @Nullable AccessibilityNodeInfo findSendNodeInfo(AccessibilityNodeInfo source) {
-        return findFirstNodeInfo(source, chatPageViewIds.getSendBtnViewId());
-    }
-
-    private static @Nullable AccessibilityNodeInfo findFirstNodeInfo(AccessibilityNodeInfo source, String viewId) {
-        List<AccessibilityNodeInfo> targets = source.findAccessibilityNodeInfosByViewId(viewId);
-        AccessibilityNodeInfo inputNode = null;
-        if (!targets.isEmpty()) {
-            inputNode = targets.get(0);
-        }
-        return inputNode;
-    }
-
-    private Command filterNewChatMessage(AccessibilityNodeInfo nodeInfo) {
-        String botName = BotApp.getInstance().getBotName();
-        Message lastMessage;
-        // todo 只有聊天标题正确或许还不行，也许得未来得加验证
-        boolean isAdmin = BotApp.getInstance().getAdminName().equals(chatTitle);
-        if (isAdmin) {
-            lastMessage = id2FindAdminLastMessage(nodeInfo);
-        } else {
-            lastMessage = id2FindGroupLastMessage(nodeInfo);
-        }
-        if (lastMessage.speaker == null || lastMessage.message == null) {
-            return null;
-        }
-        if (isAdmin) {
-            // 此处不要去验证$message.speaker,因为id2FindAdminLastMessage()中，speaker都填的是$AdminName
-            if (isAtName(lastMessage, BotApp.getInstance().getAdminName())) {
-                Log.i(TAG, "findAddNewChatMessage:last is admin message!");
-                return null;
-            }
-        } else {
-            if (!isAtName(lastMessage, botName)) {
-                return null;
-            }
-            if (botName.equals(lastMessage.speaker)) {
-                return null;
-            }
-        }
-
-        Log.i(TAG, "findAddNewChatMessage: " + lastMessage.getMessage());
-        lastMessage.message = lastMessage.message.replace("@" + botName, "").trim();
-        if (!waitQAs.isEmpty()) {
-            Command last = waitQAs.get(waitQAs.size() - 1);
-            if (last.getQuestion().equals(lastMessage)) {
-                Log.i(TAG, "findAddNewChatMessage: last message is same!");
-                return null;
-            }
-        }
-        Log.i(TAG, String.format(Locale.US, "findAddNewChatMessage: %s:%s", lastMessage.speaker, lastMessage.message));
-        BotApp.getInstance().insert(lastMessage);
-        if (mode == OpenAiSession.class) {
-            return new OpenAiMessage(nodeInfo.getPackageName().toString(), lastMessage, this);
-        } else {
-            return new NekoMessage(nodeInfo.getPackageName().toString(), lastMessage);
-        }
-    }
 
     private static boolean isAtName(Message message, String name) {
         if (message == null)
@@ -501,7 +413,7 @@ public class NekoChatService extends AccessibilityService implements OpenAiMessa
     }
 
     @Override
-    public void onReply(OpenAiMessage message) {
+    public void onReply(OpenAiAskAble message) {
         mHandler.post(() -> {
             handleQAs(getRootInActiveWindow());
             removeSuccessMessage();
@@ -509,11 +421,11 @@ public class NekoChatService extends AccessibilityService implements OpenAiMessa
     }
 
     public void setChatsIndex(int chatsIndex) {
-        this.chatsIndex = chatsIndex;
+        qqChatHandler.setChatsIndex(chatsIndex);
     }
 
     public int getChatsIndex() {
-        return chatsIndex;
+        return qqChatHandler.getChatsIndex();
     }
 
     private final Runnable delayCheck = new Runnable() {
@@ -527,59 +439,9 @@ public class NekoChatService extends AccessibilityService implements OpenAiMessa
         }
     };
 
-    private AccessibilityNodeInfo etInput;
-    private AccessibilityNodeInfo btSend;
-    public static final ChatPageViewIds chatPageViewIds = new ChatPageViewIds();
 
-    private void initChatPage(AccessibilityNodeInfo nodeInfo) {
-        if (nodeInfo == null) {
-            Log.e(TAG, "initChatPage:nodeInfo null!");
-            return;
-        }
-        //todo 目前只是适配qq聊天界面
-        if (!QQ_PACKAGE_NAME.equals(nodeInfo.getPackageName().toString())) {
-            Log.e(TAG, "initChatPage:only support mobile qq!");
-            return;
-        }
-        //输入文本框id
-        AccessibilityNodeInfo input = findFirstNodeInfo(nodeInfo, QQUtils.getInputId());
-        chatPageViewIds.setInputViewId(QQUtils.getInputId());
 
-        // 发送按钮id
-        AccessibilityNodeInfo send = null;
-        for (String viewId : SEND_BTN_IDS) {
-            send = findFirstNodeInfo(nodeInfo, nodeInfo.getPackageName() + viewId);
-            if (send != null) {
-                chatPageViewIds.setSendBtnViewId(viewId);
-                break;
-            }
-        }
 
-        // 聊天标题id
-        AccessibilityNodeInfo title = findFirstNodeInfo(nodeInfo, QQUtils.getChatTitleId());
-        chatPageViewIds.setTitleViewId(QQUtils.getChatTitleId());
-
-        // 确认 选择第一张图片的选择框id
-        AccessibilityNodeInfo firstPicCheckBox;
-        for (String viewId : PIC_CHECKBOX_IDS) {
-            firstPicCheckBox = findFirstNodeInfo(nodeInfo, nodeInfo.getPackageName() + viewId);
-            if (firstPicCheckBox != null) {
-                chatPageViewIds.setFirstPicCheckBoxViewId(viewId);
-                break;
-            }
-        }
-
-        if (input == null || send == null) {
-            Log.d(TAG, "initChatPage:非聊天界面");
-            return;
-        }
-        etInput = input;
-        btSend = send;
-        if (title != null) {
-            chatTitle = title.getText().toString();
-            Log.d(TAG, "initChatPage:聊天界面:" + title.getText());
-        }
-    }
 
     @Override
     protected void onServiceConnected() {
@@ -620,5 +482,17 @@ public class NekoChatService extends AccessibilityService implements OpenAiMessa
         Log.e(TAG, "onDestroy: ");
         super.onDestroy();
         speakLeaveVoice();
+    }
+
+    @Override
+    public void onFind(Message message) {
+        Command command;
+        if (mode == OpenAiSession.class) {
+            command =  new OpenAiAskAble(getRootInActiveWindow().getPackageName().toString(), message, this);
+        } else {
+            command = new NekoAskAble(getRootInActiveWindow().getPackageName().toString(), message);
+        }
+        command.ask();
+        waitQAs.add(command);
     }
 }

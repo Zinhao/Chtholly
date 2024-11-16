@@ -1,13 +1,9 @@
 package com.zinhao.chtholly.entity;
 
-import com.zinhao.chtholly.session.OpenAiSession;
-
-import java.util.Locale;
-
-public class StaticMessage extends Command{
+public class StaticAskAble extends Command{
     String staticAnswer;
 
-    public StaticMessage(String packageName, Message question, String staticAnswer) {
+    public StaticAskAble(String packageName, Message question, String staticAnswer) {
         super(packageName, question);
         this.staticAnswer = staticAnswer;
     }

@@ -21,18 +21,18 @@ import java.util.Map;
 import java.util.function.Consumer;
 import java.util.regex.Pattern;
 
-public class OpenAiMessage extends NekoMessage implements Callback{
+public class OpenAiAskAble extends NekoAskAble implements Callback{
     private static final String TAG = "OpenAiMessage";
     private DelayReplyCallback delayReplyCallback;
 
     private final Pattern remind = Pattern.compile("\\[remind \\d{1,12} .*?]");
 
-    public OpenAiMessage(String packageName, Message question, DelayReplyCallback delayReplyCallback) {
+    public OpenAiAskAble(String packageName, Message question, DelayReplyCallback delayReplyCallback) {
         super(packageName, question);
         this.delayReplyCallback = delayReplyCallback;
     }
 
-    public OpenAiMessage(String packageName, Message question) {
+    public OpenAiAskAble(String packageName, Message question) {
         super(packageName, question);
     }
 
@@ -156,7 +156,7 @@ public class OpenAiMessage extends NekoMessage implements Callback{
                     CallAble callAble = aiMethodTool.getCallAble();
                     if(callAble!=null){
                         Map<String, Object> argsMap = toolCall.getArgsMap();
-                        argsMap.put(OpenAiMessage.this.getClass().getName(),OpenAiMessage.this);
+                        argsMap.put(OpenAiAskAble.this.getClass().getName(), OpenAiAskAble.this);
                         callAble.call(argsMap);
                     }
                 } catch (JSONException e) {
@@ -174,6 +174,6 @@ public class OpenAiMessage extends NekoMessage implements Callback{
     }
 
     public interface DelayReplyCallback {
-        void onReply(OpenAiMessage message);
+        void onReply(OpenAiAskAble message);
     }
 }

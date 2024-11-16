@@ -4,8 +4,7 @@ import com.koushikdutta.async.http.AsyncHttpClient;
 import com.koushikdutta.async.http.AsyncHttpResponse;
 import com.zinhao.chtholly.BotApp;
 import com.zinhao.chtholly.entity.Command;
-import com.zinhao.chtholly.entity.NekoMessage;
-import com.zinhao.chtholly.entity.OpenAiMessage;
+import com.zinhao.chtholly.entity.NekoAskAble;
 import com.zinhao.chtholly.utils.LocalFileCache;
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -13,7 +12,7 @@ import org.json.JSONObject;
 
 import java.io.File;
 
-import static com.zinhao.chtholly.entity.NekoMessage.*;
+import static com.zinhao.chtholly.entity.NekoAskAble.*;
 
 public class NekoSession {
     private JSONObject keywordAnswerMap;
@@ -104,70 +103,70 @@ public class NekoSession {
         return keywordAnswerMap.toString();
     }
     
-    public boolean startAsk(NekoMessage nekoMessage){
-        if(nekoMessage.getQuestion().message.startsWith(LOOK_NODE)){
-            nekoMessage.getAnswer().setMessage(instance.show());
+    public boolean startAsk(NekoAskAble nekoAskAble){
+        if(nekoAskAble.getQuestion().message.startsWith(LOOK_NODE)){
+            nekoAskAble.getAnswer().setMessage(instance.show());
             return true;
         }
-        if(nekoMessage.getQuestion().message.startsWith(STUDY)){
-            if(nekoMessage.getQuestion().message.indexOf(STUDY) != nekoMessage.getQuestion().message.lastIndexOf(STUDY)){
-                nekoMessage.getAnswer().setMessage(HARD + randomFaceEmo());
+        if(nekoAskAble.getQuestion().message.startsWith(STUDY)){
+            if(nekoAskAble.getQuestion().message.indexOf(STUDY) != nekoAskAble.getQuestion().message.lastIndexOf(STUDY)){
+                nekoAskAble.getAnswer().setMessage(HARD + randomFaceEmo());
                 return true;
             }
-            if(nekoMessage.getQuestion().message.indexOf(SAY) != nekoMessage.getQuestion().message.lastIndexOf(SAY)){
-                nekoMessage.getAnswer().setMessage(HARD + randomFaceEmo());
+            if(nekoAskAble.getQuestion().message.indexOf(SAY) != nekoAskAble.getQuestion().message.lastIndexOf(SAY)){
+                nekoAskAble.getAnswer().setMessage(HARD + randomFaceEmo());
                 return true;
             }
-            if(nekoMessage.getQuestion().message.contains(SAY)){
+            if(nekoAskAble.getQuestion().message.contains(SAY)){
                 //记录到数据库
-                String replaceStr = nekoMessage.getQuestion().message.replace(STUDY, File.separator).replace(SAY, File.separator);
+                String replaceStr = nekoAskAble.getQuestion().message.replace(STUDY, File.separator).replace(SAY, File.separator);
                 if(replaceStr.contains(File.separator)){
                     String[] sp = replaceStr.split(File.separator);
                     if(sp.length == 3){
                         try {
                            instance.study(sp[1].trim(),sp[2].trim());
-                            nekoMessage.getAnswer().setMessage(OK + randomFaceEmo());
+                            nekoAskAble.getAnswer().setMessage(OK + randomFaceEmo());
                             return true;
                         } catch (JSONException e) {
 
                         }
                     }
                 }
-                nekoMessage.getAnswer().setMessage(HARD+ randomFaceEmo());
+                nekoAskAble.getAnswer().setMessage(HARD+ randomFaceEmo());
             }else{
-                nekoMessage.getAnswer().setMessage(THINK+ randomFaceEmo());
+                nekoAskAble.getAnswer().setMessage(THINK+ randomFaceEmo());
             }
             return true;
         }
 
-        if(nekoMessage.getQuestion().message.contains("忘记")){
+        if(nekoAskAble.getQuestion().message.contains("忘记")){
             //写入json
 //            BotApp.getInstance().getNekoSession().write();\ --D./
-            nekoMessage.getAnswer().setMessage(NOT_FORGET + randomFaceEmo());
+            nekoAskAble.getAnswer().setMessage(NOT_FORGET + randomFaceEmo());
             return true;
         }
 
         // json
         try {
-            String an = instance.find(nekoMessage.getQuestion().message);
+            String an = instance.find(nekoAskAble.getQuestion().message);
             if(an!=null){
-                nekoMessage.getAnswer().setMessage(an);
+                nekoAskAble.getAnswer().setMessage(an);
                 return true;
             }
         } catch (JSONException e) {
 
         }
 
-        if(nekoMessage.getQuestion().message.contains("早上好") || nekoMessage.getQuestion().message.contains("早安")){
-            nekoMessage.getAnswer().setMessage(ASK_NORMAL_TEMP.replace("$","早")+ randomFaceEmo());
-        }else if(nekoMessage.getQuestion().message.contains("中午好") || nekoMessage.getQuestion().message.contains("午安")){
-            nekoMessage.getAnswer().setMessage(ASK_NORMAL_TEMP.replace("$","午")+ randomFaceEmo());
-        }else if(nekoMessage.getQuestion().message.contains("晚安")){
-            nekoMessage.getAnswer().setMessage(ASK_NORMAL_TEMP.replace("$","晚") + randomFaceEmo());
-        }else if(nekoMessage.getQuestion().message.contains("晚上好")){
-            nekoMessage.getAnswer().setMessage(nekoMessage.getQuestion().message + randomFaceEmo());
+        if(nekoAskAble.getQuestion().message.contains("早上好") || nekoAskAble.getQuestion().message.contains("早安")){
+            nekoAskAble.getAnswer().setMessage(ASK_NORMAL_TEMP.replace("$","早")+ randomFaceEmo());
+        }else if(nekoAskAble.getQuestion().message.contains("中午好") || nekoAskAble.getQuestion().message.contains("午安")){
+            nekoAskAble.getAnswer().setMessage(ASK_NORMAL_TEMP.replace("$","午")+ randomFaceEmo());
+        }else if(nekoAskAble.getQuestion().message.contains("晚安")){
+            nekoAskAble.getAnswer().setMessage(ASK_NORMAL_TEMP.replace("$","晚") + randomFaceEmo());
+        }else if(nekoAskAble.getQuestion().message.contains("晚上好")){
+            nekoAskAble.getAnswer().setMessage(nekoAskAble.getQuestion().message + randomFaceEmo());
         }else {
-            miaomiaojiao(nekoMessage);
+            miaomiaojiao(nekoAskAble);
         }
         return true;
     }

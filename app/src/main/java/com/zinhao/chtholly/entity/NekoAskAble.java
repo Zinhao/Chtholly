@@ -1,10 +1,8 @@
 package com.zinhao.chtholly.entity;
 
-import com.zinhao.chtholly.NekoChatService;
 import com.zinhao.chtholly.session.NekoSession;
-import com.zinhao.chtholly.session.OpenAiSession;
 
-public class NekoMessage extends Command {
+public class NekoAskAble extends Command {
     public static final String LOOK_NODE = "/看看你的本子";
     public static final String STUDY = "/主人说";
     public static final String SAY = "/要回答";
@@ -21,7 +19,7 @@ public class NekoMessage extends Command {
     public static String[] textNoWords = new String[]{" ୧⍢⃝୨","←_←","┐(´-｀)┌","(*￣rǒ￣)"};
     public static String[] textSad = new String[]{"˃ ˄ ˂̥̥ "};
 
-    public NekoMessage(String packageName, Message question) {
+    public NekoAskAble(String packageName, Message question) {
         super(packageName, question);
     }
 

@@ -1,5 +1,5 @@
 package com.zinhao.chtholly.entity;
 
-interface AskAble {
+public interface AskAble {
     boolean ask();
 }

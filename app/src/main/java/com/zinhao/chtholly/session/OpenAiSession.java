@@ -5,7 +5,7 @@ import com.zinhao.chtholly.BotApp;
 import com.zinhao.chtholly.LoggingInterceptor;
 import com.zinhao.chtholly.entity.AIMethodTool;
 import com.zinhao.chtholly.entity.Message;
-import com.zinhao.chtholly.entity.OpenAiMessage;
+import com.zinhao.chtholly.entity.OpenAiAskAble;
 import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
@@ -191,7 +191,7 @@ public class OpenAiSession extends NekoSession{
         return instance;
     }
 
-    public boolean startAsk(OpenAiMessage message) throws JSONException {
+    public boolean startAsk(OpenAiAskAble message) throws JSONException {
         addChat(ROLE_USER,message.getQuestion().getMessage());
         data.put("messages",chats);
         return requestChatCompletions(message);
@@ -207,9 +207,9 @@ public class OpenAiSession extends NekoSession{
 
     public void requestChatSummarize(){
         Message question = new Message("system","使用不超过50字总结对话",System.currentTimeMillis());
-        OpenAiMessage summarizeMessage = new OpenAiMessage(BotApp.getInstance().getPackageName(), question, new OpenAiMessage.DelayReplyCallback() {
+        OpenAiAskAble summarizeMessage = new OpenAiAskAble(BotApp.getInstance().getPackageName(), question, new OpenAiAskAble.DelayReplyCallback() {
             @Override
-            public void onReply(OpenAiMessage message) {
+            public void onReply(OpenAiAskAble message) {
                 chats = new JSONArray();
                 chats.put(firstSystemChat);
                 addChat(ROLE_SYSTEM,message.getAnswer().getMessage());
@@ -218,7 +218,7 @@ public class OpenAiSession extends NekoSession{
         summarizeMessage.ask();
     }
 
-    public boolean requestChatCompletions(OpenAiMessage message){
+    public boolean requestChatCompletions(OpenAiAskAble message){
         RequestBody requestBody = RequestBody.Companion.create(data.toString(),MediaType.parse("application/json;charset=utf-8"));
         Log.d(TAG, "requestAsk: "+data);
         Request request = new Request.Builder().post(requestBody).url(chatUrl)

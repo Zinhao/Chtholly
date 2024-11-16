@@ -16,7 +16,7 @@ import com.zinhao.chtholly.NekoChatService;
 import com.zinhao.chtholly.session.NekoSession;
 import com.zinhao.chtholly.session.OpenAiSession;
 import com.zinhao.chtholly.utils.ChatPageViewIds;
-import com.zinhao.chtholly.utils.QQUtils;
+import com.zinhao.chtholly.utils.QQChatHandler;
 import org.jetbrains.annotations.NotNull;
 
 import java.lang.reflect.InvocationTargetException;
@@ -27,6 +27,7 @@ import java.util.regex.Pattern;
 
 /** @noinspection ALL*/
 public class Command implements AskAble {
+    private static final String TAG = "Command";
     private static final String SWITCH_COMMAND_EN = "/switchBotOrAI";
 
     private static final String SEVER_BATTERY = "/battery";
@@ -44,6 +45,7 @@ public class Command implements AskAble {
     private static final String EVERY_DAY_CHECK = "/everyDayCheck";
     private static final String SWITCH_CHATS = "/switchChat";
     private static final String SEND_GALLERY = "/sendGallery";
+    private static final String SHARE_SCREEN = "/shareScreen";
 
     private final String packageName;
     private final Message question;
@@ -96,6 +98,9 @@ public class Command implements AskAble {
         if(answer == null){
             answer = new Message(BotApp.getInstance().getBotName(),null,System.currentTimeMillis());
         }
+        if(!getQuestion().getMessage().startsWith("/")){
+            return false;
+        }
         try {
             String[] methodAndArgs = args();
             String MethodName = methodAndArgs[0];
@@ -132,34 +137,53 @@ public class Command implements AskAble {
 
     private boolean sendGallery() {
         // /c /gnt /p2 /lmy
+        ChatPageViewIds cpvi = NekoChatService.getInstance().currentChatPageIds(getPackageName());
+        if(cpvi == null){
+            Log.e(TAG, "sendGallery: ", new RuntimeException("ChatPageViewIds is null"));
+            return false;
+        }
+
         steps = new Vector<>();
-        steps.add(new Step(QQUtils.QQ_PACKAGE_NAME,":id/gnt",AccessibilityNodeInfo.ACTION_CLICK,false));
-        steps.add(new Step(QQUtils.QQ_PACKAGE_NAME,":id/p2",AccessibilityNodeInfo.ACTION_CLICK,false,500));
+        steps.add(new Step(QQChatHandler.QQ_PACKAGE_NAME,":id/gnt",AccessibilityNodeInfo.ACTION_CLICK,false));
+        steps.add(new Step(QQChatHandler.QQ_PACKAGE_NAME,":id/p2",AccessibilityNodeInfo.ACTION_CLICK,false,500));
         if(args == null || args.length == 0){
             // todo 发送最近照片截图，尚未测试
-            steps.add(new Step(QQUtils.QQ_PACKAGE_NAME,null,AccessibilityService.GLOBAL_ACTION_TAKE_SCREENSHOT,true,500));
-            steps.add(new Step(QQUtils.QQ_PACKAGE_NAME,null,AccessibilityService.GLOBAL_ACTION_BACK,true,500));
-            steps.add(new Step(QQUtils.QQ_PACKAGE_NAME, QQUtils.getPicButtonId(), AccessibilityNodeInfo.ACTION_CLICK,false));
-            steps.add(new Step(QQUtils.QQ_PACKAGE_NAME, NekoChatService.chatPageViewIds.getFirstPicCheckBoxViewId(), AccessibilityNodeInfo.ACTION_CLICK,false,300));
-            steps.add(new Step(QQUtils.QQ_PACKAGE_NAME, NekoChatService.chatPageViewIds.getSendBtnViewId(), AccessibilityNodeInfo.ACTION_CLICK,false,300));
-            steps.add(new Step(QQUtils.QQ_PACKAGE_NAME, QQUtils.getPicButtonId(), AccessibilityNodeInfo.ACTION_CLICK,false,300));
-            getAnswer().setMessage("需要发送具体照片，请在按一下格式发送,如发送第一张照片("+SEND_GALLERY+" 0),");
+            steps.add(new Step(QQChatHandler.QQ_PACKAGE_NAME,null,AccessibilityService.GLOBAL_ACTION_TAKE_SCREENSHOT,true,2500));
+            steps.add(new Step(QQChatHandler.QQ_PACKAGE_NAME,null,AccessibilityService.GLOBAL_ACTION_BACK,true,500));
+            steps.add(new Step(QQChatHandler.QQ_PACKAGE_NAME, QQChatHandler.getPicButtonId(), AccessibilityNodeInfo.ACTION_CLICK,false,500));
+            steps.add(new Step(QQChatHandler.QQ_PACKAGE_NAME, cpvi.getFirstPicCheckBoxViewId(), AccessibilityNodeInfo.ACTION_CLICK,false,400));
+            steps.add(new Step(QQChatHandler.QQ_PACKAGE_NAME, cpvi.getSendBtnViewId(), AccessibilityNodeInfo.ACTION_CLICK,false,300));
+            steps.add(new Step(QQChatHandler.QQ_PACKAGE_NAME, QQChatHandler.getPicButtonId(), AccessibilityNodeInfo.ACTION_CLICK,false,300));
+            getAnswer().setMessage("需要发送具体照片，请在按一下格式发送,如发送第1张和第5张("+SEND_GALLERY+" 0 4),");
         }else{
-            int position = 0;
-            try {
-                position = Integer.parseInt(args[0]);
-            } catch (Exception e) {
-                return true;
+            for (int i = 0; i < args.length; i++) {
+                int position = -1;
+                try {
+                    position = Integer.parseInt(args[i]);
+                    if(position>=0){
+                        steps.add(new Step(QQChatHandler.QQ_PACKAGE_NAME,
+                                ":id/photo_list_gv",AccessibilityNodeInfo.ACTION_CLICK,
+                                false,500,true,
+                                new int[]{position,1}));
+                    }
+
+                } catch (Exception e) {
+                    return true;
+                }
             }
-            steps.add(new Step(QQUtils.QQ_PACKAGE_NAME,":id/photo_list_gv",AccessibilityNodeInfo.ACTION_CLICK,false,500,true,new int[]{position,1}));
-            steps.add(new Step(QQUtils.QQ_PACKAGE_NAME,":id/send_btn",AccessibilityNodeInfo.ACTION_CLICK,false,500));
-            getAnswer().setMessage(NekoMessage.OK);
+            steps.add(new Step(QQChatHandler.QQ_PACKAGE_NAME,":id/send_btn",AccessibilityNodeInfo.ACTION_CLICK,false,500));
+            getAnswer().setMessage(NekoAskAble.OK);
         }
         return true;
     }
 
     private boolean switchChat() {
-        ChatPageViewIds cpvi = NekoChatService.chatPageViewIds;
+
+        ChatPageViewIds cpvi = NekoChatService.getInstance().currentChatPageIds(getPackageName());
+        if(cpvi == null){
+            Log.e(TAG, "switchChat: ", new RuntimeException("ChatPageViewIds is null"));
+            return false;
+        }
         if(getQuestion().getMessage().contains(" ")){
             String[] ids = getQuestion().getMessage().split(" ");
             int position = 0;
@@ -167,14 +191,14 @@ public class Command implements AskAble {
                 try{
                     position = Integer.parseInt(ids[1]);
                 }catch (Exception e){
-                    getAnswer().setMessage(NekoMessage.HARD);
+                    getAnswer().setMessage(NekoAskAble.HARD);
                     return true;
                 }
                 NekoChatService.getInstance().setChatsIndex(position);
                 steps = new Vector<>();
                 steps.add(new Step(null,null,AccessibilityService.GLOBAL_ACTION_BACK,true));
-                steps.add(new Step(QQUtils.QQ_PACKAGE_NAME,":id/recent_chat_list", AccessibilityNodeInfo.ACTION_CLICK,false,1500,true,new int[]{position+1}));
-                getAnswer().setMessage(NekoMessage.COME_BACK);
+                steps.add(new Step(QQChatHandler.QQ_PACKAGE_NAME,":id/recent_chat_list", AccessibilityNodeInfo.ACTION_CLICK,false,1500,true,new int[]{position+1}));
+                getAnswer().setMessage(NekoAskAble.COME_BACK);
             }
         }else {
             //截图聊天列表并发送截图
@@ -183,14 +207,14 @@ public class Command implements AskAble {
                 steps = new Vector<>();
                 steps.add(new Step(null, null, AccessibilityService.GLOBAL_ACTION_BACK, true));
                 steps.add(new Step(null, null, AccessibilityService.GLOBAL_ACTION_TAKE_SCREENSHOT, true,500));
-                steps.add(new Step(QQUtils.QQ_PACKAGE_NAME,":id/recent_chat_list", AccessibilityNodeInfo.ACTION_CLICK,false,500,true,new int[]{position+1}));
-                steps.add(new Step(QQUtils.QQ_PACKAGE_NAME, QQUtils.getPicButtonId(), AccessibilityNodeInfo.ACTION_CLICK,false,500));
-                steps.add(new Step(QQUtils.QQ_PACKAGE_NAME, cpvi.getFirstPicCheckBoxViewId(), AccessibilityNodeInfo.ACTION_CLICK,false,500));
-                steps.add(new Step(QQUtils.QQ_PACKAGE_NAME, cpvi.getSendBtnViewId(), AccessibilityNodeInfo.ACTION_CLICK,false,500));
-                steps.add(new Step(QQUtils.QQ_PACKAGE_NAME, QQUtils.getPicButtonId(), AccessibilityNodeInfo.ACTION_CLICK,false,500));
+                steps.add(new Step(QQChatHandler.QQ_PACKAGE_NAME,":id/recent_chat_list", AccessibilityNodeInfo.ACTION_CLICK,false,500,true,new int[]{position+1}));
+                steps.add(new Step(QQChatHandler.QQ_PACKAGE_NAME, QQChatHandler.getPicButtonId(), AccessibilityNodeInfo.ACTION_CLICK,false,500));
+                steps.add(new Step(QQChatHandler.QQ_PACKAGE_NAME, cpvi.getFirstPicCheckBoxViewId(), AccessibilityNodeInfo.ACTION_CLICK,false,500));
+                steps.add(new Step(QQChatHandler.QQ_PACKAGE_NAME, cpvi.getSendBtnViewId(), AccessibilityNodeInfo.ACTION_CLICK,false,500));
+                steps.add(new Step(QQChatHandler.QQ_PACKAGE_NAME, QQChatHandler.getPicButtonId(), AccessibilityNodeInfo.ACTION_CLICK,false,500));
                 getAnswer().setMessage("看好需要切换的聊天的位置，使用("+SWITCH_CHATS+" 0)切换至第一个聊天，数字表示聊天的索引。");
             }else {
-                getAnswer().setMessage(NekoMessage.HARD);
+                getAnswer().setMessage(NekoAskAble.HARD);
                 return true;
             }
         }
@@ -199,25 +223,29 @@ public class Command implements AskAble {
 
     private boolean everyDayCheck() {
         steps = new Vector<>();
-        steps.add(new Step(QQUtils.QQ_PACKAGE_NAME,":id/qn4",AccessibilityNodeInfo.ACTION_CLICK,false));
-        steps.add(new Step(QQUtils.QQ_PACKAGE_NAME,":id/nfz",AccessibilityNodeInfo.ACTION_CLICK,false,500));
+        steps.add(new Step(QQChatHandler.QQ_PACKAGE_NAME,":id/qn4",AccessibilityNodeInfo.ACTION_CLICK,false));
+        steps.add(new Step(QQChatHandler.QQ_PACKAGE_NAME,":id/nfz",AccessibilityNodeInfo.ACTION_CLICK,false,500));
         steps.add(new Step(null,null,AccessibilityService.GLOBAL_ACTION_BACK,true,500));
-        getAnswer().setMessage(NekoMessage.OK);
+        getAnswer().setMessage(NekoAskAble.OK);
         return true;
     }
 
     private boolean screenShot() {
-        ChatPageViewIds cpvi = NekoChatService.chatPageViewIds;
+        ChatPageViewIds cpvi = NekoChatService.getInstance().currentChatPageIds(getPackageName());
+        if(cpvi == null){
+            Log.e(TAG, "screenShot: ", new RuntimeException("ChatPageViewIds is null"));
+            return false;
+        }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
             steps = new Vector<>();
             steps.add(new Step(null,null, AccessibilityService.GLOBAL_ACTION_TAKE_SCREENSHOT,true));
-            steps.add(new Step(QQUtils.QQ_PACKAGE_NAME, QQUtils.getPicButtonId(), AccessibilityNodeInfo.ACTION_CLICK,false,500));
-            steps.add(new Step(QQUtils.QQ_PACKAGE_NAME, cpvi.getFirstPicCheckBoxViewId(), AccessibilityNodeInfo.ACTION_CLICK,false,500));
-            steps.add(new Step(QQUtils.QQ_PACKAGE_NAME, cpvi.getSendBtnViewId(), AccessibilityNodeInfo.ACTION_CLICK,false,500));
-            steps.add(new Step(QQUtils.QQ_PACKAGE_NAME, QQUtils.getPicButtonId(), AccessibilityNodeInfo.ACTION_CLICK,false,500));
-            getAnswer().setMessage(NekoMessage.OK);
+            steps.add(new Step(QQChatHandler.QQ_PACKAGE_NAME, QQChatHandler.getPicButtonId(), AccessibilityNodeInfo.ACTION_CLICK,false,500));
+            steps.add(new Step(QQChatHandler.QQ_PACKAGE_NAME, cpvi.getFirstPicCheckBoxViewId(), AccessibilityNodeInfo.ACTION_CLICK,false,500));
+            steps.add(new Step(QQChatHandler.QQ_PACKAGE_NAME, cpvi.getSendBtnViewId(), AccessibilityNodeInfo.ACTION_CLICK,false,500));
+            steps.add(new Step(QQChatHandler.QQ_PACKAGE_NAME, QQChatHandler.getPicButtonId(), AccessibilityNodeInfo.ACTION_CLICK,false,500));
+            getAnswer().setMessage(NekoAskAble.OK);
         }else{
-            getAnswer().setMessage(NekoMessage.DONT_SUPPORT);
+            getAnswer().setMessage(NekoAskAble.DONT_SUPPORT);
         }
         return true;
     }
@@ -226,32 +254,37 @@ public class Command implements AskAble {
         // 发送最新一张图 /gnt /qhp /fun_btn /gnt  三星
         // 发送最新一张图 /gnt /qhq /send_btn /gnt  pixel3
         // 发送最新一张图 /gnt /dpo /send_btn /gnt  ONE PLUS
+        ChatPageViewIds cpvi = NekoChatService.getInstance().currentChatPageIds(getPackageName());
+        if(cpvi == null){
+            Log.e(TAG, "sendNewestPic: ", new RuntimeException("ChatPageViewIds is null"));
+            return false;
+        }
         steps = new Vector<>();
-        steps.add(new Step(QQUtils.QQ_PACKAGE_NAME, QQUtils.getPicButtonId(), AccessibilityNodeInfo.ACTION_CLICK,false));
-        steps.add(new Step(QQUtils.QQ_PACKAGE_NAME, NekoChatService.chatPageViewIds.getFirstPicCheckBoxViewId(), AccessibilityNodeInfo.ACTION_CLICK,false,300));
-        steps.add(new Step(QQUtils.QQ_PACKAGE_NAME, NekoChatService.chatPageViewIds.getSendBtnViewId(), AccessibilityNodeInfo.ACTION_CLICK,false,300));
-        steps.add(new Step(QQUtils.QQ_PACKAGE_NAME, QQUtils.getPicButtonId(), AccessibilityNodeInfo.ACTION_CLICK,false,300));
-        getAnswer().setMessage(NekoMessage.OK);
+        steps.add(new Step(QQChatHandler.QQ_PACKAGE_NAME, QQChatHandler.getPicButtonId(), AccessibilityNodeInfo.ACTION_CLICK,false));
+        steps.add(new Step(QQChatHandler.QQ_PACKAGE_NAME, cpvi.getFirstPicCheckBoxViewId(), AccessibilityNodeInfo.ACTION_CLICK,false,300));
+        steps.add(new Step(QQChatHandler.QQ_PACKAGE_NAME, cpvi.getSendBtnViewId(), AccessibilityNodeInfo.ACTION_CLICK,false,300));
+        steps.add(new Step(QQChatHandler.QQ_PACKAGE_NAME, QQChatHandler.getPicButtonId(), AccessibilityNodeInfo.ACTION_CLICK,false,300));
+        getAnswer().setMessage(NekoAskAble.OK);
         return true;
     }
 
     private boolean takePhoto() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
             steps = new Vector<>();
-            steps.add(new Step(QQUtils.QQ_PACKAGE_NAME,":id/go6", AccessibilityNodeInfo.ACTION_CLICK,false));
+            steps.add(new Step(QQChatHandler.QQ_PACKAGE_NAME,":id/go6", AccessibilityNodeInfo.ACTION_CLICK,false));
             //打开闪光灯
-            steps.add(new Step(QQUtils.QQ_PACKAGE_NAME+".aelight_impl",":id/py", AccessibilityNodeInfo.ACTION_CLICK,false,500));
+            steps.add(new Step(QQChatHandler.QQ_PACKAGE_NAME+".aelight_impl",":id/py", AccessibilityNodeInfo.ACTION_CLICK,false,500));
             // 切换前置
 //                steps.add(new Step(QQUtils.QQ_PACKAGE_NAME+".aelight_impl",":id/pv", AccessibilityNodeInfo.ACTION_CLICK,false,500));
             // 拍照
-            Step gestureStep = new Step(QQUtils.QQ_PACKAGE_NAME+".aelight_impl",":id/a74",AccessibilityNodeInfo.ACTION_SCROLL_FORWARD,false,500);
+            Step gestureStep = new Step(QQChatHandler.QQ_PACKAGE_NAME+".aelight_impl",":id/a74",AccessibilityNodeInfo.ACTION_SCROLL_FORWARD,false,500);
             gestureStep.setNeedGesture(CLICK);
             steps.add(gestureStep);
             //发送
-            steps.add(new Step(QQUtils.QQ_PACKAGE_NAME+".aelight_impl",":id/ut", AccessibilityNodeInfo.ACTION_CLICK,false,1500));
-            getAnswer().setMessage(NekoMessage.OK+"请耐心等待");
+            steps.add(new Step(QQChatHandler.QQ_PACKAGE_NAME+".aelight_impl",":id/ut", AccessibilityNodeInfo.ACTION_CLICK,false,1500));
+            getAnswer().setMessage(NekoAskAble.OK+"请耐心等待");
         }else{
-            getAnswer().setMessage(NekoMessage.DONT_SUPPORT);
+            getAnswer().setMessage(NekoAskAble.DONT_SUPPORT);
         }
         return true;
     }
@@ -260,9 +293,9 @@ public class Command implements AskAble {
         steps = new Vector<>();
         String[] ids = getQuestion().getMessage().split(" ");
         for (int i = 1; i < ids.length; i++) {
-            steps.add(new Step(QQUtils.QQ_PACKAGE_NAME,":id"+ids[i], AccessibilityNodeInfo.ACTION_CLICK,false,500));
+            steps.add(new Step(QQChatHandler.QQ_PACKAGE_NAME,":id"+ids[i], AccessibilityNodeInfo.ACTION_CLICK,false,500));
         }
-        getAnswer().setMessage(NekoMessage.OK);
+        getAnswer().setMessage(NekoAskAble.OK);
         return true;
     }
 
@@ -293,10 +326,10 @@ public class Command implements AskAble {
 
     private void switchBotOrAI() {
         if(openaiIgnoreCase.matcher(question.getMessage()).find()){
-            answer.setMessage(NekoMessage.TOO_HIGH);
+            answer.setMessage(NekoAskAble.TOO_HIGH);
             NekoChatService.mode = OpenAiSession.class;
         }else{
-            answer.setMessage(NekoMessage.KOU_WAI);
+            answer.setMessage(NekoAskAble.KOU_WAI);
             NekoChatService.mode = NekoSession.class;
         }
     }
@@ -311,16 +344,35 @@ public class Command implements AskAble {
         }
 
         steps = new Vector<>();
-        steps.add(new Step(QQUtils.QQ_PACKAGE_NAME,":id/gny", AccessibilityNodeInfo.ACTION_CLICK,false));
-        steps.add(new Step(QQUtils.QQ_PACKAGE_NAME,":id/icon_viewPager", AccessibilityNodeInfo.ACTION_CLICK,false,500,true,new int[]{0,1}));
-        steps.add(new Step(QQUtils.QQ_PACKAGE_NAME, ":id/bbt", AccessibilityNodeInfo.ACTION_CLICK,false,300));
+        steps.add(new Step(QQChatHandler.QQ_PACKAGE_NAME,":id/gny", AccessibilityNodeInfo.ACTION_CLICK,false));
+        steps.add(new Step(QQChatHandler.QQ_PACKAGE_NAME,":id/icon_viewPager", AccessibilityNodeInfo.ACTION_CLICK,false,500,true,new int[]{0,1}));
+        steps.add(new Step(QQChatHandler.QQ_PACKAGE_NAME, ":id/bbt", AccessibilityNodeInfo.ACTION_CLICK,false,300));
         if(mainCamera){
             //切换后置摄像头
-            steps.add(new Step(QQUtils.QQ_PACKAGE_NAME, ":id/gd7", AccessibilityNodeInfo.ACTION_CLICK,false,4000));
+            steps.add(new Step(QQChatHandler.QQ_PACKAGE_NAME, ":id/gd7", AccessibilityNodeInfo.ACTION_CLICK,false,4000));
         }
         //小窗
-        steps.add(new Step(QQUtils.QQ_PACKAGE_NAME, ":id/g76", AccessibilityNodeInfo.ACTION_CLICK,false,500));
-        getAnswer().setMessage(NekoMessage.OK);
+        steps.add(new Step(QQChatHandler.QQ_PACKAGE_NAME, ":id/g76", AccessibilityNodeInfo.ACTION_CLICK,false,500));
+        getAnswer().setMessage(NekoAskAble.OK);
+    }
+
+    private void shareScreen(){
+        steps = new Vector<>();
+        steps.add(new Step(QQChatHandler.QQ_PACKAGE_NAME,":id/gny", AccessibilityNodeInfo.ACTION_CLICK,false));
+        steps.add(new Step(QQChatHandler.QQ_PACKAGE_NAME,":id/icon_viewPager", AccessibilityNodeInfo.ACTION_CLICK,false,500,true,new int[]{0,3}));
+        steps.add(new Step(QQChatHandler.QQ_PACKAGE_NAME, ":id/dialogRightBtn", AccessibilityNodeInfo.ACTION_CLICK,false,500));
+        steps.add(new Step(QQChatHandler.QQ_PACKAGE_NAME, ":id/bbt", AccessibilityNodeInfo.ACTION_CLICK,false,1500));
+
+
+        // 关闭扬声器
+        steps.add(new Step(QQChatHandler.QQ_PACKAGE_NAME, ":id/g71", AccessibilityNodeInfo.ACTION_CLICK,false,500));
+        // menu
+//        steps.add(new Step(QQChatHandler.QQ_PACKAGE_NAME, ":id/sp5", AccessibilityNodeInfo.ACTION_CLICK,false,500));
+        // 分享屏幕
+//        steps.add(new Step(QQChatHandler.QQ_PACKAGE_NAME, ":id/i4o", AccessibilityNodeInfo.ACTION_CLICK,false,500,true,new int[]{2}));
+        // 小窗
+        steps.add(new Step(QQChatHandler.QQ_PACKAGE_NAME, ":id/g76", AccessibilityNodeInfo.ACTION_CLICK,false,2500));
+        getAnswer().setMessage(NekoAskAble.OK);
     }
 
     private String[] args(){
@@ -398,6 +450,7 @@ public class Command implements AskAble {
         stringBuilder.append(EVERY_DAY_CHECK).append(' ').append("会打卡，并无什么用处").append('\n');
         stringBuilder.append(SWITCH_CHATS).append(' ').append("切换聊天群").append('\n');
         stringBuilder.append(SEND_GALLERY).append(' ').append("发送相册截图").append('\n');
+        stringBuilder.append(SHARE_SCREEN).append(' ').append("发起分享屏幕").append('\n');
         Method[] methods = Command.class.getMethods();
         for (Method method : methods) {
             // 检查方法的修饰符是否为私有

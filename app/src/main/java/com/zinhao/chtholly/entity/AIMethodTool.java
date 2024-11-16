@@ -6,9 +6,7 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.lang.reflect.Method;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.Map;
 
 public class AIMethodTool{
@@ -37,11 +35,11 @@ public class AIMethodTool{
             String timeStr = (String) argMap.get("time");
             long t = Long.parseLong(timeStr);
             String actionStr = (String) argMap.get("action");
-            if(argMap.containsKey(OpenAiMessage.class.getName())) {
-                OpenAiMessage message = (OpenAiMessage) argMap.get(OpenAiMessage.class.getName());
+            if(argMap.containsKey(OpenAiAskAble.class.getName())) {
+                OpenAiAskAble message = (OpenAiAskAble) argMap.get(OpenAiAskAble.class.getName());
                 if(message!=null){
-                    message.doTextReply(NekoMessage.OK);
-                    message.doTTSReply(NekoMessage.OK);
+                    message.doTextReply(NekoAskAble.OK);
+                    message.doTTSReply(NekoAskAble.OK);
                     assert message.getQuestion()!=null;
                     NekoChatService.getInstance().addRemind(t,actionStr,message.getQuestion().getSpeaker());
                 }
@@ -56,8 +54,8 @@ public class AIMethodTool{
         @Override
         public void call(Map<String, Object> argMap) {
             String hotMessage = (String) argMap.get("text");
-            if(argMap.containsKey(OpenAiMessage.class.getName())) {
-                OpenAiMessage message = (OpenAiMessage) argMap.get(OpenAiMessage.class.getName());
+            if(argMap.containsKey(OpenAiAskAble.class.getName())) {
+                OpenAiAskAble message = (OpenAiAskAble) argMap.get(OpenAiAskAble.class.getName());
                 if(message!=null){
                     message.doTTSReply(hotMessage);
                     message.doTextReply(hotMessage + '\n' + Command.getHelpStringBuilder());

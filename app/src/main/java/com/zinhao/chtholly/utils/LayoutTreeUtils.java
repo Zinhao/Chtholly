@@ -4,6 +4,7 @@ import android.graphics.Rect;
 import android.util.Log;
 import android.view.accessibility.AccessibilityEvent;
 import android.view.accessibility.AccessibilityNodeInfo;
+import com.zinhao.chtholly.BuildConfig;
 import com.zinhao.chtholly.NekoChatService;
 import org.jetbrains.annotations.NotNull;
 import org.json.JSONArray;
@@ -12,8 +13,8 @@ import org.json.JSONObject;
 
 import java.util.Locale;
 
-import static com.zinhao.chtholly.utils.QQUtils.getChatNickId;
-import static com.zinhao.chtholly.utils.QQUtils.getChatTextId;
+import static com.zinhao.chtholly.utils.QQChatHandler.getChatNickId;
+import static com.zinhao.chtholly.utils.QQChatHandler.getChatTextId;
 
 public class LayoutTreeUtils {
 
@@ -32,8 +33,8 @@ public class LayoutTreeUtils {
         if (treeIndex == 0) {
             builder = new StringBuilder();
             if (BuildConfig.DEBUG && printTree) {
-
-                Log.d(TAG, "treeInfo:=========================================================>" + nodeInfo.getPackageName());
+                String pageName = QQChatHandler.checkWhatPage(nodeInfo);
+                Log.d(TAG, "\uD83D\uDE21"+pageName+":===============================================>" + nodeInfo.getPackageName());
             }
             builder.append("|__");
         } else {
@@ -46,9 +47,9 @@ public class LayoutTreeUtils {
                 continue;
             }
             builder.delete(builder.length() - 2, builder.length());
-            if (child.isClickable() || child.isCheckable() || child.isLongClickable()) {
-                NekoChatService.chatPageViewIds.addActionableId(child);
-            }
+//            if (child.isClickable() || child.isCheckable() || child.isLongClickable()) {
+//                NekoChatService.chatPageViewIds.addActionableId(child);
+//            }
             JSONObject childObject;
             if (child.getChildCount() != 0) {
                 builder.append("__");
@@ -98,19 +99,22 @@ public class LayoutTreeUtils {
     @NotNull
     public static StringBuilder getEventStringBuilder(AccessibilityEvent event) {
         StringBuilder stringBuilder = new StringBuilder();
-        if ((event.getContentChangeTypes() & AccessibilityEvent.CONTENT_CHANGE_TYPE_TEXT) == AccessibilityEvent.CONTENT_CHANGE_TYPE_TEXT) {
-            stringBuilder.append("CONTENT_CHANGE_TYPE_TEXT");
-        }
-        if ((event.getContentChangeTypes() & AccessibilityEvent.CONTENT_CHANGE_TYPE_SUBTREE) == AccessibilityEvent.CONTENT_CHANGE_TYPE_SUBTREE) {
-            if (stringBuilder.length() != 0)
-                stringBuilder.append(' ');
-            stringBuilder.append("CONTENT_CHANGE_TYPE_SUBTREE");
-        }
-        if ((event.getContentChangeTypes() & AccessibilityEvent.CONTENT_CHANGE_TYPE_CONTENT_DESCRIPTION) == AccessibilityEvent.CONTENT_CHANGE_TYPE_CONTENT_DESCRIPTION) {
-            if (stringBuilder.length() != 0)
-                stringBuilder.append(' ');
-            stringBuilder.append("CONTENT_CHANGE_TYPE_CONTENT_DESCRIPTION");
-        }
-        return stringBuilder;
+        stringBuilder.append(event.toString());
+        Log.d(TAG, "getEventStringBuilder: "+stringBuilder);
+        return  stringBuilder;
+//        if ((event.getContentChangeTypes() & AccessibilityEvent.CONTENT_CHANGE_TYPE_TEXT) == AccessibilityEvent.CONTENT_CHANGE_TYPE_TEXT) {
+//            stringBuilder.append("CONTENT_CHANGE_TYPE_TEXT");
+//        }
+//        if ((event.getContentChangeTypes() & AccessibilityEvent.CONTENT_CHANGE_TYPE_SUBTREE) == AccessibilityEvent.CONTENT_CHANGE_TYPE_SUBTREE) {
+//            if (stringBuilder.length() != 0)
+//                stringBuilder.append(' ');
+//            stringBuilder.append("CONTENT_CHANGE_TYPE_SUBTREE");
+//        }
+//        if ((event.getContentChangeTypes() & AccessibilityEvent.CONTENT_CHANGE_TYPE_CONTENT_DESCRIPTION) == AccessibilityEvent.CONTENT_CHANGE_TYPE_CONTENT_DESCRIPTION) {
+//            if (stringBuilder.length() != 0)
+//                stringBuilder.append(' ');
+//            stringBuilder.append("CONTENT_CHANGE_TYPE_CONTENT_DESCRIPTION");
+//        }
+//        return stringBuilder;
     }
 }
