@@ -4,12 +4,14 @@ import android.accessibilityservice.AccessibilityButtonController;
 import android.accessibilityservice.AccessibilityService;
 import android.accessibilityservice.AccessibilityServiceInfo;
 import android.accessibilityservice.GestureDescription;
-import android.os.Bundle;
+import android.content.Intent;
 import android.os.Handler;
+import android.provider.Settings;
 import android.util.Log;
+import android.view.View;
+import android.view.WindowManager;
 import android.view.accessibility.AccessibilityEvent;
 import android.view.accessibility.AccessibilityNodeInfo;
-import androidx.annotation.Nullable;
 import androidx.media3.common.MediaItem;
 import androidx.media3.common.MediaMetadata;
 import androidx.media3.common.Player;
@@ -34,7 +36,10 @@ public class NekoChatService extends AccessibilityService implements OpenAiAskAb
     private ExoPlayer mediaPlayer;
     private AccessibilityButtonController accessibilityButtonController;
     private boolean mIsAccessibilityButtonAvailable;
-
+    private View floatView;
+    private WindowManager.LayoutParams floatViewParams;
+    private boolean floatWindowShow;
+    private WindowManager windowManager;
     /***
      * 每日自动问候
      */
@@ -72,6 +77,7 @@ public class NekoChatService extends AccessibilityService implements OpenAiAskAb
         dayCount = calendar.get(Calendar.DAY_OF_MONTH);
         mediaPlayer = new ExoPlayer.Builder(this).build();
         qqChatHandler = new QQChatHandler(this);
+        windowManager = getSystemService(WindowManager.class);
         speakStartVoice();
     }
 
@@ -475,6 +481,40 @@ public class NekoChatService extends AccessibilityService implements OpenAiAskAb
 
     private static long randomTime(long min, long max) {
         return Math.round(Math.random() * max * 60 * 1000) + min * 60 * 1000;
+    }
+
+    public void setFloatView(View floatView) {
+        this.floatView = floatView;
+    }
+
+    public View getFloatView() {
+        return floatView;
+    }
+
+    public WindowManager.LayoutParams getFloatViewParams() {
+        return floatViewParams;
+    }
+
+    public void showFloatWindow() {
+        if (!Settings.canDrawOverlays(getApplicationContext()) || floatView == null) {
+            Intent rqIntent = new Intent(NekoChatService.this, FloatWindowActivity.class);
+            rqIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            startActivity(rqIntent);
+        } else {
+            if (!floatWindowShow) {
+                windowManager.addView(floatView, floatViewParams);
+            }
+            floatWindowShow = true;
+        }
+    }
+
+    public void hideFloatWindow() {
+        if (floatView == null)
+            return;
+        if (floatWindowShow) {
+            windowManager.removeView(floatView);
+        }
+        floatWindowShow = false;
     }
 
     @Override
