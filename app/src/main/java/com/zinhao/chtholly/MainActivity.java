@@ -138,6 +138,7 @@ public class MainActivity extends AppCompatActivity {
         binding.button2.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                NekoChatService.getInstance().showFloatWindow();
                 new DialogLayer(MainActivity.this)
                         .setContentView(dialogContent)
                         .setGravity(Gravity.BOTTOM)

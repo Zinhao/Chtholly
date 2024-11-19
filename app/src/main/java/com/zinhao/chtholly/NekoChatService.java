@@ -5,9 +5,12 @@ import android.accessibilityservice.AccessibilityService;
 import android.accessibilityservice.AccessibilityServiceInfo;
 import android.accessibilityservice.GestureDescription;
 import android.content.Intent;
+import android.graphics.PixelFormat;
+import android.os.Build;
 import android.os.Handler;
 import android.provider.Settings;
 import android.util.Log;
+import android.view.Gravity;
 import android.view.View;
 import android.view.WindowManager;
 import android.view.accessibility.AccessibilityEvent;
@@ -78,7 +81,13 @@ public class NekoChatService extends AccessibilityService implements OpenAiAskAb
         mediaPlayer = new ExoPlayer.Builder(this).build();
         qqChatHandler = new QQChatHandler(this);
         windowManager = getSystemService(WindowManager.class);
+        floatViewParams = makeFloatWindowParams(0,0);
         speakStartVoice();
+    }
+
+    @Override
+    public int onStartCommand(Intent intent, int flags, int startId) {
+        return super.onStartCommand(intent, flags, startId);
     }
 
     @Override
@@ -445,14 +454,11 @@ public class NekoChatService extends AccessibilityService implements OpenAiAskAb
         }
     };
 
-
-
-
-
     @Override
     protected void onServiceConnected() {
         super.onServiceConnected();
         Log.d(TAG, "onServiceConnected: ");
+        showFloatWindow();
         accessibilityButtonController = getAccessibilityButtonController();
         mIsAccessibilityButtonAvailable = accessibilityButtonController.isAccessibilityButtonAvailable();
         if (!mIsAccessibilityButtonAvailable) {
@@ -496,8 +502,9 @@ public class NekoChatService extends AccessibilityService implements OpenAiAskAb
     }
 
     public void showFloatWindow() {
+//        att
         if (!Settings.canDrawOverlays(getApplicationContext()) || floatView == null) {
-            Intent rqIntent = new Intent(NekoChatService.this, FloatWindowActivity.class);
+            Intent rqIntent = new Intent(getApplicationContext(), FloatWindowActivity.class);
             rqIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             startActivity(rqIntent);
         } else {
@@ -517,10 +524,26 @@ public class NekoChatService extends AccessibilityService implements OpenAiAskAb
         floatWindowShow = false;
     }
 
+    private static WindowManager.LayoutParams makeFloatWindowParams(float x, float y) {
+        WindowManager.LayoutParams params = new WindowManager.LayoutParams();
+        params.type = WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY;
+        params.gravity = Gravity.START | Gravity.TOP;
+        params.width = WindowManager.LayoutParams.MATCH_PARENT;
+        params.height = WindowManager.LayoutParams.WRAP_CONTENT;
+        params.flags =
+                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE | WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL |
+                        WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH;
+        params.format = PixelFormat.RGBA_8888;
+        params.x = (int) x;
+        params.y = (int) y;
+        return params;
+    }
+
     @Override
     public void onDestroy() {
         Log.e(TAG, "onDestroy: ");
         super.onDestroy();
+        hideFloatWindow();
         speakLeaveVoice();
     }
 

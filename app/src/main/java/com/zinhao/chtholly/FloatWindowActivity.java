@@ -12,17 +12,22 @@ import android.provider.Settings;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
+import android.widget.Button;
+import android.widget.TextView;
 import androidx.appcompat.app.AppCompatActivity;
 import android.os.Bundle;
 
 import java.util.Locale;
 
 /** @noinspection deprecation*/
-public class FloatWindowActivity extends AppCompatActivity implements ServiceConnection{
+public class FloatWindowActivity extends AppCompatActivity{
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        TextView t = new TextView(this);
+        t.setText("123");
+        setContentView(t);
         if (!Settings.canDrawOverlays(this)) {
             AlertDialog.Builder builder = new AlertDialog.Builder(this);
             builder.setMessage("还没有显示悬浮窗口的权限！")
@@ -41,15 +46,36 @@ public class FloatWindowActivity extends AppCompatActivity implements ServiceCon
             AlertDialog askDrawOverlaysDialog = builder.create();
             askDrawOverlaysDialog.show();
         }
-        bindService(new Intent(this, NekoChatService.class), this, BIND_AUTO_CREATE);
+        init();
+
     }
 
     @SuppressLint("ClickableViewAccessibility")
-    @Override
-    public void onServiceConnected(ComponentName name, IBinder service) {
+    public void init() {
         if(NekoChatService.getInstance().getFloatView() == null){
             View view = LayoutInflater.from(this).inflate(R.layout.float_helper, null, false);
-            view.setOnTouchListener(new View.OnTouchListener() {
+            View contentView = view.findViewById(R.id.content);
+            Button closeBtn = view.findViewById(R.id.close);
+            closeBtn.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    NekoChatService.getInstance().hideFloatWindow();
+                }
+            });
+
+            Button minBtn = view.findViewById(R.id.min);
+            minBtn.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    if(contentView.getVisibility() == View.GONE){
+                        contentView.setVisibility(View.VISIBLE);
+                    }else {
+                        contentView.setVisibility(View.GONE);
+                    }
+                }
+            });
+            View cv = view.findViewById(R.id.ctrl);
+            cv.setOnTouchListener(new View.OnTouchListener() {
                 private float downX, downY;
                 @Override
                 public boolean onTouch(View v, MotionEvent event) {
@@ -84,10 +110,5 @@ public class FloatWindowActivity extends AppCompatActivity implements ServiceCon
             NekoChatService.getInstance().showFloatWindow();
             finishAndRemoveTask();
         }
-    }
-
-    @Override
-    public void onServiceDisconnected(ComponentName name) {
-
     }
 }
