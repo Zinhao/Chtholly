@@ -12,10 +12,7 @@ import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.ArrayAdapter;
-import android.widget.EditText;
-import android.widget.ListView;
-import android.widget.TextView;
+import android.widget.*;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
@@ -123,6 +120,16 @@ public class MainActivity extends AppCompatActivity {
         });
 
         binding.button4.setOnClickListener(this::toVoiceSetting);
+        binding.button5.setOnClickListener(this::showFloat);
+    }
+
+    private void showFloat(View view) {
+        NekoChatService nekoChatService = NekoChatService.getInstance();
+        if(nekoChatService!=null){
+            nekoChatService.showCtrlWindow();
+        }else{
+            Toast.makeText(view.getContext(), "请先打开服务", Toast.LENGTH_SHORT).show();
+        }
     }
 
     private void toVoiceSetting(View view) {
@@ -138,7 +145,7 @@ public class MainActivity extends AppCompatActivity {
         binding.button2.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                NekoChatService.getInstance().showFloatWindow();
+
                 new DialogLayer(MainActivity.this)
                         .setContentView(dialogContent)
                         .setGravity(Gravity.BOTTOM)

@@ -63,8 +63,8 @@ public class QQChatHandler extends BaseChatHandler {
         hitMessage.message = hitMessage.message.replace("@" + botName, "").trim();
         if (!messageList.isEmpty()) {
             Message last = messageList.get(messageList.size() - 1);
-            if (last.message.equals(hitMessage.message)) {
-                Log.i(TAG, "findAddNewChatMessage: last message is same!");
+            if (last.message.equals(hitMessage.message) && System.currentTimeMillis() - last.getTimeStamp() > 10000) {
+                Log.i(TAG, "findAddNewChatMessage: in close time, last message is same!");
                 return;
             }
         }

@@ -2,12 +2,9 @@ package com.zinhao.chtholly;
 
 import android.annotation.SuppressLint;
 import android.app.AlertDialog;
-import android.content.ComponentName;
 import android.content.DialogInterface;
 import android.content.Intent;
-import android.content.ServiceConnection;
 import android.net.Uri;
-import android.os.IBinder;
 import android.provider.Settings;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
@@ -46,34 +43,29 @@ public class FloatWindowActivity extends AppCompatActivity{
             AlertDialog askDrawOverlaysDialog = builder.create();
             askDrawOverlaysDialog.show();
         }
-        init();
-
+        initAccView();
+        initCtrlView();
     }
 
-    @SuppressLint("ClickableViewAccessibility")
-    public void init() {
-        if(NekoChatService.getInstance().getFloatView() == null){
-            View view = LayoutInflater.from(this).inflate(R.layout.float_helper, null, false);
-            View contentView = view.findViewById(R.id.content);
-            Button closeBtn = view.findViewById(R.id.close);
-            closeBtn.setOnClickListener(new View.OnClickListener() {
+    public void initCtrlView() {
+        if(NekoChatService.getInstance().getCtrlView() == null){
+            View view = LayoutInflater.from(this).inflate(R.layout.float_bt, null, false);
+            Button showBtn = view.findViewById(R.id.show);
+            showBtn.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
-                    NekoChatService.getInstance().hideFloatWindow();
+                    NekoChatService.getInstance().showAccWindow();
                 }
             });
 
-            Button minBtn = view.findViewById(R.id.min);
-            minBtn.setOnClickListener(new View.OnClickListener() {
+            Button hideBtn = view.findViewById(R.id.hide);
+            hideBtn.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
-                    if(contentView.getVisibility() == View.GONE){
-                        contentView.setVisibility(View.VISIBLE);
-                    }else {
-                        contentView.setVisibility(View.GONE);
-                    }
+                    NekoChatService.getInstance().hideAccWindow();
                 }
             });
+
             View cv = view.findViewById(R.id.ctrl);
             cv.setOnTouchListener(new View.OnTouchListener() {
                 private float downX, downY;
@@ -92,10 +84,10 @@ public class FloatWindowActivity extends AppCompatActivity{
                         float moveX = nowX - downX;
                         float moveY = nowY - downY;
                         if (NekoChatService.getInstance() != null) {
-                            NekoChatService.getInstance().getFloatViewParams().x += moveX;
-                            NekoChatService.getInstance().getFloatViewParams().y += moveY;
-                            getWindowManager().updateViewLayout(NekoChatService.getInstance().getFloatView(),
-                                    NekoChatService.getInstance().getFloatViewParams());
+                            NekoChatService.getInstance().getCtrlViewParams().x += moveX;
+                            NekoChatService.getInstance().getCtrlViewParams().y += moveY;
+                            getWindowManager().updateViewLayout(NekoChatService.getInstance().getCtrlView(),
+                                    NekoChatService.getInstance().getCtrlViewParams());
                         }
                         downX = nowX;
                         downY = nowY;
@@ -103,12 +95,24 @@ public class FloatWindowActivity extends AppCompatActivity{
                     return true;
                 }
             });
-            NekoChatService.getInstance().setFloatView(view);
+            NekoChatService.getInstance().setCtrlView(view);
         }
         if (Settings.canDrawOverlays(this)) {
             // 有权限
-            NekoChatService.getInstance().showFloatWindow();
+            NekoChatService.getInstance().showCtrlWindow();
             finishAndRemoveTask();
+        }
+    }
+
+    @SuppressLint("ClickableViewAccessibility")
+    public void initAccView() {
+        if(NekoChatService.getInstance().getAccView() == null){
+            View view = LayoutInflater.from(this).inflate(R.layout.float_helper, null, false);
+            NekoChatService.getInstance().setAccView(view);
+        }
+        if (Settings.canDrawOverlays(this)) {
+            // 有权限
+//            NekoChatService.getInstance().showAccWindow();
         }
     }
 }

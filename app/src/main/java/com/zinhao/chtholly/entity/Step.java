@@ -18,6 +18,7 @@ public class Step {
     private  boolean waiting = false;
     private boolean findChildByPosition = false;
     private int[] findPosition;
+    private int inNodesPosition = 0;
     private NeedGesture needGesture;
 
     public Step(String packageName, String viewId, int actionId, boolean globalAction) {
@@ -36,6 +37,10 @@ public class Step {
         this(packageName, viewId, actionId, globalAction, daley);
         this.findChildByPosition = findChildByPosition;
         this.findPosition = findPosition;
+    }
+
+    public void setInNodesPosition(int inNodesPosition) {
+        this.inNodesPosition = inNodesPosition;
     }
 
     public String getPackageName() {
@@ -91,6 +96,10 @@ public class Step {
 
     public int[] getFindPosition() {
         return findPosition;
+    }
+
+    public int getInNodesPosition() {
+        return inNodesPosition;
     }
 
     public void setFindPosition(int[] findPosition) {

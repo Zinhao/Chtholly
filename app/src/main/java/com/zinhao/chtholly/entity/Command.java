@@ -197,7 +197,11 @@ public class Command implements AskAble {
                 NekoChatService.getInstance().setChatsIndex(position);
                 steps = new Vector<>();
                 steps.add(new Step(null,null,AccessibilityService.GLOBAL_ACTION_BACK,true));
-                steps.add(new Step(QQChatHandler.QQ_PACKAGE_NAME,":id/recent_chat_list", AccessibilityNodeInfo.ACTION_CLICK,false,1500,true,new int[]{position+1}));
+
+                Step targetP = new Step(QQChatHandler.QQ_PACKAGE_NAME,":id/relativeItem",AccessibilityNodeInfo.ACTION_CLICK,false,1500);
+                targetP.setInNodesPosition(position+1);
+                steps.add(targetP);
+
                 getAnswer().setMessage(NekoAskAble.COME_BACK);
             }
         }else {

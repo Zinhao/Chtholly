@@ -6,7 +6,6 @@ import android.accessibilityservice.AccessibilityServiceInfo;
 import android.accessibilityservice.GestureDescription;
 import android.content.Intent;
 import android.graphics.PixelFormat;
-import android.os.Build;
 import android.os.Handler;
 import android.provider.Settings;
 import android.util.Log;
@@ -39,9 +38,17 @@ public class NekoChatService extends AccessibilityService implements OpenAiAskAb
     private ExoPlayer mediaPlayer;
     private AccessibilityButtonController accessibilityButtonController;
     private boolean mIsAccessibilityButtonAvailable;
-    private View floatView;
-    private WindowManager.LayoutParams floatViewParams;
-    private boolean floatWindowShow;
+
+    private boolean accShow;
+    private View accView;
+    private WindowManager.LayoutParams accViewParams;
+
+    private boolean ctrlShow;
+    private View ctrlView;
+    private WindowManager.LayoutParams ctrlViewParams;
+    private AccessibilityBoundView accessibilityBoundView;
+
+
     private WindowManager windowManager;
     /***
      * 每日自动问候
@@ -81,7 +88,8 @@ public class NekoChatService extends AccessibilityService implements OpenAiAskAb
         mediaPlayer = new ExoPlayer.Builder(this).build();
         qqChatHandler = new QQChatHandler(this);
         windowManager = getSystemService(WindowManager.class);
-        floatViewParams = makeFloatWindowParams(0,0);
+        accViewParams = makeFloatWindowParams(0,0,0,0);
+        ctrlViewParams = makeFloatWindowParams(400,400,1,1);
         speakStartVoice();
     }
 
@@ -99,6 +107,13 @@ public class NekoChatService extends AccessibilityService implements OpenAiAskAb
 
         autoMission(event.getPackageName().toString());
         AccessibilityNodeInfo root = getRootInActiveWindow();
+        if(root!=null){
+            if(accView !=null ){
+                if(accessibilityBoundView == null)
+                    accessibilityBoundView = accView.findViewById(R.id.acbv);
+                accessibilityBoundView.setNodeInfo(event.getSource());
+            }
+        }
         if (BuildConfig.DEBUG) {
             LayoutTreeUtils.getEventStringBuilder(event);
             //EventType: TYPE_WINDOW_CONTENT_CHANGED; EventTime: 338363649;
@@ -138,10 +153,11 @@ public class NekoChatService extends AccessibilityService implements OpenAiAskAb
                     throw new RuntimeException(e);
                 }
             }
-
         }
         if(QQ_PACKAGE_NAME.equals(event.getPackageName().toString())){
             qqChatHandler.handle(event);
+            if(accessibilityBoundView != null)
+                accessibilityBoundView.invalidate();
         }
         if (waitQAs.isEmpty()) {
             return;
@@ -297,7 +313,7 @@ public class NekoChatService extends AccessibilityService implements OpenAiAskAb
                 if (step.isGlobalAction()) {
                     result = performGlobalAction(step.getActionId());
                 } else {
-                    AccessibilityNodeInfo targetView = findFirstNodeInfo(source, step.getViewId());
+                    AccessibilityNodeInfo targetView = findIndexNodeInfo(source, step.getViewId(),step.getInNodesPosition());
                     if (step.isFindChildByPosition() && targetView != null) {
                         for (int i = 0; i < step.getFindPosition().length; i++) {
                             targetView = targetView.getChild(step.getFindPosition()[i]);
@@ -458,7 +474,6 @@ public class NekoChatService extends AccessibilityService implements OpenAiAskAb
     protected void onServiceConnected() {
         super.onServiceConnected();
         Log.d(TAG, "onServiceConnected: ");
-        showFloatWindow();
         accessibilityButtonController = getAccessibilityButtonController();
         mIsAccessibilityButtonAvailable = accessibilityButtonController.isAccessibilityButtonAvailable();
         if (!mIsAccessibilityButtonAvailable) {
@@ -489,50 +504,105 @@ public class NekoChatService extends AccessibilityService implements OpenAiAskAb
         return Math.round(Math.random() * max * 60 * 1000) + min * 60 * 1000;
     }
 
-    public void setFloatView(View floatView) {
-        this.floatView = floatView;
+    public void setAccView(View accView) {
+        this.accView = accView;
     }
 
-    public View getFloatView() {
-        return floatView;
+    public View getAccView() {
+        return accView;
     }
 
-    public WindowManager.LayoutParams getFloatViewParams() {
-        return floatViewParams;
+    public View getCtrlView() {
+        return ctrlView;
     }
 
-    public void showFloatWindow() {
-//        att
-        if (!Settings.canDrawOverlays(getApplicationContext()) || floatView == null) {
+    public void setCtrlView(View ctrlView) {
+        this.ctrlView = ctrlView;
+    }
+
+    public WindowManager.LayoutParams getAccViewParams() {
+        return accViewParams;
+    }
+
+    public WindowManager.LayoutParams getCtrlViewParams() {
+        return ctrlViewParams;
+    }
+
+    public void showAccWindow() {
+        if (!Settings.canDrawOverlays(getApplicationContext()) || accView == null) {
             Intent rqIntent = new Intent(getApplicationContext(), FloatWindowActivity.class);
             rqIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             startActivity(rqIntent);
         } else {
-            if (!floatWindowShow) {
-                windowManager.addView(floatView, floatViewParams);
+            if (!accShow) {
+                windowManager.removeView(ctrlView);
+                windowManager.addView(accView, accViewParams);
+                if(accessibilityBoundView!=null){
+                    accessibilityBoundView.postInvalidate();
+                }
+                windowManager.addView(ctrlView, ctrlViewParams);
+
             }
-            floatWindowShow = true;
+            accShow = true;
         }
     }
 
-    public void hideFloatWindow() {
-        if (floatView == null)
+    public boolean isAccShow() {
+        return accShow;
+    }
+
+    public void hideAccWindow() {
+        if (accView == null)
             return;
-        if (floatWindowShow) {
-            windowManager.removeView(floatView);
+        if (accShow) {
+            windowManager.removeView(accView);
         }
-        floatWindowShow = false;
+        accShow = false;
     }
 
-    private static WindowManager.LayoutParams makeFloatWindowParams(float x, float y) {
+    public void showCtrlWindow() {
+        if (!Settings.canDrawOverlays(getApplicationContext()) || ctrlView == null) {
+            Intent rqIntent = new Intent(getApplicationContext(), FloatWindowActivity.class);
+            rqIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            startActivity(rqIntent);
+        } else {
+            if (!ctrlShow) {
+                windowManager.addView(ctrlView, ctrlViewParams);
+            }
+            ctrlShow = true;
+        }
+    }
+
+    public void hideCtrlWindow() {
+        if (ctrlView == null)
+            return;
+        if (ctrlShow) {
+            windowManager.removeView(ctrlView);
+        }
+        ctrlShow = false;
+    }
+
+
+    private static WindowManager.LayoutParams makeFloatWindowParams(float x, float y,int width,int height) {
         WindowManager.LayoutParams params = new WindowManager.LayoutParams();
-        params.type = WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY;
+        params.type = WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY;
         params.gravity = Gravity.START | Gravity.TOP;
-        params.width = WindowManager.LayoutParams.MATCH_PARENT;
-        params.height = WindowManager.LayoutParams.WRAP_CONTENT;
+        if(width == 0){
+            params.width = WindowManager.LayoutParams.MATCH_PARENT;
+        }else {
+            params.width = WindowManager.LayoutParams.WRAP_CONTENT;
+        }
+        if(height == 0){
+            params.height = WindowManager.LayoutParams.MATCH_PARENT;
+        }else {
+            params.height = WindowManager.LayoutParams.WRAP_CONTENT;
+        }
+
         params.flags =
                 WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE | WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL |
-                        WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH;
+                        WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH | WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON;
+
+
         params.format = PixelFormat.RGBA_8888;
         params.x = (int) x;
         params.y = (int) y;
@@ -543,7 +613,7 @@ public class NekoChatService extends AccessibilityService implements OpenAiAskAb
     public void onDestroy() {
         Log.e(TAG, "onDestroy: ");
         super.onDestroy();
-        hideFloatWindow();
+        hideAccWindow();
         speakLeaveVoice();
     }
 
