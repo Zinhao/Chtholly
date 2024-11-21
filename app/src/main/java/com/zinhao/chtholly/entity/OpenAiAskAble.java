@@ -104,21 +104,6 @@ public class OpenAiAskAble extends NekoAskAble implements Callback{
                 }
             }
         }
-//        else if(response.code() == 400){
-//            int deleteCount = OpenAiSession.getInstance().autoSummarize();
-//            if(deleteCount>=2){
-//                OpenAiSession.getInstance().requestAsk(this);
-//            }else{
-//                getAnswer().setMessage("我有点累了，需要休息!("+response.code()+")");
-//            }
-//        }else {
-//            int deleteCount = OpenAiSession.getInstance().autoSummarize();
-//            if(deleteCount>=2){
-//                OpenAiSession.getInstance().requestAsk(this);
-//            }else{
-//                getAnswer().setMessage("我有点累了，需要休息!("+response.code()+")");
-//            }
-//        }
         if(delayReplyCallback !=null)
             delayReplyCallback.onReply(this);
         response.close();

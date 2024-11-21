@@ -3,6 +3,7 @@ package com.zinhao.chtholly.session;
 import android.util.Log;
 import com.zinhao.chtholly.BotApp;
 import com.zinhao.chtholly.LoggingInterceptor;
+import com.zinhao.chtholly.NekoChatService;
 import com.zinhao.chtholly.entity.AIMethodTool;
 import com.zinhao.chtholly.entity.Message;
 import com.zinhao.chtholly.entity.OpenAiAskAble;
@@ -206,12 +207,14 @@ public class OpenAiSession extends NekoSession{
     }
 
     public void requestChatSummarize(){
+        NekoChatService.getInstance().addLogcat("requestChatSummarize:length");
         Message question = new Message("system","使用不超过50字总结对话",System.currentTimeMillis());
         OpenAiAskAble summarizeMessage = new OpenAiAskAble(BotApp.getInstance().getPackageName(), question, new OpenAiAskAble.DelayReplyCallback() {
             @Override
             public void onReply(OpenAiAskAble message) {
                 chats = new JSONArray();
                 chats.put(firstSystemChat);
+                NekoChatService.getInstance().addLogcat("requestChatSummarize:"+message.getAnswer().getMessage());
                 addChat(ROLE_SYSTEM,message.getAnswer().getMessage());
             }
         });

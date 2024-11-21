@@ -45,30 +45,42 @@ public class FloatWindowActivity extends AppCompatActivity{
         }
         initAccView();
         initCtrlView();
+        initLogcatView();
     }
 
     public void initCtrlView() {
         if(NekoChatService.getInstance().getCtrlView() == null){
             View view = LayoutInflater.from(this).inflate(R.layout.float_bt, null, false);
-            Button showBtn = view.findViewById(R.id.show);
+            Button showBtn = view.findViewById(R.id.b1);
             showBtn.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
-                    NekoChatService.getInstance().showAccWindow();
+                    if(NekoChatService.getInstance().isAccShow()){
+                        NekoChatService.getInstance().setAccIsAlpha(!NekoChatService.getInstance().isAccIsAlpha());
+                    }else{
+                        NekoChatService.getInstance().showAccWindow();
+                    }
+
                 }
             });
 
-            Button hideBtn = view.findViewById(R.id.hide);
+            Button hideBtn = view.findViewById(R.id.b2);
             hideBtn.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
-                    NekoChatService.getInstance().hideAccWindow();
+                    if(NekoChatService.getInstance().isLogcatShow()){
+                        NekoChatService.getInstance().setLogcatAlpha(!NekoChatService.getInstance().isLogcatAlpha());
+                    }else {
+                        NekoChatService.getInstance().showLogcat();
+                    }
+
                 }
             });
 
             View cv = view.findViewById(R.id.ctrl);
             cv.setOnTouchListener(new View.OnTouchListener() {
                 private float downX, downY;
+                @SuppressLint("ClickableViewAccessibility")
                 @Override
                 public boolean onTouch(View v, MotionEvent event) {
                     if (event.getAction() == MotionEvent.ACTION_DOWN) {
@@ -110,9 +122,12 @@ public class FloatWindowActivity extends AppCompatActivity{
             View view = LayoutInflater.from(this).inflate(R.layout.float_helper, null, false);
             NekoChatService.getInstance().setAccView(view);
         }
-        if (Settings.canDrawOverlays(this)) {
-            // 有权限
-//            NekoChatService.getInstance().showAccWindow();
+    }
+
+    public void initLogcatView(){
+        if(NekoChatService.getInstance().getAccessibilityLogcatView() == null){
+            View view = LayoutInflater.from(this).inflate(R.layout.float_logcat, null, false);
+            NekoChatService.getInstance().setAccessibilityLogcatView(view);
         }
     }
 }

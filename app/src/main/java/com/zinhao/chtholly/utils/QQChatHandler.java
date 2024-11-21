@@ -4,6 +4,7 @@ import android.util.Log;
 import android.view.accessibility.AccessibilityEvent;
 import android.view.accessibility.AccessibilityNodeInfo;
 import com.zinhao.chtholly.BotApp;
+import com.zinhao.chtholly.NekoChatService;
 import com.zinhao.chtholly.entity.Command;
 import com.zinhao.chtholly.entity.Message;
 
@@ -18,9 +19,6 @@ public class QQChatHandler extends BaseChatHandler {
     public static final String QQ_TIP_MESSAGE_ID = ":id/graybar";
     public static final String QQ_RL_TITLE_ID = ":id/rlCommenTitle";
 
-
-    private static Message emptyMessage;
-
     private final List<Message> messageList = new Vector<>();
     private int chatsIndex = 0;
 
@@ -33,8 +31,8 @@ public class QQChatHandler extends BaseChatHandler {
             return;
         }
         String botName = BotApp.getInstance().getBotName();
-        // 通过打卡view判断是不是
-        boolean isPersonal =nodeInfo.findAccessibilityNodeInfosByViewId(getPackageName() + ":id/qn4").isEmpty();
+        // 通过状态view判断是不是
+        boolean isPersonal = !nodeInfo.findAccessibilityNodeInfosByViewId(getPackageName() + ":id/title_sub").isEmpty();
         Message hitMessage = null;
         if (isPersonal) {
             hitMessage = id2FindPersonLastMessage(nodeInfo);
@@ -47,7 +45,7 @@ public class QQChatHandler extends BaseChatHandler {
         if (isPersonal) {
             // 此处不要去验证$message.speaker,因为id2FindAdminLastMessage()中，speaker都填的是$AdminName
             if (isAtName(hitMessage, BotApp.getInstance().getAdminName())) {
-                Log.i(TAG, "findAddNewChatMessage:last is admin message!");
+                Log.i(TAG, "findAddNewChatMessage:last is @admin message!");
                 return;
             }
         } else {
@@ -63,12 +61,13 @@ public class QQChatHandler extends BaseChatHandler {
         hitMessage.message = hitMessage.message.replace("@" + botName, "").trim();
         if (!messageList.isEmpty()) {
             Message last = messageList.get(messageList.size() - 1);
-            if (last.message.equals(hitMessage.message) && System.currentTimeMillis() - last.getTimeStamp() > 10000) {
-                Log.i(TAG, "findAddNewChatMessage: in close time, last message is same!");
+            if (last.message.equals(hitMessage.message) && System.currentTimeMillis() - last.getTimeStamp() < 10000) {
+                Log.d(TAG, "findLastMessage: in close time, same message:"+last.message);
+                //in close time, same message
                 return;
             }
         }
-        Log.i(TAG, String.format(Locale.US, "✨findAddNewChatMessage: %s:%s", hitMessage.speaker, hitMessage.message));
+        NekoChatService.getInstance().addLogcat(String.format(Locale.US, "✨findAddNewChatMessage: %s:%s", hitMessage.speaker, hitMessage.message));
         BotApp.getInstance().insert(hitMessage);
         messageList.add(hitMessage);
         messageCallback.onFind(hitMessage);
@@ -113,8 +112,8 @@ public class QQChatHandler extends BaseChatHandler {
         }
     }
 
-    public static Message id2FindGroupLastMessage(AccessibilityNodeInfo nodeInfo){
-        emptyMessage = new Message(null,null,System.currentTimeMillis());
+    public Message id2FindGroupLastMessage(AccessibilityNodeInfo nodeInfo){
+        Message emptyMessage = new Message(null,null,System.currentTimeMillis());
         List<AccessibilityNodeInfo> otherMessageNodes = nodeInfo.findAccessibilityNodeInfosByViewId(QQ_PACKAGE_NAME+":id/msgbox");
         if(!otherMessageNodes.isEmpty()){
             for (int i = 0; i < otherMessageNodes.size(); i++) {
@@ -220,8 +219,8 @@ public class QQChatHandler extends BaseChatHandler {
         return chatPageViewIds;
     }
 
-    public static Message id2FindPersonLastMessage(AccessibilityNodeInfo nodeInfo){
-        emptyMessage = new Message(null,null,System.currentTimeMillis());
+    public Message id2FindPersonLastMessage(AccessibilityNodeInfo nodeInfo){
+        Message emptyMessage = new Message(null,null,System.currentTimeMillis());
         List<AccessibilityNodeInfo> messageNodes = nodeInfo.findAccessibilityNodeInfosByViewId(getChatTextId());
         if(messageNodes.isEmpty())
             return emptyMessage;

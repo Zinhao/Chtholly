@@ -40,14 +40,20 @@ public class NekoChatService extends AccessibilityService implements OpenAiAskAb
     private boolean mIsAccessibilityButtonAvailable;
 
     private boolean accShow;
+    private boolean accIsAlpha;
     private View accView;
     private WindowManager.LayoutParams accViewParams;
+
+    private boolean logcatShow;
+    private boolean logcatAlpha;
+    private View aclv;
+    private AccessibilityLogcatView accessibilityLogcatView;
+    private WindowManager.LayoutParams logcatViewParams;
 
     private boolean ctrlShow;
     private View ctrlView;
     private WindowManager.LayoutParams ctrlViewParams;
     private AccessibilityBoundView accessibilityBoundView;
-
 
     private WindowManager windowManager;
     /***
@@ -88,8 +94,8 @@ public class NekoChatService extends AccessibilityService implements OpenAiAskAb
         mediaPlayer = new ExoPlayer.Builder(this).build();
         qqChatHandler = new QQChatHandler(this);
         windowManager = getSystemService(WindowManager.class);
-        accViewParams = makeFloatWindowParams(0,0,0,0);
-        ctrlViewParams = makeFloatWindowParams(400,400,1,1);
+        accViewParams = OverlayUtils.makeNotTouchWindowParams(0,0,0,0);
+        ctrlViewParams = OverlayUtils.makeFloatWindowParams(400,400,1,1);
         speakStartVoice();
     }
 
@@ -107,13 +113,26 @@ public class NekoChatService extends AccessibilityService implements OpenAiAskAb
 
         autoMission(event.getPackageName().toString());
         AccessibilityNodeInfo root = getRootInActiveWindow();
-        if(root!=null){
-            if(accView !=null ){
-                if(accessibilityBoundView == null)
-                    accessibilityBoundView = accView.findViewById(R.id.acbv);
-                accessibilityBoundView.setNodeInfo(event.getSource());
+        AccessibilityNodeInfo source = event.getSource();
+        if(accView !=null){
+            if(accessibilityBoundView == null)
+                accessibilityBoundView = accView.findViewById(R.id.acbv);
+            if(source == null && root!=null){
+                accessibilityBoundView.setNodeInfo(root);
+            }else if(source !=null && root == null){
+                accessibilityBoundView.setNodeInfo(source);
+            }else if(source != null){
+                accessibilityBoundView.setNodeInfo(source);
             }
+            accessibilityBoundView.postInvalidate();
         }
+
+        if(aclv!=null){
+            if(accessibilityLogcatView == null)
+                accessibilityLogcatView = aclv.findViewById(R.id.aclv);
+        }
+
+
         if (BuildConfig.DEBUG) {
             LayoutTreeUtils.getEventStringBuilder(event);
             //EventType: TYPE_WINDOW_CONTENT_CHANGED; EventTime: 338363649;
@@ -123,7 +142,8 @@ public class NekoChatService extends AccessibilityService implements OpenAiAskAb
             // ItemCount: -1; CurrentItemIndex: -1; Ena
             // : package:com.tencent.mobileqq, text: [[有人@我]景皓(二次元入口):@丛雨 最近有点低迷，我想你说点鼓励的话语], desc: null
             if(!event.getText().isEmpty() || event.getContentDescription()!=null){
-                Log.i(TAG, "package:" + event.getPackageName() + ", class:"+event.getClassName()+", text: " + event.getText() + ", desc: " + event.getContentDescription());
+                String logcat ="package:" + event.getPackageName() + ", class:"+event.getClassName()+", text: " + event.getText() + ", desc: " + event.getContentDescription();
+                Log.i(TAG, logcat);
             }
         }
         String pageName = processNotChatPage(event.getSource());
@@ -156,8 +176,6 @@ public class NekoChatService extends AccessibilityService implements OpenAiAskAb
         }
         if(QQ_PACKAGE_NAME.equals(event.getPackageName().toString())){
             qqChatHandler.handle(event);
-            if(accessibilityBoundView != null)
-                accessibilityBoundView.invalidate();
         }
         if (waitQAs.isEmpty()) {
             return;
@@ -199,7 +217,7 @@ public class NekoChatService extends AccessibilityService implements OpenAiAskAb
         int nowHourCount = calendar.get(Calendar.HOUR_OF_DAY);
         if (nowDayCount != dayCount) {
             //下一个日子
-            Log.d(TAG, "autoMission: new day come!");
+            addLogcat( "autoMission: new day come!");
             todayMorning = false;
             todayNoon = false;
             todayAfter = false;
@@ -210,14 +228,14 @@ public class NekoChatService extends AccessibilityService implements OpenAiAskAb
         if (nowHourCount > 8 && nowHourCount <= 10 && !todayMorning) {
             long delayMillis = randomTime(3, 7);
             autoCommand = new NekoAskAble(packageName, new Message("system", "早上好", System.currentTimeMillis()));
-            Log.d(TAG, "autoMission:todayMorning will answer at " + dateTimeFormat.format(System.currentTimeMillis() + delayMillis));
+            addLogcat("autoMission:todayMorning will answer at " + dateTimeFormat.format(System.currentTimeMillis() + delayMillis));
             mHandler.postDelayed(delayCheck, delayMillis);
             todayMorning = true;
         }
         if (nowHourCount > 11 && nowHourCount <= 13 && !todayNoon) {
             long delayMillis = randomTime(4, 15);
             autoCommand = new NekoAskAble(packageName, new Message("system", "中午好", System.currentTimeMillis()));
-            Log.d(TAG, "autoMission:todayNoon will answer at " + dateTimeFormat.format(System.currentTimeMillis() + delayMillis));
+            addLogcat("autoMission:todayNoon will answer at " + dateTimeFormat.format(System.currentTimeMillis() + delayMillis));
             mHandler.postDelayed(delayCheck, delayMillis);
             todayNoon = true;
 
@@ -234,20 +252,20 @@ public class NekoChatService extends AccessibilityService implements OpenAiAskAb
         if (nowHourCount > 13 && nowHourCount <= 19 && !todayAfter) {
             long delayMillis = randomTime(20, 30);
             autoCommand = new NekoAskAble(packageName, new Message("system", "下午好", System.currentTimeMillis()));
-            Log.d(TAG, "autoMission:todayAfter will answer at " + dateTimeFormat.format(System.currentTimeMillis() + delayMillis));
+            addLogcat("autoMission:todayAfter will answer at " + dateTimeFormat.format(System.currentTimeMillis() + delayMillis));
             mHandler.postDelayed(delayCheck, delayMillis);
             todayAfter = true;
         }
         if (nowHourCount > 19 && nowHourCount <= 22 && !todayEvening) {
             long delayMillis = randomTime(5, 15);
-            Log.d(TAG, "autoMission:todayEvening will answer at " + dateTimeFormat.format(System.currentTimeMillis() + delayMillis));
+            addLogcat("autoMission:todayEvening will answer at " + dateTimeFormat.format(System.currentTimeMillis() + delayMillis));
             autoCommand = new NekoAskAble(packageName, new Message("system", "晚上好", System.currentTimeMillis()));
             mHandler.postDelayed(delayCheck, delayMillis);
             todayEvening = true;
         }
         if (nowHourCount > 22 && !todayBedTime) {
             long delayMillis = randomTime(5, 10);
-            Log.d(TAG, "autoMission:todayBedTime will answer at " + dateTimeFormat.format(System.currentTimeMillis() + delayMillis));
+            addLogcat("autoMission:todayBedTime will answer at " + dateTimeFormat.format(System.currentTimeMillis() + delayMillis));
             autoCommand = new NekoAskAble(packageName, new Message("system", "晚安", System.currentTimeMillis()));
             mHandler.postDelayed(delayCheck, delayMillis);
             todayBedTime = true;
@@ -288,7 +306,7 @@ public class NekoChatService extends AccessibilityService implements OpenAiAskAb
                 }
             }
             if (qa.sendSuccess()) {
-                Log.d(TAG, "doSomething: send success:" + qa.getAnswer().getMessage());
+                addLogcat("doSomething: send success:" + qa.getAnswer().getMessage());
             }
         }
     }
@@ -329,7 +347,7 @@ public class NekoChatService extends AccessibilityService implements OpenAiAskAb
                             result = targetView.performAction(step.getActionId());
                         }
                     } else {
-                        Log.e(TAG, "doAction: 寻找视图失败" + step.getViewId());
+                        addLogcat("doAction: 寻找视图失败" + step.getViewId());
                         // 为防止卡死在一条指令上面，设置一个30秒超时，超时会自动完成任务。
                         if (System.currentTimeMillis() - qa.getQuestion().getTimeStamp() > 30000) {
                             result = true;
@@ -418,20 +436,6 @@ public class NekoChatService extends AccessibilityService implements OpenAiAskAb
         }, mHandler);
     }
 
-
-
-    private static boolean isAtName(Message message, String name) {
-        if (message == null)
-            return false;
-        if (message.message.trim().startsWith("@" + name)) {
-            return true;
-        }
-        if (message.message.trim().endsWith("@" + name)) {
-            return true;
-        }
-        return message.message.contains("@" + name);
-    }
-
     /**
      * @param seconds after now
      * @param message reply
@@ -439,7 +443,7 @@ public class NekoChatService extends AccessibilityService implements OpenAiAskAb
      */
     public void addRemind(long seconds, String message, String master) {
         long remindTime = System.currentTimeMillis() + seconds * 1000L;
-        Log.d(TAG, String.format(Locale.CHINA, "addAlarm: %s %s", dateTimeFormat.format(remindTime), message));
+        addLogcat( String.format(Locale.CHINA, "addAlarm: %s %s", dateTimeFormat.format(remindTime), message));
         remindMessages.add(new RemindMessage("system", message, remindTime, master));
     }
 
@@ -463,7 +467,6 @@ public class NekoChatService extends AccessibilityService implements OpenAiAskAb
         @Override
         public void run() {
             if (autoCommand != null) {
-                Log.d(TAG, "autoMission: " + autoCommand.getQuestion().getMessage());
                 autoCommand.ask();
                 waitQAs.add(autoCommand);
             }
@@ -473,7 +476,7 @@ public class NekoChatService extends AccessibilityService implements OpenAiAskAb
     @Override
     protected void onServiceConnected() {
         super.onServiceConnected();
-        Log.d(TAG, "onServiceConnected: ");
+        addLogcat("onServiceConnected: ");
         accessibilityButtonController = getAccessibilityButtonController();
         mIsAccessibilityButtonAvailable = accessibilityButtonController.isAccessibilityButtonAvailable();
         if (!mIsAccessibilityButtonAvailable) {
@@ -551,13 +554,55 @@ public class NekoChatService extends AccessibilityService implements OpenAiAskAb
         return accShow;
     }
 
-    public void hideAccWindow() {
-        if (accView == null)
-            return;
-        if (accShow) {
-            windowManager.removeView(accView);
+    public void setAccIsAlpha(boolean alpha){
+        accIsAlpha = alpha;
+        accView.setAlpha(alpha?0:1);
+    }
+
+    public boolean isAccIsAlpha() {
+        return accIsAlpha;
+    }
+
+    public boolean isLogcatShow() {
+        return logcatShow;
+    }
+
+    public boolean isLogcatAlpha() {
+        return logcatAlpha;
+    }
+
+    public void setLogcatAlpha(boolean logcatAlpha) {
+        this.logcatAlpha = logcatAlpha;
+        accessibilityLogcatView.setAlpha(logcatAlpha?0:1);
+    }
+
+    public View getAccessibilityLogcatView() {
+        return aclv;
+    }
+
+    public void setAccessibilityLogcatView(View aclv) {
+        this.aclv = aclv;
+    }
+
+    public void showLogcat() {
+        if (!Settings.canDrawOverlays(getApplicationContext()) || accView == null) {
+            Intent rqIntent = new Intent(getApplicationContext(), FloatWindowActivity.class);
+            rqIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            startActivity(rqIntent);
+        } else {
+            if (!logcatShow) {
+                windowManager.removeView(ctrlView);
+
+                windowManager.addView(aclv, accViewParams);
+                if(aclv!=null){
+                    aclv.postInvalidate();
+                }
+
+                windowManager.addView(ctrlView, ctrlViewParams);
+
+            }
+            logcatShow = true;
         }
-        accShow = false;
     }
 
     public void showCtrlWindow() {
@@ -582,39 +627,17 @@ public class NekoChatService extends AccessibilityService implements OpenAiAskAb
         ctrlShow = false;
     }
 
-
-    private static WindowManager.LayoutParams makeFloatWindowParams(float x, float y,int width,int height) {
-        WindowManager.LayoutParams params = new WindowManager.LayoutParams();
-        params.type = WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY;
-        params.gravity = Gravity.START | Gravity.TOP;
-        if(width == 0){
-            params.width = WindowManager.LayoutParams.MATCH_PARENT;
-        }else {
-            params.width = WindowManager.LayoutParams.WRAP_CONTENT;
-        }
-        if(height == 0){
-            params.height = WindowManager.LayoutParams.MATCH_PARENT;
-        }else {
-            params.height = WindowManager.LayoutParams.WRAP_CONTENT;
-        }
-
-        params.flags =
-                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE | WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL |
-                        WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH | WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON;
-
-
-        params.format = PixelFormat.RGBA_8888;
-        params.x = (int) x;
-        params.y = (int) y;
-        return params;
-    }
-
     @Override
     public void onDestroy() {
         Log.e(TAG, "onDestroy: ");
         super.onDestroy();
-        hideAccWindow();
         speakLeaveVoice();
+    }
+
+    public void addLogcat(String l){
+        if(accessibilityLogcatView!=null){
+            accessibilityLogcatView.appendLogcat(l);
+        }
     }
 
     @Override
@@ -627,5 +650,7 @@ public class NekoChatService extends AccessibilityService implements OpenAiAskAb
         }
         command.ask();
         waitQAs.add(command);
+        addLogcat("waitQAs["+waitQAs.size()+"] " +message.getSpeaker()+ ": "+message.getMessage());
+
     }
 }

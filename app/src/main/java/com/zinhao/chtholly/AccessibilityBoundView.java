@@ -24,13 +24,11 @@ public class AccessibilityBoundView extends View {
         rectPaint = new Paint();
         rectPaint.setStyle(Paint.Style.STROKE);
         rectPaint.setStrokeWidth(3);
-        rectPaint.setColor(Color.RED);
+        rectPaint.setColor(Color.GREEN);
 
         textPaint = new Paint();
         textPaint.setColor(Color.YELLOW);
-        textPaint.setTextSize(16);
-
-        ViewCompat.getRootWindowInsets(this);
+        textPaint.setTextSize(24);
     }
 
     @Override
@@ -68,7 +66,6 @@ public class AccessibilityBoundView extends View {
         this.nodeInfo = nodeInfo;
     }
 
-    private  int statusBarHeight = 80;
     private final Paint rectPaint;
     private final Paint textPaint;
     private final Rect bound;
@@ -89,6 +86,11 @@ public class AccessibilityBoundView extends View {
 
     private void drawInfo(AccessibilityNodeInfo nodeInfo,Canvas canvas){
         nodeInfo.getBoundsInScreen(bound);
+        if(nodeInfo.isClickable()){
+            rectPaint.setColor(Color.GREEN);
+        }else{
+            rectPaint.setColor(Color.RED);
+        }
         canvas.drawRect(bound, rectPaint);
 
         String text = nodeInfo.getViewIdResourceName();
@@ -105,22 +107,23 @@ public class AccessibilityBoundView extends View {
             // 计算文本的绘制位置，使其位于矩形的中心
             float x = bound.left; // 文本的左下角 X
             float y = bound.top + textHeight; // 文本的基线 Y
+            if(nodeInfo.isClickable()){
+                textPaint.setColor(Color.YELLOW);
+            }else{
+                textPaint.setColor(Color.RED);
+            }
             canvas.drawText(text,x,y, textPaint);
         }
     }
-
+    private static final int statusBarHeight = 80;
     private AccessibilityNodeInfo nodeInfo;
     @Override
     protected void onDraw(@NonNull Canvas canvas) {
         super.onDraw(canvas);
         if(nodeInfo!=null){
-            // 保存当前状态
             canvas.save();
-            // 应用缩放
             canvas.translate(0,-statusBarHeight);
-//            canvas.scale(0.8f, 0.8f);
             treeAndPrintLayout(nodeInfo,canvas);
-//            canvas.restore();
         }
     }
 }
