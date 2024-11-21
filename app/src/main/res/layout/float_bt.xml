@@ -3,6 +3,7 @@
               android:orientation="vertical"
               android:layout_width="50dp"
               android:layout_margin="16dp"
+              android:alpha="0.3"
               android:layout_height="wrap_content">
 
     <Button

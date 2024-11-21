@@ -109,8 +109,7 @@ public class Command implements AskAble {
                 System.arraycopy(methodAndArgs, 1, args, 0, methodAndArgs.length - 1);
             }
             Method method = Command.class.getDeclaredMethod(MethodName.replace('/',' ').trim());
-            Object result = method.invoke(this);
-            return result!=null;
+            return (boolean) method.invoke(this);
         } catch (NoSuchMethodException | InvocationTargetException | IllegalAccessException e) {
             Log.e(getClass().getSimpleName(), "ask: ", e);
             return true;
@@ -203,6 +202,7 @@ public class Command implements AskAble {
                 steps.add(targetP);
 
                 getAnswer().setMessage(NekoAskAble.COME_BACK);
+                return true;
             }
         }else {
             //截图聊天列表并发送截图
@@ -217,6 +217,7 @@ public class Command implements AskAble {
                 steps.add(new Step(QQChatHandler.QQ_PACKAGE_NAME, cpvi.getSendBtnViewId(), AccessibilityNodeInfo.ACTION_CLICK,false,500));
                 steps.add(new Step(QQChatHandler.QQ_PACKAGE_NAME, QQChatHandler.getPicButtonId(), AccessibilityNodeInfo.ACTION_CLICK,false,500));
                 getAnswer().setMessage("看好需要切换的聊天的位置，使用("+SWITCH_CHATS+" 0)切换至第一个聊天，数字表示聊天的索引。");
+                return true;
             }else {
                 getAnswer().setMessage(NekoAskAble.HARD);
                 return true;

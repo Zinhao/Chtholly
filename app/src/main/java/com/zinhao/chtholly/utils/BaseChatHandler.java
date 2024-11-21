@@ -35,10 +35,8 @@ public abstract class BaseChatHandler {
     }
 
     public static boolean clickButton(AccessibilityNodeInfo sendButton, Command commandMessage) {
-        if (!commandMessage.isSend() && commandMessage.isWrite()) {
-            boolean result = sendButton.performAction(AccessibilityNodeInfo.ACTION_CLICK);
-            commandMessage.setSend(result);
-        }
+        boolean result = sendButton.performAction(AccessibilityNodeInfo.ACTION_CLICK);
+        commandMessage.setSend(result);
         return commandMessage.isSend();
     }
 

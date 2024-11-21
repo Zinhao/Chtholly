@@ -17,6 +17,7 @@ public class LoggingInterceptor implements Interceptor {
         Request request = chain.request();
 
         // 打印请求信息
+        NekoChatService.getInstance().addLogcat("Sending request to URL: " + request.url());
         Log.d(TAG,"Sending request to URL: " + request.url());
         Log.d(TAG,"Request method: " + request.method());
         if (request.body() != null) {
@@ -32,6 +33,7 @@ public class LoggingInterceptor implements Interceptor {
         String responseBodyString = responseBody.string(); // 读取响应体
 
         // 打印响应信息
+        NekoChatService.getInstance().addLogcat("Received response from URL: " + response.request().url());
         Log.d(TAG,"Received response from URL: " + response.request().url());
         Log.d(TAG,"Response code: " + response.code());
         Log.d(TAG,"Response body: " + responseBodyString);

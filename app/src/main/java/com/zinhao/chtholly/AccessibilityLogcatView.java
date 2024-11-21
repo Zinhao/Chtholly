@@ -4,7 +4,9 @@ import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
+import android.text.TextPaint;
 import android.util.AttributeSet;
+import android.util.Log;
 import android.view.View;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -14,15 +16,17 @@ import java.util.List;
 
 public class AccessibilityLogcatView extends View {
     private final List<String> logcatList = new ArrayList<>();
+    private int lineHeight;
     public AccessibilityLogcatView(Context context) {
         this(context, null);
     }
 
     public AccessibilityLogcatView(Context context, @Nullable AttributeSet attrs) {
         super(context, attrs);
-        textPaint = new Paint();
+        textPaint = new TextPaint();
         textPaint.setColor(Color.BLUE);
         textPaint.setTextSize(24);
+        lineHeight = 24;
         logcatList.add("init logcat");
     }
 
@@ -62,17 +66,39 @@ public class AccessibilityLogcatView extends View {
         postInvalidate();
     }
 
-    private final Paint textPaint;
+    private final TextPaint textPaint;
 
     private static final int statusBarHeight = 80;
+    private static final List<String> waitDrawLineText = new ArrayList<>();
     @Override
     protected void onDraw(@NonNull Canvas canvas) {
         super.onDraw(canvas);
-        float y = getBottom();
-        float textSize = textPaint.getTextSize();
-        for (int i = 0; i < logcatList.size(); i++) {
-            float textY = y - (logcatList.size() - i) * textSize;
-            canvas.drawText(logcatList.get(i),0,textY,textPaint);
+        float textY = getBottom();
+        float maxWidth = getWidth()-lineHeight*2;
+        try {
+            for (int i = logcatList.size()-1; i >=0; i--) {
+                String logcat = logcatList.get(i);
+                waitDrawLineText.clear();
+                int seek = 0;
+                do{
+                    seek  = textPaint.breakText(logcat,false, maxWidth,null);
+                    String _t = logcat.substring(0,seek);
+                    waitDrawLineText.add(_t);
+                    logcat = logcat.substring(seek);
+                }while (!logcat.isEmpty());
+
+                for (int j = waitDrawLineText.size()-1; j >= 0; j--) {
+                    textY -= lineHeight;
+                    if(textY<0){
+                        return;
+                    }
+                    canvas.drawText(waitDrawLineText.get(j),(float)lineHeight,textY,textPaint);
+                }
+            }
+        }catch (Exception e){
+            Log.e(getClass().getSimpleName(), "onDraw: ",e);
+
         }
+
     }
 }

@@ -39,6 +39,8 @@ public class QQChatHandler extends BaseChatHandler {
         } else {
             hitMessage = id2FindGroupLastMessage(nodeInfo);
         }
+        if(hitMessage == null)
+            return;
         if (hitMessage.speaker == null || hitMessage.message == null) {
             return;
         }
@@ -113,31 +115,34 @@ public class QQChatHandler extends BaseChatHandler {
     }
 
     public Message id2FindGroupLastMessage(AccessibilityNodeInfo nodeInfo){
-        Message emptyMessage = new Message(null,null,System.currentTimeMillis());
+
         List<AccessibilityNodeInfo> otherMessageNodes = nodeInfo.findAccessibilityNodeInfosByViewId(QQ_PACKAGE_NAME+":id/msgbox");
         if(!otherMessageNodes.isEmpty()){
             for (int i = 0; i < otherMessageNodes.size(); i++) {
                 AccessibilityNodeInfo o = otherMessageNodes.get(i);
                 //__com.tencent.mobileqq:id/msgbox class:android.widget.TextView, text:[chat_1] 景皓：@丛雨 你在吗 bound:Rect(0, 207 - 1080, 299) click:true longClick:false check:false desc:0
-                Log.i(TAG, String.format(Locale.CHINA,"id2FindGroupLastMessage: other ground:%s",o.getText()));
+                NekoChatService.getInstance().addLogcat(String.format(Locale.CHINA,"id2FindGroupLastMessage: other ground:%s",o.getText()));
             }
         }
 
         List<AccessibilityNodeInfo> nickNodes = nodeInfo.findAccessibilityNodeInfosByViewId(getChatNickId());
         List<AccessibilityNodeInfo> messageNodes = nodeInfo.findAccessibilityNodeInfosByViewId(getChatTextId());
+        Message emptyMessage = new Message(null,null,System.currentTimeMillis());
         if(nickNodes.size() == messageNodes.size() && !nickNodes.isEmpty()){
-            Log.i(TAG, String.format(Locale.US,"id2FindGroupLastMessage: nikc:%d m:%d ====================================>",nickNodes.size(),messageNodes.size()));
             for (int i = 0; i < Math.min(messageNodes.size(),nickNodes.size()); i++) {
                 AccessibilityNodeInfo n = nickNodes.get(i);
                 AccessibilityNodeInfo m = messageNodes.get(i);
                 Log.i(TAG, String.format(Locale.CHINA,"id2FindGroupLastMessage: nick:%s : %s",n.getText(),m.getText()));
             }
             int lastIndex = nickNodes.size()-1;
-            emptyMessage.setSpeaker(nickNodes.get(lastIndex).getText()+"");
-            emptyMessage.setMessage(messageNodes.get(lastIndex).getText()+"");
-            emptyMessage.setNodeInfo(messageNodes.get(lastIndex));
-        }else{
-            Log.e(TAG, String.format(Locale.US,"id2FindGroupLastMessage: nikc:%d m:%d err ============>",nickNodes.size(),messageNodes.size()));
+            CharSequence text = messageNodes.get(lastIndex).getText();
+            if(text!=null){
+                emptyMessage.setSpeaker(nickNodes.get(lastIndex).getText()+"");
+                emptyMessage.setMessage(text.toString());
+                emptyMessage.setNodeInfo(messageNodes.get(lastIndex));
+            }else {
+                return null;
+            }
         }
         return emptyMessage;
     }
@@ -167,28 +172,16 @@ public class QQChatHandler extends BaseChatHandler {
         chatPageViewIds.setInputViewId(QQChatHandler.getInputId());
 
         // 发送按钮id
-        AccessibilityNodeInfo send = null;
-        for (String viewId : SEND_BTN_IDS) {
-            send = findFirstNodeInfo(nodeInfo, nodeInfo.getPackageName() + viewId);
-            if (send != null) {
-                chatPageViewIds.setSendBtnViewId(viewId);
-                break;
-            }
-        }
+        AccessibilityNodeInfo send;
+        send = findFirstNodeInfo(nodeInfo, nodeInfo.getPackageName() +SEND_BTN_IDS[1]);
+        chatPageViewIds.setSendBtnViewId(SEND_BTN_IDS[1]);
 
         // 聊天标题id
         AccessibilityNodeInfo title = findFirstNodeInfo(nodeInfo, QQChatHandler.getChatTitleId());
         chatPageViewIds.setTitleViewId(QQChatHandler.getChatTitleId());
 
         // 确认 选择第一张图片的选择框id
-        AccessibilityNodeInfo firstPicCheckBox;
-        for (String viewId : PIC_CHECKBOX_IDS) {
-            firstPicCheckBox = findFirstNodeInfo(nodeInfo, nodeInfo.getPackageName() + viewId);
-            if (firstPicCheckBox != null) {
-                chatPageViewIds.setFirstPicCheckBoxViewId(viewId);
-                break;
-            }
-        }
+        chatPageViewIds.setFirstPicCheckBoxViewId(PIC_CHECKBOX_IDS[1]);
 
         if (input == null || send == null) {
             Log.d(TAG, "initChatPage:非聊天界面");
@@ -220,18 +213,25 @@ public class QQChatHandler extends BaseChatHandler {
     }
 
     public Message id2FindPersonLastMessage(AccessibilityNodeInfo nodeInfo){
-        Message emptyMessage = new Message(null,null,System.currentTimeMillis());
         List<AccessibilityNodeInfo> messageNodes = nodeInfo.findAccessibilityNodeInfosByViewId(getChatTextId());
         if(messageNodes.isEmpty())
-            return emptyMessage;
+            return null;
+
         for (int i = 0; i < messageNodes.size(); i++) {
             AccessibilityNodeInfo m = messageNodes.get(i);
             Log.d(TAG, String.format(Locale.CHINA,"id2FindLastMessage: : %s",m.getText()));
         }
         int lastIndex = messageNodes.size()-1;
-        emptyMessage.setSpeaker(BotApp.getInstance().getAdminName());
-        emptyMessage.setMessage(messageNodes.get(lastIndex).getText() + "");
-        return emptyMessage;
+        AccessibilityNodeInfo lastNodeInfo = messageNodes.get(lastIndex);
+        CharSequence text = lastNodeInfo.getText();
+        if(text != null){
+            Message emptyMessage = new Message(null,null,System.currentTimeMillis());
+            emptyMessage.setSpeaker(BotApp.getInstance().getAdminName());
+            emptyMessage.setMessage(text.toString());
+            return emptyMessage;
+        }else {
+            return null;
+        }
     }
 
     public static final String UNKNOWN_PAGE = "com.tencent.mobileqq.unknown";
@@ -323,8 +323,8 @@ public class QQChatHandler extends BaseChatHandler {
 
     // 发送按钮
     public static final String[] SEND_BTN_IDS  = new String[]{
-            ":id/send_btn",
-            ":id/fun_btn",
+            ":id/send_btn",//   图片发送按钮
+            ":id/fun_btn",//  文字发送按钮
     };
 
 }

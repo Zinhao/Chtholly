@@ -147,7 +147,11 @@ public class NekoChatService extends AccessibilityService implements OpenAiAskAb
             }
         }
         String pageName = processNotChatPage(event.getSource());
-        Log.d(TAG, "onAccessibilityEvent: " + pageName);
+        if(!UNKNOWN_PAGE.equals(pageName) && !NULL_ROOT.equals(pageName)){
+            NekoChatService.getInstance().addLogcat( "onAccessibilityEvent: " + pageName);
+            Log.d(TAG, "onAccessibilityEvent: " + pageName);
+        }
+
 
         if (event.getSource() != null) {
             if(BuildConfig.DEBUG){
@@ -300,7 +304,7 @@ public class NekoChatService extends AccessibilityService implements OpenAiAskAb
                         btSend.refresh();
                         boolean result = BaseChatHandler.clickButton(btSend, qa);
                         if (!result) {
-                            Log.e(TAG, "doSomething: id[" + btSend.getViewIdResourceName() + ']', new RuntimeException("点击发送按钮失败"));
+                            addLogcat("doSomething: id[" + btSend.getViewIdResourceName() + ']'+"点击发送按钮失败");
                         }
                     }
                 }
@@ -352,7 +356,7 @@ public class NekoChatService extends AccessibilityService implements OpenAiAskAb
                         if (System.currentTimeMillis() - qa.getQuestion().getTimeStamp() > 30000) {
                             result = true;
                             qa.finishStepAction();
-                            qa.getAnswer().setMessage("doAction: 寻找视图超时！结束任务。");
+                            addLogcat("doAction: 寻找视图超时！结束任务。");
                         }
 
                     }
