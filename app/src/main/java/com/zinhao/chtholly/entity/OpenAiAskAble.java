@@ -80,6 +80,11 @@ public class OpenAiAskAble extends NekoAskAble implements Callback{
             delayReplyCallback.onReply(this);
     }
 
+
+    //* 模型停止生成令牌的原因。如果模型达到自然停止点或提供的停止序列，则这将stop；
+    //* 如果达到请求中指定的最大令牌数，则将length；
+    //* 如果由于内容过滤器中的标志而省略内容，则为 content_filter；
+    //* 如果模型达到 tool_calls，则为 tool_calls称为工具。
     @Override
     public void onResponse(@NotNull Call call, @NotNull Response response) throws IOException {
         if(response.code() == 200){
@@ -89,13 +94,20 @@ public class OpenAiAskAble extends NekoAskAble implements Callback{
                     if(getAnswer() != null){
                         try {
                             Choice nekoReply = parseResponse(body.string());
-                            String content = nekoReply.getMessage().getContent();
-                            if(content != null && !content.trim().equals("null")){
-                                doTextReply(content);
-                                doTTSReply(content);
+                            if(nekoReply.getFinishReason().equals("length")){
+                                OpenAiSession.getInstance().requestChatSummarize();
+                            }else if(nekoReply.getFinishReason().equals("tool_calls")){
+                                doToolCall(nekoReply);
+                            }else if(nekoReply.getFinishReason().equals("stop")){
+                                String content = nekoReply.getMessage().getContent();
+                                if(content != null && !content.trim().equals("null")){
+                                    doTextReply(content);
+                                    doTTSReply(content);
+                                    OpenAiSession.getInstance().addAssistantChat(content);
+                                }
                             }
-                            doToolCall(nekoReply);
                         }catch (IllegalStateException e){
+                            NekoChatService.getInstance().addLogcat("onResponse: "+e.getMessage());
                             Log.e(TAG, "onResponse: ", e);
                         }
                     }
@@ -112,11 +124,25 @@ public class OpenAiAskAble extends NekoAskAble implements Callback{
     public void doTextReply(String content){
         getAnswer().setMessage(content);
         BotApp.getInstance().insert(getAnswer());
-        OpenAiSession.getInstance().addAssistantChat(content);
     }
 
     public void doTTSReply(String text){
         NekoChatService.getInstance().playTTSVoiceFromNetWork(text);
+    }
+
+    /***
+     *
+     */
+    public void doToolCallReply(JSONObject content,String callId){
+        //function_call_result_message = {
+        //    "role": "tool",
+        //    "content": json.dumps({
+        //        "order_id": order_id,
+        //        "delivery_date": delivery_date.strftime('%Y-%m-%d %H:%M:%S')
+        //    }),
+        //    "tool_call_id": response['choices'][0]['message']['tool_calls'][0]['id']
+        //}
+        OpenAiSession.getInstance().addToolCallResult(content,callId);
     }
 
     /**
@@ -128,9 +154,7 @@ public class OpenAiAskAble extends NekoAskAble implements Callback{
      * @param nekoReply
      */
     public void doToolCall(Choice nekoReply){
-        if(nekoReply.getFinishReason().equals("length")){
-            OpenAiSession.getInstance().requestChatSummarize();
-        }
+        OpenAiSession.getInstance().addToolCalls(nekoReply.getMessage());
         nekoReply.getMessage().getToolCalls().forEach(new Consumer<Choice.ToolCall>() {
             @Override
             public void accept(Choice.ToolCall toolCall) {
@@ -142,7 +166,7 @@ public class OpenAiAskAble extends NekoAskAble implements Callback{
                     if(callAble!=null){
                         Map<String, Object> argsMap = toolCall.getArgsMap();
                         argsMap.put(OpenAiAskAble.this.getClass().getName(), OpenAiAskAble.this);
-                        callAble.call(argsMap);
+                        callAble.call(argsMap,toolCall.getId());
                     }
                 } catch (JSONException e) {
                     throw new RuntimeException(e);

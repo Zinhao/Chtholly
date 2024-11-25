@@ -7,6 +7,7 @@ import com.zinhao.chtholly.BotApp;
 import com.zinhao.chtholly.NekoChatService;
 import com.zinhao.chtholly.entity.Command;
 import com.zinhao.chtholly.entity.Message;
+import com.zinhao.chtholly.session.OpenAiSession;
 
 import java.util.List;
 import java.util.Locale;
@@ -24,6 +25,27 @@ public class QQChatHandler extends BaseChatHandler {
 
     public QQChatHandler(MessageCallback messageCallback) {
         super(messageCallback);
+    }
+
+    @Override
+    public boolean writeAndSend(Command qa) {
+        if (etInput != null && btSend != null) {
+            etInput.refresh();
+            if (writeMessage(etInput, qa)) {
+                btSend.refresh();
+                boolean result = BaseChatHandler.clickButton(btSend, qa);
+                if (!result) {
+                    NekoChatService.getInstance().addLogcat("doSomething: id[" + btSend.getViewIdResourceName() + ']'+"点击发送按钮失败");
+                }
+                return result;
+            }
+        }
+        return false;
+    }
+
+    @Override
+    public String beforeWriteMessage(Command command) {
+        return String.format("@%s %s", command.getQuestion().getSpeaker(), command.getAnswer().getMessage());
     }
 
     public void findLastMessage(AccessibilityNodeInfo nodeInfo){
@@ -121,7 +143,13 @@ public class QQChatHandler extends BaseChatHandler {
             for (int i = 0; i < otherMessageNodes.size(); i++) {
                 AccessibilityNodeInfo o = otherMessageNodes.get(i);
                 //__com.tencent.mobileqq:id/msgbox class:android.widget.TextView, text:[chat_1] 景皓：@丛雨 你在吗 bound:Rect(0, 207 - 1080, 299) click:true longClick:false check:false desc:0
-                NekoChatService.getInstance().addLogcat(String.format(Locale.CHINA,"id2FindGroupLastMessage: other ground:%s",o.getText()));
+                CharSequence text = o.getText();
+                NekoChatService.getInstance().addLogcat(String.format(Locale.CHINA,"id2FindGroupLastMessage: other ground:%s",text));
+                if(text!=null){
+                    if(text.toString().startsWith("QQ天气")){
+                        OpenAiSession.getInstance().addSystemChat(text.toString());
+                    }
+                }
             }
         }
 
@@ -251,20 +279,7 @@ public class QQChatHandler extends BaseChatHandler {
     private static final String SEARCH_RESULT_PAGE = "com.tencent.mobileqq.search_result_page";
     private static final String[] SEARCH_RESULT_PAGE_ID = new String[]{"id/title","id/text1","id/f_u","id/bgt","id/text2","id/io1","id/io2","id/j64"};
 
-    public static boolean hasAllId(AccessibilityNodeInfo nodeInfo,String... ids){
-        for (String s : ids)
-        {
-            if(!s.startsWith(":")){
-                s= ":"+s;
-            }
-            List<AccessibilityNodeInfo> nodeInfoList = nodeInfo
-                    .findAccessibilityNodeInfosByViewId(nodeInfo.getPackageName() + s);
-            if(nodeInfoList.isEmpty()){
-                return false;
-            }
-        }
-        return true;
-    }
+
 
     public static String checkWhatPage(AccessibilityNodeInfo root){
         if(root == null){

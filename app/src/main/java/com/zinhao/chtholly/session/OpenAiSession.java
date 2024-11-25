@@ -5,6 +5,7 @@ import com.zinhao.chtholly.BotApp;
 import com.zinhao.chtholly.LoggingInterceptor;
 import com.zinhao.chtholly.NekoChatService;
 import com.zinhao.chtholly.entity.AIMethodTool;
+import com.zinhao.chtholly.entity.Choice;
 import com.zinhao.chtholly.entity.Message;
 import com.zinhao.chtholly.entity.OpenAiAskAble;
 import okhttp3.MediaType;
@@ -24,10 +25,12 @@ public class OpenAiSession extends NekoSession{
 
     private static final String ROLE = "role";
     private static final String CONTENT = "content";
+    private static final String TOOL_CALL_ID = "tool_call_id";
 
     private static final String ROLE_SYSTEM = "system";
     private static final String ROLE_ASSISTANT = "assistant";
     private static final String ROLE_USER = "user";
+    private static final String ROLE_TOOL = "tool";
 
     public static final String MODEL_GPT_3_5_TURBO = "gpt-3.5-turbo";
     public static final String MODEL_GPT_4_TURBO = "gpt-4-turbo";
@@ -170,17 +173,37 @@ public class OpenAiSession extends NekoSession{
     }
 
     public void addAssistantChat(String message){
-        addChat(ROLE_ASSISTANT,message);
+        OpenAiSession.getInstance().addTextChat(ROLE_ASSISTANT,message);
     }
 
-    private void addChat(String role,String content){
+    public void addSystemChat(String message){
+        OpenAiSession.getInstance().addTextChat(ROLE_SYSTEM,message);
+    }
+
+    public void addToolCalls(Choice.Message message){
+        chats.put(message.getRawJsonString());
+    }
+
+    public void addToolCallResult(JSONObject content,String callId){
+        JSONObject function_call_result_message = new JSONObject();
+        try {
+            function_call_result_message.put(ROLE,ROLE_TOOL);
+            function_call_result_message.put(CONTENT,content);
+            function_call_result_message.put(TOOL_CALL_ID,callId);
+        } catch (JSONException e) {
+            throw new RuntimeException(e);
+        }
+        chats.put(function_call_result_message);
+    }
+
+    private void addTextChat(String role, String text){
         JSONObject newChat = new JSONObject();
         try {
             newChat.put("role",role);
-            newChat.put("content",content);
-            Log.d(TAG, String.format(Locale.CHINA,"addChat: %s: %s",role,content));
+            newChat.put("content",text);
+            Log.d(TAG, String.format(Locale.CHINA,"addChat: %s: %s",role,text));
         } catch (JSONException e) {
-            Log.e(TAG, String.format(Locale.CHINA,"addChat: %s: %s",role,content));
+            Log.e(TAG, String.format(Locale.CHINA,"addChat: %s: %s",role,text));
         }
         chats.put(newChat);
     }
@@ -193,7 +216,7 @@ public class OpenAiSession extends NekoSession{
     }
 
     public boolean startAsk(OpenAiAskAble message) throws JSONException {
-        addChat(ROLE_USER,message.getQuestion().getMessage());
+        addTextChat(ROLE_USER,message.getQuestion().getMessage());
         data.put("messages",chats);
         return requestChatCompletions(message);
     }
@@ -215,7 +238,7 @@ public class OpenAiSession extends NekoSession{
                 chats = new JSONArray();
                 chats.put(firstSystemChat);
                 NekoChatService.getInstance().addLogcat("requestChatSummarize:"+message.getAnswer().getMessage());
-                addChat(ROLE_SYSTEM,message.getAnswer().getMessage());
+                addTextChat(ROLE_SYSTEM,message.getAnswer().getMessage());
             }
         });
         summarizeMessage.ask();

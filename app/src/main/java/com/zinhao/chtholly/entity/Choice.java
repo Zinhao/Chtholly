@@ -86,7 +86,7 @@ public class Choice {
         private String role;
         private String functionCall;
         private List<ToolCall> toolCalls;
-
+        private String rawJsonString;
         public Message(String content, String role, String functionCall, List<ToolCall> toolCalls) {
             this.content = content;
             this.role = role;
@@ -123,6 +123,10 @@ public class Choice {
             return toolCalls;
         }
 
+        public String getRawJsonString() {
+            return rawJsonString;
+        }
+
         public void setToolCalls(List<ToolCall> toolCalls) {
             this.toolCalls = toolCalls;
         }
@@ -140,8 +144,9 @@ public class Choice {
                     toolCalls.add(toolCall);
                 }
             }
-
-            return new Message(content, role, functionCall, toolCalls);
+            Message message = new Message(content, role, functionCall, toolCalls);
+            message.rawJsonString = jsonString;
+            return message;
         }
     }
 

@@ -23,11 +23,14 @@ public abstract class BaseChatHandler {
         this.messageCallback = messageCallback;
     }
 
+    public abstract boolean writeAndSend(Command command);
+    public abstract String beforeWriteMessage(Command command);
+
     public boolean writeMessage(AccessibilityNodeInfo inputEditText, Command qaMessage) {
         if (!qaMessage.isWrite()) {
             Bundle arg = new Bundle();
-            String atMessage = String.format("@%s %s", qaMessage.getQuestion().getSpeaker(), qaMessage.getAnswer().getMessage());
-            arg.putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, atMessage);
+            String sendMessage = beforeWriteMessage(qaMessage);
+            arg.putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, sendMessage);
             boolean result = inputEditText.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, arg);
             qaMessage.setWrite(result);
         }
@@ -53,6 +56,21 @@ public abstract class BaseChatHandler {
             }
         }
         return target;
+    }
+
+    public static boolean hasAllId(AccessibilityNodeInfo nodeInfo,String... ids){
+        for (String s : ids)
+        {
+            if(!s.startsWith(":")){
+                s= ":"+s;
+            }
+            List<AccessibilityNodeInfo> nodeInfoList = nodeInfo
+                    .findAccessibilityNodeInfosByViewId(nodeInfo.getPackageName() + s);
+            if(nodeInfoList.isEmpty()){
+                return false;
+            }
+        }
+        return true;
     }
 }
 

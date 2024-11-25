@@ -84,6 +84,7 @@ public class NekoChatService extends AccessibilityService implements OpenAiAskAb
     private final List<Command> waitQAs = new Vector<>();
     private Calendar calendar;
     private QQChatHandler qqChatHandler;
+    private WXChatHandler wxChatHandler;
     @Override
     public void onCreate() {
         super.onCreate();
@@ -93,6 +94,7 @@ public class NekoChatService extends AccessibilityService implements OpenAiAskAb
         dayCount = calendar.get(Calendar.DAY_OF_MONTH);
         mediaPlayer = new ExoPlayer.Builder(this).build();
         qqChatHandler = new QQChatHandler(this);
+        wxChatHandler = new WXChatHandler(this);
         windowManager = getSystemService(WindowManager.class);
         accViewParams = OverlayUtils.makeNotTouchWindowParams(0,0,0,0);
         ctrlViewParams = OverlayUtils.makeFloatWindowParams(400,400,1,1);
@@ -180,6 +182,9 @@ public class NekoChatService extends AccessibilityService implements OpenAiAskAb
         }
         if(QQ_PACKAGE_NAME.equals(event.getPackageName().toString())){
             qqChatHandler.handle(event);
+        }else if(WXChatHandler.WX_PACKAGE_NAME.equals(event.getPackageName().toString())){
+            wxChatHandler.initChatPage(event.getSource());
+            wxChatHandler.handle(event);
         }
         if (waitQAs.isEmpty()) {
             return;
@@ -196,7 +201,14 @@ public class NekoChatService extends AccessibilityService implements OpenAiAskAb
     }
 
     private void removeSuccessMessage() {
-        waitQAs.removeIf(commandMessage -> commandMessage.sendSuccess() && commandMessage.actionSuccess());
+        waitQAs.removeIf(commandMessage -> {
+            addLogcat("removeSuccessMessage:"+commandMessage.getAnswer().getMessage());
+            Step step = commandMessage.getNextStep();
+            if(step!=null){
+                addLogcat("removeSuccessMessage:"+step);
+            }
+            return commandMessage.sendSuccess() && commandMessage.actionSuccess();
+        });
     }
 
     private void autoMission(String packageName) {
@@ -292,21 +304,14 @@ public class NekoChatService extends AccessibilityService implements OpenAiAskAb
             // todo 也许需要添加一个开关，允许或者拒绝动作的执行
             if (qa.haveAction()) {
                 if (doAction(source, qa)) {
+                    // 一次处理一项
                     return;
                 }
             } else {
-                AccessibilityNodeInfo etInput,btSend;
-                etInput = qqChatHandler.getEtInput();
-                btSend = qqChatHandler.getBtSend();
-                if (etInput != null && btSend != null) {
-                    etInput.refresh();
-                    if (qqChatHandler.writeMessage(etInput, qa)) {
-                        btSend.refresh();
-                        boolean result = BaseChatHandler.clickButton(btSend, qa);
-                        if (!result) {
-                            addLogcat("doSomething: id[" + btSend.getViewIdResourceName() + ']'+"点击发送按钮失败");
-                        }
-                    }
+                if(source.getPackageName().equals(qqChatHandler.getPackageName())){
+                    qqChatHandler.writeAndSend(qa);
+                }else if(source.getPackageName().equals(wxChatHandler.getPackageName())){
+                    wxChatHandler.writeAndSend(qa);
                 }
             }
             if (qa.sendSuccess()) {
@@ -380,7 +385,7 @@ public class NekoChatService extends AccessibilityService implements OpenAiAskAb
             try {
                 String rawMessage = speakMessage.replace("&", " ");
                 MediaItem.Builder builder = new MediaItem.Builder();
-                String path = String.format(Locale.US, "%s/generate_voice?text=%s&speaker_id=%d&translate=1",
+                String path = String.format(Locale.US, "%s/generate_voice?text=%s&speaker_id=%d&translate=0",
                         BotApp.getInstance().getTtsUrl(),
                         rawMessage,
                         BotApp.getInstance().getSpeakerId());

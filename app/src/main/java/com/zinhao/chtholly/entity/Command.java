@@ -329,7 +329,7 @@ public class Command implements AskAble {
         return true;
     }
 
-    private void switchBotOrAI() {
+    private boolean switchBotOrAI() {
         if(openaiIgnoreCase.matcher(question.getMessage()).find()){
             answer.setMessage(NekoAskAble.TOO_HIGH);
             NekoChatService.mode = OpenAiSession.class;
@@ -337,16 +337,22 @@ public class Command implements AskAble {
             answer.setMessage(NekoAskAble.KOU_WAI);
             NekoChatService.mode = NekoSession.class;
         }
+        return true;
     }
 
-    private void videoCall() {
+    private boolean videoCall() {
         // :id/gny [:id/icon_viewPager 1->2] :id/bbt
         boolean mainCamera;
-        if(args==null){
-            mainCamera = false;
+        if(args == null){
+            mainCamera = true;
         }else{
-            mainCamera = args[0].equals("false") || args[0].equals('0');
+            if(args.length == 0){
+                mainCamera = true;
+            }else{
+                mainCamera = args[0].equals("false") || args[0].equals('0');
+            }
         }
+
 
         steps = new Vector<>();
         steps.add(new Step(QQChatHandler.QQ_PACKAGE_NAME,":id/gny", AccessibilityNodeInfo.ACTION_CLICK,false));
@@ -359,9 +365,10 @@ public class Command implements AskAble {
         //小窗
         steps.add(new Step(QQChatHandler.QQ_PACKAGE_NAME, ":id/g76", AccessibilityNodeInfo.ACTION_CLICK,false,500));
         getAnswer().setMessage(NekoAskAble.OK);
+        return true;
     }
 
-    private void shareScreen(){
+    private boolean shareScreen(){
         steps = new Vector<>();
         steps.add(new Step(QQChatHandler.QQ_PACKAGE_NAME,":id/gny", AccessibilityNodeInfo.ACTION_CLICK,false));
         steps.add(new Step(QQChatHandler.QQ_PACKAGE_NAME,":id/icon_viewPager", AccessibilityNodeInfo.ACTION_CLICK,false,500,true,new int[]{0,3}));
@@ -378,6 +385,7 @@ public class Command implements AskAble {
         // 小窗
         steps.add(new Step(QQChatHandler.QQ_PACKAGE_NAME, ":id/g76", AccessibilityNodeInfo.ACTION_CLICK,false,2500));
         getAnswer().setMessage(NekoAskAble.OK);
+        return true;
     }
 
     private String[] args(){
@@ -386,7 +394,6 @@ public class Command implements AskAble {
         }else {
             return new String[]{getQuestion().getMessage().trim()};
         }
-
     }
 
 

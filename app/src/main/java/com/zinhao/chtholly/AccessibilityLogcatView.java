@@ -62,7 +62,12 @@ public class AccessibilityLogcatView extends View {
     }
 
     public void appendLogcat(String logcat) {
-        logcatList.add(logcat);
+        String last = logcatList.get(logcatList.size()-1);
+        if(last.startsWith(logcat)){
+            logcatList.set(logcatList.size()-1,last + ":>");
+        }else {
+            logcatList.add(logcat);
+        }
         postInvalidate();
     }
 

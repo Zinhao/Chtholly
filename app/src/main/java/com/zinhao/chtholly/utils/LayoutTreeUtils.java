@@ -24,6 +24,8 @@ public class LayoutTreeUtils {
     private static final boolean printTree = true;
     public static JSONObject treeAndPrintLayout(AccessibilityNodeInfo nodeInfo, int treeIndex) throws JSONException {
         JSONObject root = new JSONObject();
+        if(nodeInfo == null)
+            return root;
         root.put("id", nodeInfo.getViewIdResourceName());
         root.put("class",nodeInfo.getClassName());
 //        root.put("click",nodeInfo.isClickable());

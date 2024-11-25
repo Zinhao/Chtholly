@@ -6,6 +6,7 @@
 
     <queries>
         <package android:name="com.tencent.mobileqq" />
+        <package android:name="com.tencent.mm" />
     </queries>
 
     <application

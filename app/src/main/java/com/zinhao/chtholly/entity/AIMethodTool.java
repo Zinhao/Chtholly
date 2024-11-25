@@ -1,5 +1,6 @@
 package com.zinhao.chtholly.entity;
 
+import android.util.Log;
 import com.zinhao.chtholly.CallAble;
 import com.zinhao.chtholly.NekoChatService;
 import org.json.JSONArray;
@@ -10,7 +11,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class AIMethodTool{
-
+    private static final String TAG = "AIMethodTool";
     private final String name;
     private final String description;
     private final Parameters parameters;
@@ -31,7 +32,7 @@ public class AIMethodTool{
             "object", REMIND_ARG_MAP, new String[]{"time", "action"}, false
     ), new CallAble() {
         @Override
-        public void call(Map<String, Object> argMap) {
+        public boolean call(Map<String, Object> argMap,String callId) {
             String timeStr = (String) argMap.get("time");
             long t = Long.parseLong(timeStr);
             String actionStr = (String) argMap.get("action");
@@ -40,10 +41,20 @@ public class AIMethodTool{
                 if(message!=null){
                     message.doTextReply(NekoAskAble.OK);
                     message.doTTSReply(NekoAskAble.OK);
+                    JSONObject content = new JSONObject();
+                    try {
+                        content.put("time",timeStr);
+                        content.put("action",actionStr);
+                        message.doToolCallReply(content,callId);
+                    } catch (JSONException e) {
+                        Log.d(TAG, "call: ",e);
+                    }
                     assert message.getQuestion()!=null;
                     NekoChatService.getInstance().addRemind(t,actionStr,message.getQuestion().getSpeaker());
+                    return true;
                 }
             }
+            return false;
         }
     });
 
@@ -52,15 +63,25 @@ public class AIMethodTool{
             "object", EMPTY_ARG_MAP, new String[]{"text"}, false
     ), new CallAble() {
         @Override
-        public void call(Map<String, Object> argMap) {
+        public boolean call(Map<String, Object> argMap,String callId) {
             String hotMessage = (String) argMap.get("text");
             if(argMap.containsKey(OpenAiAskAble.class.getName())) {
                 OpenAiAskAble message = (OpenAiAskAble) argMap.get(OpenAiAskAble.class.getName());
                 if(message!=null){
+                    JSONObject content = new JSONObject();
+                    try {
+                        content.put("text",hotMessage);
+                        message.doToolCallReply(content,callId);
+                    } catch (JSONException e) {
+                        Log.d(TAG, "call: ",e);
+                    }
+
                     message.doTTSReply(hotMessage);
                     message.doTextReply(hotMessage + '\n' + Command.getHelpStringBuilder());
+                    return true;
                 }
             }
+            return false;
         }
     });
 

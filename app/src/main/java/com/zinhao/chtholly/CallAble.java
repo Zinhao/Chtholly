@@ -3,5 +3,5 @@ package com.zinhao.chtholly;
 import java.util.Map;
 
 public interface CallAble {
-    void call(Map<String,Object> argMap);
+    boolean call(Map<String,Object> argMap,String callId);
 }
