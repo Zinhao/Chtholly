@@ -197,9 +197,12 @@ public class Command implements AskAble {
                 steps = new Vector<>();
                 steps.add(new Step(null,null,AccessibilityService.GLOBAL_ACTION_BACK,true));
 
-                Step targetP = new Step(QQChatHandler.QQ_PACKAGE_NAME,":id/relativeItem",AccessibilityNodeInfo.ACTION_CLICK,false,1500);
-                targetP.setInNodesPosition(position+1);
-                steps.add(targetP);
+                Step clickChatItem = new Step(QQChatHandler.QQ_PACKAGE_NAME,":id/recent_chat_list", AccessibilityNodeInfo.ACTION_CLICK,false,1500,true,new int[]{position+1});
+                clickChatItem.setNeedHasId(":id/relativeItem");
+                steps.add(clickChatItem);
+//                Step targetP = new Step(QQChatHandler.QQ_PACKAGE_NAME,":id/relativeItem",AccessibilityNodeInfo.ACTION_CLICK,false,1500);
+//                targetP.setInNodesPosition(position+1);
+//                steps.add(targetP);
 
                 getAnswer().setMessage(NekoAskAble.COME_BACK);
                 return true;
@@ -408,6 +411,24 @@ public class Command implements AskAble {
             path.moveTo(p.x,p.y);
             path.lineTo(p.x,0);
             gb.addStroke(new GestureDescription.StrokeDescription(path,0,400));
+            return  gb.build();
+        }
+    };
+
+    public static final Step.NeedGesture SWIPE_DOWN_FAST = new Step.NeedGesture() {
+        @Override
+        public GestureDescription onGesture(AccessibilityNodeInfo targetView) {
+            GestureDescription.Builder gb = new GestureDescription.Builder();
+            Rect r = new Rect();
+            targetView.getBoundsInScreen(r);
+            Path path = new Path();
+            PointF p = new PointF((r.left+r.right)/2f,r.bottom);
+            path.moveTo(p.x,p.y);
+            path.lineTo(p.x,Math.max(0,r.centerY()));
+            GestureDescription.StrokeDescription gestureDescription = new GestureDescription.StrokeDescription(path,0,50,false);
+
+//            GestureDescription.StrokeDescription
+            gb.addStroke(gestureDescription);
             return  gb.build();
         }
     };

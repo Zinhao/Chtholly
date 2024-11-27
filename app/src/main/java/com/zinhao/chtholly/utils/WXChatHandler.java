@@ -1,8 +1,12 @@
 package com.zinhao.chtholly.utils;
 
+import android.accessibilityservice.AccessibilityService;
+import android.accessibilityservice.GestureDescription;
+import android.os.Bundle;
 import android.util.Log;
 import android.view.accessibility.AccessibilityEvent;
 import android.view.accessibility.AccessibilityNodeInfo;
+import androidx.media3.common.C;
 import com.zinhao.chtholly.BotApp;
 import com.zinhao.chtholly.NekoChatService;
 import com.zinhao.chtholly.entity.Command;
@@ -46,11 +50,11 @@ public class WXChatHandler extends BaseChatHandler {
         chatPageViewIds.setTitleViewId(getPackageName()+":id/qhq");
 
         if(input!=null){
-            NekoChatService.getInstance().addLogcat("input edit find!");
+//            NekoChatService.getInstance().addLogcat("input edit find!");
             etInput = input;
         }
         if(send!=null){
-            NekoChatService.getInstance().addLogcat("send btn find!");
+//            NekoChatService.getInstance().addLogcat("send btn find!");
             btSend = send;
         }
         if (title != null) {
@@ -63,14 +67,19 @@ public class WXChatHandler extends BaseChatHandler {
     public boolean writeAndSend(Command qa) {
         if (etInput != null) {
             etInput.refresh();
-//            etInput.setFocused(true);
+//            Bundle arguments = new Bundle();
+//            arguments.putInt(AccessibilityNodeInfo.ACTION_ARGUMENT_SELECTION_START_INT, 1);
+//            arguments.putInt(AccessibilityNodeInfo.ACTION_ARGUMENT_SELECTION_END_INT, 2);
+//            etInput.performAction(AccessibilityNodeInfo.ACTION_SET_SELECTION, arguments);
+
+            etInput.performAction(AccessibilityNodeInfo.ACTION_FOCUS);
+            Log.d(TAG, "writeAndSend: 焦点"+etInput.isFocused());
             if (writeMessage(etInput, qa)) {
-                NekoChatService.getInstance().addLogcat("write: id[" + etInput.getViewIdResourceName() + ']'+qa.getAnswer().getMessage());
-            }else{
-                NekoChatService.getInstance().addLogcat("write failed");
+                NekoChatService.getInstance().addLogcat("write: id[" + etInput.getViewIdResourceName() + ']' + qa.getAnswer().getMessage());
             }
-        }else {
-            NekoChatService.getInstance().addLogcat("etInput null");
+//            if (pasteMessage(etInput, qa)) {
+//                NekoChatService.getInstance().addLogcat("paste: id[" + etInput.getViewIdResourceName() + ']' + qa.getAnswer().getMessage());
+//            }
         }
         if(btSend!=null){
             if(qa.isWrite()){
@@ -80,12 +89,7 @@ public class WXChatHandler extends BaseChatHandler {
                     NekoChatService.getInstance().addLogcat("send: id[" + btSend.getViewIdResourceName() + ']'+"点击发送按钮失败");
                 }
                 return result;
-            }else {
-                NekoChatService.getInstance().addLogcat("!write");
             }
-
-        }else {
-            NekoChatService.getInstance().addLogcat("btSend null");
         }
         return false;
     }
@@ -113,18 +117,9 @@ public class WXChatHandler extends BaseChatHandler {
         initChatPage(event.getSource());
         //EventType: TYPE_WINDOW_CONTENT_CHANGED; EventTime: 99375618; PackageName: com.tencent.mm; MovementGranularity: 0; Action: 0; ContentChangeTypes: [CONTENT_CHANGE_TYPE_TEXT]; WindowChangeTypes: [] [ ClassName: android.widget.TextVie
         //EventType: TYPE_WINDOW_CONTENT_CHANGED; EventTime: 99375717; PackageName: com.tencent.mm; MovementGranularity: 0; Action: 0; ContentChangeTypes: [CONTENT_CHANGE_TYPE_SUBTREE, CONTENT_CHANGE_TYPE_TEXT];
-        if ((event.getContentChangeTypes() & AccessibilityEvent.CONTENT_CHANGE_TYPE_TEXT) == AccessibilityEvent.CONTENT_CHANGE_TYPE_TEXT) {
-            if ((event.getContentChangeTypes() & AccessibilityEvent.CONTENT_CHANGE_TYPE_SUBTREE) == AccessibilityEvent.CONTENT_CHANGE_TYPE_SUBTREE) {
-                if (hasAllId(event.getSource(),CHAT_PAGE_ID)) {
-                    // chat 文本消息
-                    findLastMessage(event.getSource());
-                }
-            }
-        } else {
-            if ((event.getContentChangeTypes() & AccessibilityEvent.CONTENT_CHANGE_TYPE_SUBTREE) == AccessibilityEvent.CONTENT_CHANGE_TYPE_SUBTREE) {
-                //todo 目前还没处理这类消息 拍一拍，欢迎消息，撤回消息
-//                Log.d(TAG, "onAccessibilityEvent: 拍一拍，欢迎消息，撤回消息");
-            }
+        if (hasAllId(event.getSource(),CHAT_PAGE_ID)) {
+            // chat 文本消息
+            findLastMessage(event.getSource());
         }
     }
 

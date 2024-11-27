@@ -2,8 +2,6 @@ package com.zinhao.chtholly.entity;
 
 import android.accessibilityservice.AccessibilityService;
 import android.accessibilityservice.GestureDescription;
-import android.graphics.Path;
-import android.graphics.Rect;
 import android.view.accessibility.AccessibilityNodeInfo;
 import org.jetbrains.annotations.NotNull;
 
@@ -20,6 +18,7 @@ public class Step {
     private int[] findPosition;
     private int inNodesPosition = 0;
     private NeedGesture needGesture;
+    private String needHasId;
 
     public Step(String packageName, String viewId, int actionId, boolean globalAction) {
         this.packageName = packageName;
@@ -120,6 +119,17 @@ public class Step {
 
     public boolean isWaiting() {
         return waiting;
+    }
+
+    public String getNeedHasId() {
+        if(needHasId !=null && needHasId.startsWith(":")){
+            return packageName+needHasId;
+        }
+        return needHasId;
+    }
+
+    public void setNeedHasId(String needHasId) {
+        this.needHasId = needHasId;
     }
 
     public interface NeedGesture{

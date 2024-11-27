@@ -5,11 +5,9 @@ import android.accessibilityservice.AccessibilityService;
 import android.accessibilityservice.AccessibilityServiceInfo;
 import android.accessibilityservice.GestureDescription;
 import android.content.Intent;
-import android.graphics.PixelFormat;
 import android.os.Handler;
 import android.provider.Settings;
 import android.util.Log;
-import android.view.Gravity;
 import android.view.View;
 import android.view.WindowManager;
 import android.view.accessibility.AccessibilityEvent;
@@ -52,6 +50,7 @@ public class NekoChatService extends AccessibilityService implements OpenAiAskAb
 
     private boolean ctrlShow;
     private View ctrlView;
+    boolean lockScreen = false;
     private WindowManager.LayoutParams ctrlViewParams;
     private AccessibilityBoundView accessibilityBoundView;
 
@@ -136,16 +135,52 @@ public class NekoChatService extends AccessibilityService implements OpenAiAskAb
 
 
         if (BuildConfig.DEBUG) {
-            LayoutTreeUtils.getEventStringBuilder(event);
+            StringBuilder stringBuilder = LayoutTreeUtils.getEventStringBuilder(event);
+            Log.i(TAG, "getEventStringBuilder: "+stringBuilder);
             //EventType: TYPE_WINDOW_CONTENT_CHANGED; EventTime: 338363649;
             // PackageName: com.android.systemui; MovementGranularity: 0; Action: 0;
             // ContentChangeTypes: [CONTENT_CHANGE_TYPE_CONTENT_DESCRIPTION];
             // WindowChangeTypes: [] [ ClassName: android.widget.ImageView; Text: []; ContentDescription: QQ通知：二次元入口 (2条新消息);
             // ItemCount: -1; CurrentItemIndex: -1; Ena
+            // 锁屏也能接收
             // : package:com.tencent.mobileqq, text: [[有人@我]景皓(二次元入口):@丛雨 最近有点低迷，我想你说点鼓励的话语], desc: null
+
+            // 锁屏被通知唤醒
+            //getEventStringBuilder: EventType: TYPE_NOTIFICATION_STATE_CHANGED; EventTime: 4599479; PackageName: com.tencent.mobileqq; MovementGranularity: 0; Action: 0; ContentChangeTypes: []; WindowChangeTypes: [] [ ClassName: android.app.Notification; Text: [[有人@我]景皓(二次元入口):@丛雨 /help]; ContentDescription: null; ItemCount: -1; CurrentItemIndex: -1; Enabled: false; Password: false; Checked: false; FullScreen: false; Scrollable: false; BeforeText: null; FromIndex: -1; ToIndex: -1; ScrollX: -1; ScrollY: -1; MaxScrollX: -1; MaxScrollY: -1; AddedCount: -1; RemovedCount: -1; ParcelableData: Notification(channel=CHANNEL_ID_SHOW_BADGE pri=1 contentView=null vibrate=[] sound=null tick defaults=0x0 flags=0x11 color=0x00000000 vis=PRIVATE) ]; recordCount: 0
+            //2024-11-27 23:30:55.317 23102-23102 NekoChatService  com.zinhao.chtholly  I  package:com.tencent.mobileqq, class:android.app.Notification, text: [[有人@我]景皓(二次元入口):@丛雨 /help], desc: null,source:null
+            //2024-11-27 23:30:55.333 23102-23102 NekoChatService  com.zinhao.chtholly  I  getEventStringBuilder: EventType: TYPE_WINDOW_CONTENT_CHANGED; EventTime: 4599500; PackageName: com.android.systemui; MovementGranularity: 0; Action: 0; ContentChangeTypes: [CONTENT_CHANGE_TYPE_SUBTREE, CONTENT_CHANGE_TYPE_TEXT]; WindowChangeTypes: [] [ ClassName: android.widget.FrameLayout; Text: []; ContentDescription: null; ItemCount: -1; CurrentItemIndex: -1; Enabled: true; Password: false; Checked: false; FullScreen: false; Scrollable: false; BeforeText: null; FromIndex: -1; ToIndex: -1; ScrollX: -1; ScrollY: -1; MaxScrollX: -1; MaxScrollY: -1; AddedCount: -1; RemovedCount: -1; ParcelableData: null ]; recordCount: 0
+            //2024-11-27 23:30:55.511 23102-23102 NekoChatService  com.zinhao.chtholly  I  getEventStringBuilder: EventType: TYPE_WINDOW_CONTENT_CHANGED; EventTime: 4599662; PackageName: com.android.systemui; MovementGranularity: 0; Action: 0; ContentChangeTypes: [CONTENT_CHANGE_TYPE_SUBTREE, CONTENT_CHANGE_TYPE_TEXT]; WindowChangeTypes: [] [ ClassName: android.widget.FrameLayout; Text: []; ContentDescription: null; ItemCount: -1; CurrentItemIndex: -1; Enabled: true; Password: false; Checked: false; FullScreen: false; Scrollable: false; BeforeText: null; FromIndex: -1; ToIndex: -1; ScrollX: -1; ScrollY: -1; MaxScrollX: -1; MaxScrollY: -1; AddedCount: -1; RemovedCount: -1; ParcelableData: null ]; recordCount: 0
+            //2024-11-27 23:30:55.534 23102-23102 NekoChatService  com.zinhao.chtholly  I  getEventStringBuilder: EventType: TYPE_WINDOW_STATE_CHANGED; EventTime: 4599719; PackageName: com.mfashiongallery.emag; MovementGranularity: 0; Action: 0; ContentChangeTypes: []; WindowChangeTypes: [] [ ClassName: android.widget.FrameLayout; Text: [11月27日, 周三  ]; ContentDescription: null; ItemCount: -1; CurrentItemIndex: -1; Enabled: true; Password: false; Checked: false; FullScreen: false; Scrollable: false; BeforeText: null; FromIndex: -1; ToIndex: -1; ScrollX: -1; ScrollY: -1; MaxScrollX: -1; MaxScrollY: -1; AddedCount: -1; RemovedCount: -1; ParcelableData: null ]; recordCount: 0
+            //2024-11-27 23:30:55.535 23102-23102 NekoChatService  com.zinhao.chtholly  I  package:com.mfashiongallery.emag, class:android.widget.FrameLayout, text: [11月27日, 周三  ], desc: null,source:null
             if(!event.getText().isEmpty() || event.getContentDescription()!=null){
-                String logcat ="package:" + event.getPackageName() + ", class:"+event.getClassName()+", text: " + event.getText() + ", desc: " + event.getContentDescription();
+                String sourcePackageName = null;
+                if(event.getSource()!=null){
+                    sourcePackageName = event.getSource().getPackageName().toString();
+                }
+                String logcat ="package:" + event.getPackageName() + ", class:"+event.getClassName()+", text: " + event.getText() + ", desc: " + event.getContentDescription() +",source:"+sourcePackageName;
                 Log.i(TAG, logcat);
+                // 锁屏 动作package:com.android.systemui, class:android.widget.FrameLayout, text: [锁定屏幕。], desc: null,source:com.android.systemui
+                if(event.getPackageName().equals("com.android.systemui") && event.getText().toString().equals("[锁定屏幕。]")){
+                    Log.i(TAG, "onAccessibilityEvent: lock screen!");
+                    addLogcat("lock screen");
+                    lockScreen = true;
+                }else {
+                    if(lockScreen){
+                        //try unlock screen;
+                        if(root!=null){
+                            addLogcat("try unlock scree");
+                            performGlobalAction(GLOBAL_ACTION_HOME);
+//                            Step unlock = new Step("com.android.systemui",":id/keyguard_indication_text",AccessibilityNodeInfo.ACTION_SCROLL_FORWARD,false,1200);
+//                            unlock.setNeedGesture(Command.SWIPE_DOWN_FAST);
+//
+//                            doGesture(root,unlock);
+                        }
+                        return;
+                    }
+                }
+
+
+
             }
         }
         String pageName = processNotChatPage(event.getSource());
@@ -161,7 +196,7 @@ public class NekoChatService extends AccessibilityService implements OpenAiAskAb
                     if("com.android.systemui:id/clock".equals(event.getSource().getViewIdResourceName())){
 //                        Log.d(TAG, "onAccessibilityEvent: " + "s");
                     }else{
-                        JSONObject layoutTree = LayoutTreeUtils.treeAndPrintLayout(root, 0);
+                        JSONObject layoutTree = LayoutTreeUtils.treeAndPrintLayout(event.getSource(), 0);
                         //com.tencent.mobileqq:id/listView1
                         String idString = event.getSource().getViewIdResourceName();
                         String fileName;
@@ -183,13 +218,12 @@ public class NekoChatService extends AccessibilityService implements OpenAiAskAb
         if(QQ_PACKAGE_NAME.equals(event.getPackageName().toString())){
             qqChatHandler.handle(event);
         }else if(WXChatHandler.WX_PACKAGE_NAME.equals(event.getPackageName().toString())){
-            wxChatHandler.initChatPage(event.getSource());
             wxChatHandler.handle(event);
         }
         if (waitQAs.isEmpty()) {
             return;
         }
-        handleQAs(root);
+        handleQAs(event.getSource());
         removeSuccessMessage();
     }
 
@@ -202,11 +236,6 @@ public class NekoChatService extends AccessibilityService implements OpenAiAskAb
 
     private void removeSuccessMessage() {
         waitQAs.removeIf(commandMessage -> {
-            addLogcat("removeSuccessMessage:"+commandMessage.getAnswer().getMessage());
-            Step step = commandMessage.getNextStep();
-            if(step!=null){
-                addLogcat("removeSuccessMessage:"+step);
-            }
             return commandMessage.sendSuccess() && commandMessage.actionSuccess();
         });
     }
@@ -353,7 +382,19 @@ public class NekoChatService extends AccessibilityService implements OpenAiAskAb
                         if (step.getActionId() == AccessibilityNodeInfo.ACTION_SCROLL_FORWARD) {
                             result = doGesture(targetView, step);
                         } else {
-                            result = targetView.performAction(step.getActionId());
+                            String needHasId = step.getNeedHasId();
+                            if(needHasId!=null){
+                                // 需要检查是否是包含目标
+                                if(!targetView.findAccessibilityNodeInfosByViewId(needHasId).isEmpty()){
+                                    result = targetView.performAction(step.getActionId());
+                                }else{
+                                    addLogcat("is not has view id ["+needHasId +"] in "+targetView.getViewIdResourceName());
+                                }
+                            }else{
+                                // 不需要检查是否是目标
+                                result = targetView.performAction(step.getActionId());
+                            }
+
                         }
                     } else {
                         addLogcat("doAction: 寻找视图失败" + step.getViewId());

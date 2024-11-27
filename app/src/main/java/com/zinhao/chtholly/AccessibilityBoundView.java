@@ -88,11 +88,13 @@ public class AccessibilityBoundView extends View {
         nodeInfo.getBoundsInScreen(bound);
         if(nodeInfo.isClickable()){
             rectPaint.setColor(Color.GREEN);
-        }else{
+        }else {
             rectPaint.setColor(Color.RED);
         }
         canvas.drawRect(bound, rectPaint);
-
+        if(nodeInfo.isEditable()){
+            drawTextInCenter(canvas,"可输入",bound,textPaint);
+        }
         String text = nodeInfo.getViewIdResourceName();
         if(text!=null){
             text = text.replace(nodeInfo.getPackageName(),"");
@@ -115,6 +117,22 @@ public class AccessibilityBoundView extends View {
             canvas.drawText(text,x,y, textPaint);
         }
     }
+
+    private static void drawTextInCenter(Canvas canvas,String text,Rect bound,Paint textPaint){
+        // 计算矩形的中心点
+        int rectWidth = bound.right - bound.left;
+        int rectHeight = bound.bottom - bound.top;
+
+        // 获取文本的宽度和高度
+        float textWidth = textPaint.measureText(text);
+        float textHeight = textPaint.getTextSize(); // 在这里使用文本大小作为高度
+
+        // 计算文本的绘制位置，使其位于矩形的中心
+        float x = bound.centerX() - textWidth/2; // 文本的左下角 X
+        float y = bound.centerY() + textHeight/2; // 文本的基线 Y
+        canvas.drawText(text,x,y, textPaint);
+    }
+
     private static final int statusBarHeight = 80;
     private AccessibilityNodeInfo nodeInfo;
     @Override

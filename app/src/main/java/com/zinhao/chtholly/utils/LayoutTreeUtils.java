@@ -57,9 +57,9 @@ public class LayoutTreeUtils {
                 builder.append("__");
                 if (BuildConfig.DEBUG && printTree) {
                     child.getBoundsInScreen(bound);
-                    Log.d(TAG, String.format(Locale.US, "treeInfo:%s%s class:%s, text:%s bound:%s click:%s longClick:%s check:%s desc:%s",
+                    Log.d(TAG, String.format(Locale.US, "treeInfo:%s%s class:%s, text:%s bound:%s click:%s longClick:%s check:%s desc:%s edit:%s",
                             builder, child.getViewIdResourceName(), child.getClassName(), child.getText(),
-                            bound, child.isClickable(), child.isLongClickable(), child.isCheckable(), child.describeContents()));
+                            bound, child.isClickable(), child.isLongClickable(), child.isCheckable(), child.describeContents(),child.isEditable()));
                 }
                 builder.delete(builder.length() - 2, builder.length());
                 builder.append("  ");
@@ -84,9 +84,9 @@ public class LayoutTreeUtils {
                 }
                 if (BuildConfig.DEBUG && printTree) {
                     child.getBoundsInScreen(bound);
-                    Log.d(TAG, String.format(Locale.US, "treeInfo:%s%s class:%s, text:%s bound:%s click:%s longClick:%s check:%s desc:%s",
+                    Log.d(TAG, String.format(Locale.US, "treeInfo:%s%s class:%s, text:%s bound:%s click:%s longClick:%s check:%s desc:%s edit:%s",
                             builder, child.getViewIdResourceName(), child.getClassName(), child.getText(),
-                            bound, child.isClickable(), child.isLongClickable(), child.isCheckable(), child.describeContents()));
+                            bound, child.isClickable(), child.isLongClickable(), child.isCheckable(), child.describeContents(),child.isEditable()));
                 }
             }
             children.put(childObject);
@@ -102,7 +102,6 @@ public class LayoutTreeUtils {
     public static StringBuilder getEventStringBuilder(AccessibilityEvent event) {
         StringBuilder stringBuilder = new StringBuilder();
         stringBuilder.append(event.toString());
-        Log.d(TAG, "getEventStringBuilder: "+stringBuilder);
         return  stringBuilder;
 //        if ((event.getContentChangeTypes() & AccessibilityEvent.CONTENT_CHANGE_TYPE_TEXT) == AccessibilityEvent.CONTENT_CHANGE_TYPE_TEXT) {
 //            stringBuilder.append("CONTENT_CHANGE_TYPE_TEXT");

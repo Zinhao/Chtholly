@@ -120,6 +120,14 @@ public class QQChatHandler extends BaseChatHandler {
             return;
         if(event.getSource() == null)
             return;
+        if(QQChatHandler.UPDATE_DIALOG_PAGE.equals(checkWhatPage(event.getSource()))){
+            Log.d(TAG, "handle: is update dialog");
+            AccessibilityNodeInfo closeBtn = findFirstNodeInfo(event.getSource(),getPackageName()+":id/x3c");
+            if(closeBtn!=null){
+                closeBtn.performAction(AccessibilityNodeInfo.ACTION_CLICK);
+                return;
+            }
+        }
         if ((event.getContentChangeTypes() & AccessibilityEvent.CONTENT_CHANGE_TYPE_TEXT) == AccessibilityEvent.CONTENT_CHANGE_TYPE_TEXT) {
             if ((event.getContentChangeTypes() & AccessibilityEvent.CONTENT_CHANGE_TYPE_SUBTREE) == AccessibilityEvent.CONTENT_CHANGE_TYPE_SUBTREE) {
                 // chat 文本消息
@@ -278,8 +286,8 @@ public class QQChatHandler extends BaseChatHandler {
     private static final String[] SEARCH_PAGE_ID = new String[]{"id/bl9","id/ble","id/kbs","id/blc","id/ujx","id/bl8","id/uk_","id/bld"};
     private static final String SEARCH_RESULT_PAGE = "com.tencent.mobileqq.search_result_page";
     private static final String[] SEARCH_RESULT_PAGE_ID = new String[]{"id/title","id/text1","id/f_u","id/bgt","id/text2","id/io1","id/io2","id/j64"};
-
-
+    private static final String UPDATE_DIALOG_PAGE = "com.tencent.mobileqq.update_page";
+    private static final String[] UPDATE_DIALOG_PAGE_ID = new String[]{"id/x3e","id/x3h","id/x3c","id/x3i","id/x3d","id/x3j"};
 
     public static String checkWhatPage(AccessibilityNodeInfo root){
         if(root == null){
@@ -299,6 +307,8 @@ public class QQChatHandler extends BaseChatHandler {
             return SEARCH_PAGE;
         }else if(hasAllId(root,SEARCH_RESULT_PAGE_ID)){
             return SEARCH_RESULT_PAGE;
+        }else if(hasAllId(root,UPDATE_DIALOG_PAGE_ID)){
+            return UPDATE_DIALOG_PAGE;
         }
         return UNKNOWN_PAGE;
     }
