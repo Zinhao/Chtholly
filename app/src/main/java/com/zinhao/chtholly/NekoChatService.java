@@ -4,8 +4,18 @@ import android.accessibilityservice.AccessibilityButtonController;
 import android.accessibilityservice.AccessibilityService;
 import android.accessibilityservice.AccessibilityServiceInfo;
 import android.accessibilityservice.GestureDescription;
+import android.app.Notification;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
+import android.content.Context;
 import android.content.Intent;
+import android.hardware.Sensor;
+import android.hardware.SensorEvent;
+import android.hardware.SensorEventListener;
+import android.hardware.SensorManager;
+import android.os.Binder;
 import android.os.Handler;
+import android.os.IBinder;
 import android.provider.Settings;
 import android.util.Log;
 import android.view.View;
@@ -22,12 +32,13 @@ import com.zinhao.chtholly.utils.*;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 import java.util.*;
 
 import static com.zinhao.chtholly.utils.QQChatHandler.*;
 
-public class NekoChatService extends AccessibilityService implements OpenAiAskAble.DelayReplyCallback, MessageCallback {
+public class NekoChatService extends AccessibilityService implements OpenAiAskAble.DelayReplyCallback, MessageCallback, SensorEventListener {
     private static final String TAG = "NekoChatService";
     public static Class<?> mode = OpenAiSession.class;
     private static final SimpleDateFormat dateTimeFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss", Locale.CHINA);
@@ -53,6 +64,7 @@ public class NekoChatService extends AccessibilityService implements OpenAiAskAb
     boolean lockScreen = false;
     private WindowManager.LayoutParams ctrlViewParams;
     private AccessibilityBoundView accessibilityBoundView;
+    private VibrationGraphView vibrationGraphView;
 
     private WindowManager windowManager;
     /***
@@ -84,9 +96,11 @@ public class NekoChatService extends AccessibilityService implements OpenAiAskAb
     private Calendar calendar;
     private QQChatHandler qqChatHandler;
     private WXChatHandler wxChatHandler;
+    private long serviceCreateTime = 0;
     @Override
     public void onCreate() {
         super.onCreate();
+        serviceCreateTime= System.currentTimeMillis();
         instance = this;
         mHandler = new Handler(getMainLooper());
         calendar = Calendar.getInstance();
@@ -96,8 +110,17 @@ public class NekoChatService extends AccessibilityService implements OpenAiAskAb
         wxChatHandler = new WXChatHandler(this);
         windowManager = getSystemService(WindowManager.class);
         accViewParams = OverlayUtils.makeNotTouchWindowParams(0,0,0,0);
-        ctrlViewParams = OverlayUtils.makeFloatWindowParams(400,400,1,1);
+        ctrlViewParams = OverlayUtils.makeFloatWindowParams(0,0,1,1);
         speakStartVoice();
+
+        createNotificationChannel();
+        startForeground(1, getNotification());
+        sensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
+        if (sensorManager != null) {
+            Sensor accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
+            Log.d(TAG, "onCreate: accelerometer is WakeUpSensor:" +  accelerometer.isWakeUpSensor());
+            sensorManager.registerListener(this, accelerometer, SensorManager.SENSOR_DELAY_NORMAL);
+        }
     }
 
     @Override
@@ -131,6 +154,8 @@ public class NekoChatService extends AccessibilityService implements OpenAiAskAb
         if(aclv!=null){
             if(accessibilityLogcatView == null)
                 accessibilityLogcatView = aclv.findViewById(R.id.aclv);
+            if(vibrationGraphView== null)
+                vibrationGraphView = aclv.findViewById(R.id.vgv);
         }
 
 
@@ -223,7 +248,7 @@ public class NekoChatService extends AccessibilityService implements OpenAiAskAb
         if (waitQAs.isEmpty()) {
             return;
         }
-        handleQAs(event.getSource());
+        handleQAs(root);
         removeSuccessMessage();
     }
 
@@ -624,6 +649,7 @@ public class NekoChatService extends AccessibilityService implements OpenAiAskAb
     public void setLogcatAlpha(boolean logcatAlpha) {
         this.logcatAlpha = logcatAlpha;
         accessibilityLogcatView.setAlpha(logcatAlpha?0:1);
+        vibrationGraphView.setAlpha(logcatAlpha?0:1);
     }
 
     public View getAccessibilityLogcatView() {
@@ -682,6 +708,7 @@ public class NekoChatService extends AccessibilityService implements OpenAiAskAb
         Log.e(TAG, "onDestroy: ");
         super.onDestroy();
         speakLeaveVoice();
+        sensorManager.unregisterListener(this);
     }
 
     public void addLogcat(String l){
@@ -702,5 +729,126 @@ public class NekoChatService extends AccessibilityService implements OpenAiAskAb
         waitQAs.add(command);
         addLogcat("waitQAs["+waitQAs.size()+"] " +message.getSpeaker()+ ": "+message.getMessage());
 
+    }
+
+    private long lastReportVibration = 0;
+    private static final long REPORT_RANGE = 15000;
+    private SensorManager sensorManager;
+    private static final float MIN_STR = 0.10000f;
+    private final static DecimalFormat decimalFormat = new DecimalFormat("0.0000");
+    private final List<Long> timestamps = new ArrayList<>(); // 存储数据点的时间戳
+    private final List<Float> dataPoints = new ArrayList<>(); // 存储震动强度数据
+    private static final int VIBRATION_LOG_END= 324;
+    private static final int VIBRATION_LOGGING= 325;
+    private int currentVibrationLogStatus;
+    private OnVibrationStrengthListener listener = new OnVibrationStrengthListener() {
+        @Override
+        public void onVibrationStrengthChanged(float strength) {
+            if(strength >= MIN_STR && System.currentTimeMillis() - lastReportVibration > REPORT_RANGE  && System.currentTimeMillis() - serviceCreateTime > 30000){
+                //开始记录10秒内的震动数据
+                dataPoints.clear();
+                timestamps.clear();
+                currentVibrationLogStatus = VIBRATION_LOGGING;
+                lastReportVibration = System.currentTimeMillis();
+                delayReportVibration();
+
+                addLogcat("开始记录震动:"+strength);
+                StaticAskAble s = new StaticAskAble(getPackageName(),
+                        new Message(BotApp.getInstance().getAdminName(),"/recordVideo",System.currentTimeMillis()),
+                        "开始记录震动:"+strength);
+                s.ask();
+                waitQAs.add(s);
+            }
+            if(currentVibrationLogStatus == VIBRATION_LOGGING){
+                timestamps.add(System.currentTimeMillis());
+                dataPoints.add(strength);
+            }
+            if(vibrationGraphView!=null){
+                Log.i(TAG, "onVibrationStrengthChanged: "+strength);
+                if(logcatShow && !logcatAlpha){
+                    vibrationGraphView.updateData(strength);
+                }
+            }else{
+                Log.e(TAG, "onVibrationStrengthChanged: null");
+            }
+        }
+    };
+
+    private void delayReportVibration(){
+        mHandler.postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                if(timestamps.isEmpty() || dataPoints.isEmpty())
+                    return;
+                currentVibrationLogStatus = VIBRATION_LOG_END;
+                String vibrationReportBuilder = "报告震动记录" + '\n' +
+                        "记录开始时间为：" + dateTimeFormat.format(timestamps.get(0)) + '\n' +
+                        "记录结束时间为：" + dateTimeFormat.format(timestamps.get(timestamps.size() - 1)) + '\n' +
+                        "期间最大强度：" + decimalFormat.format(Collections.max(dataPoints));
+                StaticAskAble s = new StaticAskAble(getPackageName(),
+                        new Message(BotApp.getInstance().getAdminName(),"报告震动记录",System.currentTimeMillis()),
+                        vibrationReportBuilder);
+
+                s.ask();
+                waitQAs.add(s);
+            }
+        },REPORT_RANGE);
+    }
+
+    public interface OnVibrationStrengthListener {
+        void onVibrationStrengthChanged(float strength);
+    }
+
+    // 用于高通滤波器
+    private final float[] gravity = new float[3];
+    private static final float alpha = 0.8f; // 过滤系数
+
+    @Override
+    public void onSensorChanged(SensorEvent event) {
+        // 使用低通滤波器计算重力
+        final float beta = 1.0f - alpha;
+        gravity[0] = alpha * gravity[0] + beta * event.values[0];
+        gravity[1] = alpha * gravity[1] + beta * event.values[1];
+        gravity[2] = alpha * gravity[2] + beta * event.values[2];
+
+        // 计算加速度（去掉重力的影响）
+        float xAcc = event.values[0] - gravity[0];
+        float yAcc = event.values[1] - gravity[1];
+        float zAcc = event.values[2] - gravity[2];
+
+        // 计算震动强度
+        float acceleration = (float) Math.sqrt(xAcc * xAcc + yAcc * yAcc + zAcc * zAcc);
+
+        // 假设震动的阈值
+        if ( listener != null) { // 适当调整阈值
+            listener.onVibrationStrengthChanged(acceleration);
+        }
+    }
+
+    @Override
+    public void onAccuracyChanged(Sensor sensor, int accuracy) {}
+
+    public void setOnVibrationStrengthListener(OnVibrationStrengthListener listener) {
+        this.listener = listener;
+    }
+
+    private void createNotificationChannel() {
+        NotificationChannel serviceChannel = new NotificationChannel(
+                "VibrationDetectionServiceChannel",
+                "Vibration Detection Service",
+                NotificationManager.IMPORTANCE_DEFAULT
+        );
+        NotificationManager manager = getSystemService(NotificationManager.class);
+        if (manager != null) {
+            manager.createNotificationChannel(serviceChannel);
+        }
+    }
+
+    private Notification getNotification() {
+        return new Notification.Builder(this, "VibrationDetectionServiceChannel")
+                .setContentTitle("Vibration Detection Service")
+                .setContentText("Monitoring for vibrations...")
+                .setSmallIcon(R.drawable.ic_launcher_foreground) // 替换为你的图标
+                .build();
     }
 }

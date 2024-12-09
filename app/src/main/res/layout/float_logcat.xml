@@ -9,4 +9,5 @@
             android:layout_height="match_parent"
             android:layout_gravity="center"
             android:background="#39000000"/>
+    <com.zinhao.chtholly.VibrationGraphView android:id="@+id/vgv" android:layout_width="match_parent" android:layout_height="300dp"/>
 </FrameLayout>

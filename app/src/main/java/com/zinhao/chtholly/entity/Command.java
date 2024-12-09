@@ -46,6 +46,7 @@ public class Command implements AskAble {
     private static final String SWITCH_CHATS = "/switchChat";
     private static final String SEND_GALLERY = "/sendGallery";
     private static final String SHARE_SCREEN = "/shareScreen";
+    private static final String RECORD_VIDEO = "/recordVideo";
 
     private final String packageName;
     private final Message question;
@@ -297,6 +298,23 @@ public class Command implements AskAble {
         return true;
     }
 
+    private boolean recordVideo(){
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            steps = new Vector<>();
+            steps.add(new Step(QQChatHandler.QQ_PACKAGE_NAME,":id/go6", AccessibilityNodeInfo.ACTION_CLICK,false));
+            // 录像
+            Step gestureStep = new Step(QQChatHandler.QQ_PACKAGE_NAME+".aelight_impl",":id/a74",AccessibilityNodeInfo.ACTION_SCROLL_FORWARD,false,500);
+            gestureStep.setNeedGesture(PRESS_10S);
+            steps.add(gestureStep);
+            //发送
+            steps.add(new Step(QQChatHandler.QQ_PACKAGE_NAME+".aelight_impl",":id/ut", AccessibilityNodeInfo.ACTION_CLICK,false,15000));
+            getAnswer().setMessage(NekoAskAble.OK+"请耐心等待");
+        }else{
+            getAnswer().setMessage(NekoAskAble.DONT_SUPPORT);
+        }
+        return true;
+    }
+
     private boolean clickViewId() {
         steps = new Vector<>();
         String[] ids = getQuestion().getMessage().split(" ");
@@ -444,6 +462,21 @@ public class Command implements AskAble {
             path.moveTo(p.x,p.y);
             path.lineTo(p.x,p.y);
             gb.addStroke(new GestureDescription.StrokeDescription(path,0,50));
+            return  gb.build();
+        }
+    };
+
+    public static final Step.NeedGesture PRESS_10S = new Step.NeedGesture() {
+        @Override
+        public GestureDescription onGesture(AccessibilityNodeInfo targetView) {
+            GestureDescription.Builder gb = new GestureDescription.Builder();
+            Rect r = new Rect();
+            targetView.getBoundsInScreen(r);
+            Path path = new Path();
+            PointF p = new PointF((r.left+r.right)/2f,(r.top+r.bottom)/2f);
+            path.moveTo(p.x,p.y);
+            path.lineTo(p.x,p.y);
+            gb.addStroke(new GestureDescription.StrokeDescription(path,0,10000));
             return  gb.build();
         }
     };
