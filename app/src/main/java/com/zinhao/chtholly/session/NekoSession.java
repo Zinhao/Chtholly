@@ -14,7 +14,7 @@ import java.io.File;
 
 import static com.zinhao.chtholly.entity.NekoAskAble.*;
 
-public class NekoSession {
+public class NekoSession{
     private JSONObject keywordAnswerMap;
     private static NekoSession instance;
     public static NekoSession getInstance() {

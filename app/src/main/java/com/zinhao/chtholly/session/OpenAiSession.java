@@ -17,7 +17,7 @@ import java.text.SimpleDateFormat;
 import java.util.Locale;
 import java.util.concurrent.TimeUnit;
 
-public class OpenAiSession extends NekoSession{
+public class OpenAiSession extends NekoSession implements ChatSession{
     private static final String TAG = "OpenAiSession";
 
     private static final String ROLE = "role";
@@ -156,11 +156,11 @@ public class OpenAiSession extends NekoSession{
     }
 
     public void addAssistantChat(String message){
-        OpenAiSession.getInstance().addTextChat(ROLE_ASSISTANT,message);
+        addTextChat(ROLE_ASSISTANT,message);
     }
 
     public void addSystemChat(String message){
-        OpenAiSession.getInstance().addTextChat(ROLE_SYSTEM,message);
+        addTextChat(ROLE_SYSTEM,message);
     }
 
     public void addToolCalls(Choice.Message message){
@@ -204,10 +204,12 @@ public class OpenAiSession extends NekoSession{
         return requestChatCompletions(message);
     }
 
+    @Override
     public void setChatUrl(String chatUrl) {
         this.chatUrl = chatUrl;
     }
 
+    @Override
     public String getChatUrl() {
         return chatUrl;
     }
@@ -227,6 +229,7 @@ public class OpenAiSession extends NekoSession{
         summarizeMessage.ask();
     }
 
+    @Override
     public boolean requestChatCompletions(NetAiAskAble message){
         RequestBody requestBody = RequestBody.Companion.create(data.toString(),MediaType.parse("application/json;charset=utf-8"));
         Log.d(TAG, "requestAsk: "+data);

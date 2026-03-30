@@ -18,7 +18,7 @@ import android.os.Bundle;
 import com.koushikdutta.async.http.AsyncHttpClient;
 import com.koushikdutta.async.http.AsyncHttpResponse;
 import com.zinhao.chtholly.databinding.ActivityVoiceServerSettingBinding;
-import com.zinhao.chtholly.session.OpenAiSession;
+import com.zinhao.chtholly.session.ChatSession;
 import org.jetbrains.annotations.NotNull;
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -70,13 +70,14 @@ public class ServerSettingActivity extends AppCompatActivity {
         }
     };
     private EditText voiceServerEdit;
-
+    private ChatSession session;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         binding = ActivityVoiceServerSettingBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
         VoiceHttpApi.getModelInfo(modelInfo);
+        session = NekoChatService.getInstance().getSession();
         mHandler = new Handler(getMainLooper());
         localNetWork = new ServerInfo("本地代理",BotApp.getInstance().getChatUrl());
         binding.scan.setOnClickListener(new View.OnClickListener() {
@@ -138,9 +139,11 @@ public class ServerSettingActivity extends AppCompatActivity {
         int selectIndex = serverList.size()-1;
         for (int i = 0; i < serverList.size(); i++) {
             ServerInfo serverInfo = serverList.get(i);
-            if(serverInfo.url.equals(OpenAiSession.getInstance().getChatUrl())){
-                selectIndex = i;
-                break;
+            if(session!=null){
+                if(serverInfo.url.equals(session.getChatUrl())){
+                    selectIndex = i;
+                    break;
+                }
             }
         }
         binding.aiServerSpinner.setAdapter(new ArrayAdapter<>(ServerSettingActivity.this,
@@ -162,7 +165,7 @@ public class ServerSettingActivity extends AppCompatActivity {
                 }else {
                     binding.textView9.setText(serverList.get(position).url);
                     BotApp.getInstance().setChatUrl(serverList.get(position).url);
-                    OpenAiSession.getInstance().setChatUrl(serverList.get(position).url);
+                    session.setChatUrl(serverList.get(position).url);
                     saveChatUrl(serverList.get(position).url);
                 }
             }
@@ -171,7 +174,7 @@ public class ServerSettingActivity extends AppCompatActivity {
 
             }
         });
-        binding.textView9.setText(OpenAiSession.getInstance().getChatUrl());
+        binding.textView9.setText(session.getChatUrl());
 
         voiceServerEdit = binding.voiceServer.getEditText();
         if(voiceServerEdit !=null){
@@ -207,7 +210,7 @@ public class ServerSettingActivity extends AppCompatActivity {
                 localNetWork.url = host;
                 binding.textView9.setText(host);
                 BotApp.getInstance().setChatUrl(host);
-                OpenAiSession.getInstance().setChatUrl(host);
+                session.setChatUrl(host);
                 saveChatUrl(host);
             }
         }

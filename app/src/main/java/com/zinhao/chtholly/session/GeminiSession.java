@@ -18,8 +18,8 @@ import java.text.SimpleDateFormat;
 import java.util.Locale;
 import java.util.concurrent.TimeUnit;
 
-public class GeminiSession extends NekoSession{
-    private static final String TAG = "OpenAiSession";
+public class GeminiSession extends NekoSession implements ChatSession{
+    private static final String TAG = "GeminiSession";
 
     private static final String ROLE = "role";
     private static final String CONTENT = "content";
@@ -76,6 +76,7 @@ public class GeminiSession extends NekoSession{
 
     }
 
+    @Override
     public void setChara(String charaDesc){
         JSONArray partsArray = new JSONArray();
         JSONObject st = new JSONObject();
@@ -113,10 +114,6 @@ public class GeminiSession extends NekoSession{
     }
 
     public void addSystemChat(String message){
-
-    }
-
-    public void addToolCalls(Choice.Message message){
 
     }
 
@@ -185,7 +182,7 @@ public class GeminiSession extends NekoSession{
         summarizeMessage.ask();
     }
 
-    private boolean requestChatCompletions(NetAiAskAble message){
+    public boolean requestChatCompletions(NetAiAskAble message){
         RequestBody requestBody = RequestBody.Companion.create(data.toString(),MediaType.parse("application/json;charset=utf-8"));
 
         Log.d(TAG, "requestAsk: "+data);

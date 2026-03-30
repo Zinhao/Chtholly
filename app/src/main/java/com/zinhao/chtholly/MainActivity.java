@@ -18,6 +18,8 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import com.zinhao.chtholly.databinding.ActivityMainBinding;
 import com.zinhao.chtholly.entity.Message;
+import com.zinhao.chtholly.session.ChatSession;
+import com.zinhao.chtholly.session.GeminiSession;
 import com.zinhao.chtholly.session.OpenAiSession;
 import per.goweii.layer.core.anim.AnimStyle;
 import per.goweii.layer.core.widget.SwipeLayout;
@@ -178,7 +180,11 @@ public class MainActivity extends AppCompatActivity {
     protected void onResume() {
         super.onResume();
         binding.toggleButton.setChecked(isAccessibilitySettingsOn(this));
-        binding.textView.setText(OpenAiSession.getInstance().getChara());
+        ChatSession session = NekoChatService.getInstance().getSession();
+        if(session!=null){
+            binding.textView.setText(session.getChara());
+        }
+
     }
 
     private boolean isAccessibilitySettingsOn(Context mContext){

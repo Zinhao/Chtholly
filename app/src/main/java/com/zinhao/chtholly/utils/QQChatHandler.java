@@ -159,7 +159,7 @@ public class QQChatHandler extends BaseChatHandler {
                 NekoChatService.getInstance().addLogcat(String.format(Locale.CHINA,"id2FindGroupLastMessage: other ground:%s",text));
                 if(text!=null){
                     if(text.toString().startsWith("QQ天气")){
-                        OpenAiSession.getInstance().addSystemChat(text.toString());
+                       //todo
                     }
                 }
             }

@@ -12,8 +12,9 @@ import android.view.accessibility.AccessibilityNodeInfo;
 import androidx.annotation.CallSuper;
 import com.zinhao.chtholly.BotApp;
 import com.zinhao.chtholly.NekoChatService;
+import com.zinhao.chtholly.session.ChatSession;
+import com.zinhao.chtholly.session.GeminiSession;
 import com.zinhao.chtholly.session.NekoSession;
-import com.zinhao.chtholly.session.OpenAiSession;
 import com.zinhao.chtholly.utils.ChatPageViewIds;
 import com.zinhao.chtholly.utils.QQChatHandler;
 import org.jetbrains.annotations.NotNull;
@@ -265,29 +266,35 @@ public class Command implements AskAble {
     }
 
     private boolean printMessage() {
-        String his = OpenAiSession.getInstance().getContextChat();
+        ChatSession chatSession = NekoChatService.getInstance().getSession();
+        String his = chatSession.getContextChat();
         getAnswer().setMessage(his);
         return true;
     }
 
     private boolean printCharacter() {
-        String chara = OpenAiSession.getInstance().getChara();
+        ChatSession chatSession = NekoChatService.getInstance().getSession();
+        String chara = chatSession.getChara();
         getAnswer().setMessage(String.format(Locale.CHINA,"这是%s的设定： %s。",BotApp.getInstance().getBotName(),chara));
         return true;
     }
 
     private boolean summarizeChat() {
-        int len = OpenAiSession.getInstance().summarize();
+        ChatSession chatSession = NekoChatService.getInstance().getSession();
+        int len = chatSession.summarize();
         getAnswer().setMessage(String.format(Locale.CHINA,"%s 将为主人总结%d条对话。",BotApp.getInstance().getBotName(),len));
         return true;
     }
 
     private boolean switchBotOrAI() {
-        if(openaiIgnoreCase.matcher(question.getMessage()).find()){
-            answer.setMessage(NekoAskAble.TOO_HIGH);
+        if(geminiIgnoreCase.matcher(question.getMessage()).find()){
+            answer.setMessage(NekoAskAble.OK +" => gemini ai");
+            NekoChatService.mode = GeminiSession.class;
+        } else if(openaiIgnoreCase.matcher(question.getMessage()).find()){
+            answer.setMessage(NekoAskAble.OK+" => open ai");
             NekoChatService.mode = OpenAiSession.class;
         }else{
-            answer.setMessage(NekoAskAble.KOU_WAI);
+            answer.setMessage(NekoAskAble.KOU_WAI +"=> neko");
             NekoChatService.mode = NekoSession.class;
         }
         return true;
@@ -446,6 +453,7 @@ public class Command implements AskAble {
     }
 
     public static final Pattern openaiIgnoreCase = Pattern.compile("(?i)openai");
+    public static final Pattern geminiIgnoreCase = Pattern.compile("(?i)gemini");
 
     public Step getNextStep(){
         if(steps == null || steps.isEmpty()){

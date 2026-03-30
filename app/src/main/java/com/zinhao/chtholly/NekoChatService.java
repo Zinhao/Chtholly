@@ -25,6 +25,7 @@ import androidx.media3.common.MediaMetadata;
 import androidx.media3.common.Player;
 import androidx.media3.exoplayer.ExoPlayer;
 import com.zinhao.chtholly.entity.*;
+import com.zinhao.chtholly.session.ChatSession;
 import com.zinhao.chtholly.session.GeminiSession;
 import com.zinhao.chtholly.session.OpenAiSession;
 import com.zinhao.chtholly.utils.*;
@@ -728,7 +729,7 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
         if (mode == OpenAiSession.class) {
             command =  new OpenAiAskAble(getRootInActiveWindow().getPackageName().toString(), message, this);
         } else if(mode == GeminiSession.class){
-            command =  new OpenAiAskAble(getRootInActiveWindow().getPackageName().toString(), message, this);
+            command =  new GeminiAIAskAble(getRootInActiveWindow().getPackageName().toString(), message, this);
         } else {
             command = new NekoAskAble(getRootInActiveWindow().getPackageName().toString(), message);
         }
@@ -802,6 +803,15 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
                 waitQAs.add(s);
             }
         },REPORT_RANGE);
+    }
+
+    public ChatSession getSession() {
+        if(mode == OpenAiSession.class){
+            return OpenAiSession.getInstance();
+        }else if(mode == GeminiSession.class){
+            return  GeminiSession.getInstance();
+        }
+        return null;
     }
 
     public interface OnVibrationStrengthListener {

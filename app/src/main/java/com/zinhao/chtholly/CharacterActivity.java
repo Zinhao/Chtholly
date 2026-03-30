@@ -15,6 +15,8 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import com.zinhao.chtholly.databinding.ActivityCharacterBinding;
 import com.zinhao.chtholly.entity.AICharacter;
+import com.zinhao.chtholly.session.ChatSession;
+import com.zinhao.chtholly.session.GeminiSession;
 import com.zinhao.chtholly.session.OpenAiSession;
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -150,7 +152,11 @@ public class CharacterActivity extends AppCompatActivity implements CharacterAda
                 editor.putLong(BotApp.CONFIG_CURRENT_CHARACTER_ID,character.getId());
                 editor.apply();
 
-                OpenAiSession.getInstance().setChara(character.getDesc());
+                ChatSession session = NekoChatService.getInstance().getSession();
+                if(session!=null){
+                    session.setChara(character.getDesc());
+                }
+
                 dialog.dismiss();
             }
         });
