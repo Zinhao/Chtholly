@@ -110,7 +110,7 @@ public class AccessibilityBoundView extends View {
             float x = bound.left; // 文本的左下角 X
             float y = bound.top + textHeight; // 文本的基线 Y
             if(nodeInfo.isClickable()){
-                textPaint.setColor(Color.YELLOW);
+                textPaint.setColor(Color.BLACK);
             }else{
                 textPaint.setColor(Color.RED);
             }

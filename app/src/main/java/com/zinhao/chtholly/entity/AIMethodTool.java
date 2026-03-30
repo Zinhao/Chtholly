@@ -36,8 +36,8 @@ public class AIMethodTool{
             String timeStr = (String) argMap.get("time");
             long t = Long.parseLong(timeStr);
             String actionStr = (String) argMap.get("action");
-            if(argMap.containsKey(OpenAiAskAble.class.getName())) {
-                OpenAiAskAble message = (OpenAiAskAble) argMap.get(OpenAiAskAble.class.getName());
+            if(argMap.containsKey(NetAiAskAble.class.getName())) {
+                NetAiAskAble message = (NetAiAskAble) argMap.get(NetAiAskAble.class.getName());
                 if(message!=null){
                     message.doTextReply(NekoAskAble.OK);
                     message.doTTSReply(NekoAskAble.OK);
@@ -65,8 +65,8 @@ public class AIMethodTool{
         @Override
         public boolean call(Map<String, Object> argMap,String callId) {
             String hotMessage = (String) argMap.get("text");
-            if(argMap.containsKey(OpenAiAskAble.class.getName())) {
-                OpenAiAskAble message = (OpenAiAskAble) argMap.get(OpenAiAskAble.class.getName());
+            if(argMap.containsKey(NetAiAskAble.class.getName())) {
+                NetAiAskAble message = (NetAiAskAble) argMap.get(NetAiAskAble.class.getName());
                 if(message!=null){
                     JSONObject content = new JSONObject();
                     try {

@@ -21,7 +21,7 @@ public class LayoutTreeUtils {
     private static StringBuilder builder;
     private static final String TAG = "LayoutTreeUtils";
     private static final Rect bound = new Rect();
-    private static final boolean printTree = true;
+    private static final boolean printTree = false;
     public static JSONObject treeAndPrintLayout(AccessibilityNodeInfo nodeInfo, int treeIndex) throws JSONException {
         JSONObject root = new JSONObject();
         if(nodeInfo == null)
@@ -103,19 +103,5 @@ public class LayoutTreeUtils {
         StringBuilder stringBuilder = new StringBuilder();
         stringBuilder.append(event.toString());
         return  stringBuilder;
-//        if ((event.getContentChangeTypes() & AccessibilityEvent.CONTENT_CHANGE_TYPE_TEXT) == AccessibilityEvent.CONTENT_CHANGE_TYPE_TEXT) {
-//            stringBuilder.append("CONTENT_CHANGE_TYPE_TEXT");
-//        }
-//        if ((event.getContentChangeTypes() & AccessibilityEvent.CONTENT_CHANGE_TYPE_SUBTREE) == AccessibilityEvent.CONTENT_CHANGE_TYPE_SUBTREE) {
-//            if (stringBuilder.length() != 0)
-//                stringBuilder.append(' ');
-//            stringBuilder.append("CONTENT_CHANGE_TYPE_SUBTREE");
-//        }
-//        if ((event.getContentChangeTypes() & AccessibilityEvent.CONTENT_CHANGE_TYPE_CONTENT_DESCRIPTION) == AccessibilityEvent.CONTENT_CHANGE_TYPE_CONTENT_DESCRIPTION) {
-//            if (stringBuilder.length() != 0)
-//                stringBuilder.append(' ');
-//            stringBuilder.append("CONTENT_CHANGE_TYPE_CONTENT_DESCRIPTION");
-//        }
-//        return stringBuilder;
     }
 }

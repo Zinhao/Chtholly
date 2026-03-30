@@ -13,9 +13,7 @@ import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
-import android.os.Binder;
 import android.os.Handler;
-import android.os.IBinder;
 import android.provider.Settings;
 import android.util.Log;
 import android.view.View;
@@ -27,6 +25,7 @@ import androidx.media3.common.MediaMetadata;
 import androidx.media3.common.Player;
 import androidx.media3.exoplayer.ExoPlayer;
 import com.zinhao.chtholly.entity.*;
+import com.zinhao.chtholly.session.GeminiSession;
 import com.zinhao.chtholly.session.OpenAiSession;
 import com.zinhao.chtholly.utils.*;
 import org.json.JSONException;
@@ -38,7 +37,7 @@ import java.util.*;
 
 import static com.zinhao.chtholly.utils.QQChatHandler.*;
 
-public class NekoChatService extends AccessibilityService implements OpenAiAskAble.DelayReplyCallback, MessageCallback, SensorEventListener {
+public class NekoChatService extends AccessibilityService implements NetAiAskAble.DelayReplyCallback, MessageCallback, SensorEventListener {
     private static final String TAG = "NekoChatService";
     public static Class<?> mode = OpenAiSession.class;
     private static final SimpleDateFormat dateTimeFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss", Locale.CHINA);
@@ -96,6 +95,7 @@ public class NekoChatService extends AccessibilityService implements OpenAiAskAb
     private Calendar calendar;
     private QQChatHandler qqChatHandler;
     private WXChatHandler wxChatHandler;
+    private RBChatHandler rbChatHandler;
     private long serviceCreateTime = 0;
     @Override
     public void onCreate() {
@@ -108,6 +108,7 @@ public class NekoChatService extends AccessibilityService implements OpenAiAskAb
         mediaPlayer = new ExoPlayer.Builder(this).build();
         qqChatHandler = new QQChatHandler(this);
         wxChatHandler = new WXChatHandler(this);
+        rbChatHandler = new RBChatHandler(this);
         windowManager = getSystemService(WindowManager.class);
         accViewParams = OverlayUtils.makeNotTouchWindowParams(0,0,0,0);
         ctrlViewParams = OverlayUtils.makeFloatWindowParams(0,0,1,1);
@@ -240,10 +241,12 @@ public class NekoChatService extends AccessibilityService implements OpenAiAskAb
                 }
             }
         }
-        if(QQ_PACKAGE_NAME.equals(event.getPackageName().toString())){
+        if(PACKAGE_NAME.equals(event.getPackageName().toString())){
             qqChatHandler.handle(event);
         }else if(WXChatHandler.WX_PACKAGE_NAME.equals(event.getPackageName().toString())){
             wxChatHandler.handle(event);
+        }else if(RBChatHandler.PACKAGE_NAME.equals(event.getPackageName().toString())){
+            rbChatHandler.handle(event);
         }
         if (waitQAs.isEmpty()) {
             return;
@@ -366,6 +369,8 @@ public class NekoChatService extends AccessibilityService implements OpenAiAskAb
                     qqChatHandler.writeAndSend(qa);
                 }else if(source.getPackageName().equals(wxChatHandler.getPackageName())){
                     wxChatHandler.writeAndSend(qa);
+                }else if(source.getPackageName().equals(rbChatHandler.getPackageName())){
+                    rbChatHandler.writeAndSend(qa);
                 }
             }
             if (qa.sendSuccess()) {
@@ -523,7 +528,7 @@ public class NekoChatService extends AccessibilityService implements OpenAiAskAb
     }
 
     @Override
-    public void onReply(OpenAiAskAble message) {
+    public void onReply(NetAiAskAble message) {
         mHandler.post(() -> {
             handleQAs(getRootInActiveWindow());
             removeSuccessMessage();
@@ -722,6 +727,8 @@ public class NekoChatService extends AccessibilityService implements OpenAiAskAb
         Command command;
         if (mode == OpenAiSession.class) {
             command =  new OpenAiAskAble(getRootInActiveWindow().getPackageName().toString(), message, this);
+        } else if(mode == GeminiSession.class){
+            command =  new OpenAiAskAble(getRootInActiveWindow().getPackageName().toString(), message, this);
         } else {
             command = new NekoAskAble(getRootInActiveWindow().getPackageName().toString(), message);
         }
@@ -734,17 +741,19 @@ public class NekoChatService extends AccessibilityService implements OpenAiAskAb
     private long lastReportVibration = 0;
     private static final long REPORT_RANGE = 15000;
     private SensorManager sensorManager;
-    private static final float MIN_STR = 0.10000f;
+    private static final float MIN_STR = 1.10000f;
     private final static DecimalFormat decimalFormat = new DecimalFormat("0.0000");
     private final List<Long> timestamps = new ArrayList<>(); // 存储数据点的时间戳
     private final List<Float> dataPoints = new ArrayList<>(); // 存储震动强度数据
     private static final int VIBRATION_LOG_END= 324;
     private static final int VIBRATION_LOGGING= 325;
     private int currentVibrationLogStatus;
+    private boolean enableReportVibration = false;
     private OnVibrationStrengthListener listener = new OnVibrationStrengthListener() {
         @Override
         public void onVibrationStrengthChanged(float strength) {
-            if(strength >= MIN_STR && System.currentTimeMillis() - lastReportVibration > REPORT_RANGE  && System.currentTimeMillis() - serviceCreateTime > 30000){
+            if(enableReportVibration && strength >= MIN_STR && System.currentTimeMillis() - lastReportVibration > REPORT_RANGE
+                    && System.currentTimeMillis() - serviceCreateTime > 30000){
                 //开始记录10秒内的震动数据
                 dataPoints.clear();
                 timestamps.clear();
@@ -764,12 +773,12 @@ public class NekoChatService extends AccessibilityService implements OpenAiAskAb
                 dataPoints.add(strength);
             }
             if(vibrationGraphView!=null){
-                Log.i(TAG, "onVibrationStrengthChanged: "+strength);
+//                Log.i(TAG, "onVibrationStrengthChanged: "+strength);
                 if(logcatShow && !logcatAlpha){
                     vibrationGraphView.updateData(strength);
                 }
             }else{
-                Log.e(TAG, "onVibrationStrengthChanged: null");
+//                Log.e(TAG, "onVibrationStrengthChanged: null");
             }
         }
     };
@@ -820,7 +829,7 @@ public class NekoChatService extends AccessibilityService implements OpenAiAskAb
         float acceleration = (float) Math.sqrt(xAcc * xAcc + yAcc * yAcc + zAcc * zAcc);
 
         // 假设震动的阈值
-        if ( listener != null) { // 适当调整阈值
+        if ( listener != null) {
             listener.onVibrationStrengthChanged(acceleration);
         }
     }
@@ -850,5 +859,13 @@ public class NekoChatService extends AccessibilityService implements OpenAiAskAb
                 .setContentText("Monitoring for vibrations...")
                 .setSmallIcon(R.drawable.ic_launcher_foreground) // 替换为你的图标
                 .build();
+    }
+
+    public QQChatHandler getQqChatHandler() {
+        return qqChatHandler;
+    }
+
+    public WXChatHandler getWxChatHandler() {
+        return wxChatHandler;
     }
 }

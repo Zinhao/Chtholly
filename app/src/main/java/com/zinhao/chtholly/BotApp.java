@@ -18,6 +18,7 @@ public class BotApp extends Application {
     public static final String CONFIG_ADMIN_NAME = "admin_name";
     public static final String CONFIG_CHAT_URL = "chat_url";
     public static final String CONFIG_TTS_URL = "tts_url";
+    public static final String CONFIG_IS_FIRST_RUN = "is_first_run";
     private String botName;
     private String adminName;
     private long characterId;
@@ -66,7 +67,7 @@ public class BotApp extends Application {
         characterId = sharedPreferences.getLong(CONFIG_CURRENT_CHARACTER_ID,0);
         chatUrl = sharedPreferences.getString(CONFIG_CHAT_URL,"https://api.openai.com/v1/chat/completions");
         ttsUrl = sharedPreferences.getString(CONFIG_TTS_URL,"http://localhost");
-
+        boolean isFirstRun = sharedPreferences.getBoolean(CONFIG_IS_FIRST_RUN,true);
         database = Room.databaseBuilder(this,AppDatabase.class,"app_data")
                 .build();
         messageDao = database.messageDao();
@@ -75,6 +76,11 @@ public class BotApp extends Application {
             currentCharacter = aiCharacterDao.getAICharacterById(characterId);
             if(currentCharacter == null){
                 currentCharacter = new AICharacter("人工智能",getApplicationContext().getString(R.string.chara_default));
+            }
+            if(isFirstRun){
+                insert(new AICharacter("猫娘",getString(R.string.neko_chara_1)));
+                insert(new AICharacter("VTuber",getString(R.string.v_tuber_desc)));
+                sharedPreferences.edit().putBoolean(CONFIG_IS_FIRST_RUN,false).apply();
             }
         });
 

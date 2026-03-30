@@ -22,6 +22,9 @@ public interface AICharacterDao {
     @Query("SELECT * FROM aicharacter")
     List<AICharacter> getAll();
 
+    @Query("SELECT COUNT(*) FROM aicharacter")
+    int getAICharacterCount();
+
     @Query("SELECT * FROM aicharacter where aicharacter.id = :id")
     AICharacter getAICharacterById(long id);
 

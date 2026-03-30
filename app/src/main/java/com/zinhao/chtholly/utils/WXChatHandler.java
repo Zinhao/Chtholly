@@ -67,19 +67,11 @@ public class WXChatHandler extends BaseChatHandler {
     public boolean writeAndSend(Command qa) {
         if (etInput != null) {
             etInput.refresh();
-//            Bundle arguments = new Bundle();
-//            arguments.putInt(AccessibilityNodeInfo.ACTION_ARGUMENT_SELECTION_START_INT, 1);
-//            arguments.putInt(AccessibilityNodeInfo.ACTION_ARGUMENT_SELECTION_END_INT, 2);
-//            etInput.performAction(AccessibilityNodeInfo.ACTION_SET_SELECTION, arguments);
-
             etInput.performAction(AccessibilityNodeInfo.ACTION_FOCUS);
             Log.d(TAG, "writeAndSend: 焦点"+etInput.isFocused());
             if (writeMessage(etInput, qa)) {
                 NekoChatService.getInstance().addLogcat("write: id[" + etInput.getViewIdResourceName() + ']' + qa.getAnswer().getMessage());
             }
-//            if (pasteMessage(etInput, qa)) {
-//                NekoChatService.getInstance().addLogcat("paste: id[" + etInput.getViewIdResourceName() + ']' + qa.getAnswer().getMessage());
-//            }
         }
         if(btSend!=null){
             if(qa.isWrite()){

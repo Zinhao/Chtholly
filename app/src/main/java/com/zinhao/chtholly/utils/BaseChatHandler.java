@@ -1,6 +1,7 @@
 package com.zinhao.chtholly.utils;
 
 import android.os.Bundle;
+import android.util.Log;
 import android.view.accessibility.AccessibilityEvent;
 import android.view.accessibility.AccessibilityNodeInfo;
 import androidx.annotation.Nullable;
@@ -32,6 +33,7 @@ public abstract class BaseChatHandler {
             if(inputEditText.isEditable()){
                 Bundle arg = new Bundle();
                 String sendMessage = beforeWriteMessage(qaMessage);
+                Log.i(TAG,"writeMessage:"+sendMessage);
                 arg.putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, sendMessage);
                 boolean result = inputEditText.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, arg);
                 if(!result){

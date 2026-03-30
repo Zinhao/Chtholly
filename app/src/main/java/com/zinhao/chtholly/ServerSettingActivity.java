@@ -131,6 +131,8 @@ public class ServerSettingActivity extends AppCompatActivity {
         serverList.add(new ServerInfo("close ai proxy 3","https://api.openai-proxy.live/v1/chat/completions"));
         serverList.add(new ServerInfo("open ai","https://api.openai.com/v1/chat/completions"));
         serverList.add(new ServerInfo("通意千问","https://dashscope.aliyuncs.com/compatible-mode/v1"));
+        serverList.add(new ServerInfo("gemini","https://api.openai-proxy.org/google/v1beta/chat/completions"));
+        serverList.add(new ServerInfo("gemini","https://api.openai-proxy.org/google/chat/completions"));
         serverList.add(localNetWork);
 
         int selectIndex = serverList.size()-1;

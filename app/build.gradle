@@ -74,6 +74,7 @@ android {
     namespace 'com.zinhao.chtholly'
 }
 
+
 dependencies {
     implementation fileTree(dir: 'libs', include: ['*.aar', '*.jar'], exclude: [])
     implementation 'androidx.appcompat:appcompat:1.7.0'
