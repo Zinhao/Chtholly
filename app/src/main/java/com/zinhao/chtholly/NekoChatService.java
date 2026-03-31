@@ -40,7 +40,7 @@ import static com.zinhao.chtholly.utils.QQChatHandler.*;
 
 public class NekoChatService extends AccessibilityService implements NetAiAskAble.DelayReplyCallback, MessageCallback, SensorEventListener {
     private static final String TAG = "NekoChatService";
-    public static Class<?> mode = OpenAiSession.class;
+    public static Class<?> mode = GeminiSession.class;
     private static final SimpleDateFormat dateTimeFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss", Locale.CHINA);
     private static NekoChatService instance;
     private Handler mHandler;
@@ -278,7 +278,7 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
                 Message message = new Message(remindMessage.getMaster(), "/SYSTEM MESSAGE", System.currentTimeMillis());
                 StaticAskAble staticAskAble = new StaticAskAble(getPackageName(), message, remindMessage.message);
                 playTTSVoiceFromNetWork(remindMessage.message);
-                staticAskAble.ask();
+                staticAskAble.handle();
                 waitQAs.add(staticAskAble);
                 return true;
             }
@@ -312,16 +312,11 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
             addLogcat("autoMission:todayNoon will answer at " + dateTimeFormat.format(System.currentTimeMillis() + delayMillis));
             mHandler.postDelayed(delayCheck, delayMillis);
             todayNoon = true;
-
+            // todo
             List<Step> steps = new ArrayList<>();
             steps.add(new Step(getPackageName(), ":id/qn4", AccessibilityNodeInfo.ACTION_CLICK, false));
             steps.add(new Step(getPackageName(), ":id/nfz", AccessibilityNodeInfo.ACTION_CLICK, false, 500));
-            Command command = new Command(
-                    getPackageName(),
-                    new Message("SYSTEM", "打卡任务", System.currentTimeMillis()),
-                    steps);
-            command.ask();
-            waitQAs.add(command);
+//            waitQAs.add(command);
         }
         if (nowHourCount > 13 && nowHourCount <= 19 && !todayAfter) {
             long delayMillis = randomTime(20, 30);
@@ -548,7 +543,7 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
         @Override
         public void run() {
             if (autoCommand != null) {
-                autoCommand.ask();
+                autoCommand.handle();
                 waitQAs.add(autoCommand);
             }
         }
@@ -725,16 +720,16 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
 
     @Override
     public void onFind(Message message) {
-        Command command;
+        Command mainMessage;
         if (mode == OpenAiSession.class) {
-            command =  new OpenAiAskAble(getRootInActiveWindow().getPackageName().toString(), message, this);
+            mainMessage =  new OpenAiAskAble(getRootInActiveWindow().getPackageName().toString(), message, this);
         } else if(mode == GeminiSession.class){
-            command =  new GeminiAIAskAble(getRootInActiveWindow().getPackageName().toString(), message, this);
+            mainMessage =  new GeminiAIAskAble(getRootInActiveWindow().getPackageName().toString(), message, this);
         } else {
-            command = new NekoAskAble(getRootInActiveWindow().getPackageName().toString(), message);
+            mainMessage = new NekoAskAble(getRootInActiveWindow().getPackageName().toString(), message);
         }
-        command.ask();
-        waitQAs.add(command);
+        mainMessage.handle();
+        waitQAs.add(mainMessage);
         addLogcat("waitQAs["+waitQAs.size()+"] " +message.getSpeaker()+ ": "+message.getMessage());
 
     }
@@ -766,7 +761,7 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
                 StaticAskAble s = new StaticAskAble(getPackageName(),
                         new Message(BotApp.getInstance().getAdminName(),"/recordVideo",System.currentTimeMillis()),
                         "开始记录震动:"+strength);
-                s.ask();
+                s.handle();
                 waitQAs.add(s);
             }
             if(currentVibrationLogStatus == VIBRATION_LOGGING){
@@ -799,7 +794,7 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
                         new Message(BotApp.getInstance().getAdminName(),"报告震动记录",System.currentTimeMillis()),
                         vibrationReportBuilder);
 
-                s.ask();
+                s.handle();
                 waitQAs.add(s);
             }
         },REPORT_RANGE);

@@ -1,5 +1,7 @@
 package com.zinhao.chtholly.entity;
 
+import android.util.Log;
+import com.zinhao.chtholly.NekoChatService;
 import com.zinhao.chtholly.session.NekoSession;
 
 public class NekoAskAble extends Command {
@@ -24,21 +26,14 @@ public class NekoAskAble extends Command {
     }
 
     @Override
-    public boolean ask() {
-        if(super.ask()){
-            // 如果父类回答
-            return true;
-        }
-        if(throwQuestion()){
-            // 如果子类已回答
-            return true;
-        }
-        //自己回答
+    protected boolean throwToChild() {
+        Log.i("Command","NekoAskAble throwToChild");
         return NekoSession.getInstance().startAsk(this);
     }
 
-    public boolean throwQuestion(){
-        // 让子类回答
-        return false;
+    @Override
+    protected boolean handleAsk() {
+        Log.i("Command","NekoAskAble handleAsk");
+        return super.handleAsk();
     }
 }

@@ -4,9 +4,11 @@ import android.util.Log
 import com.zinhao.chtholly.BotApp
 import com.zinhao.chtholly.LoggingInterceptor
 import com.zinhao.chtholly.NekoChatService
+import com.zinhao.chtholly.entity.GeminiAIAskAble
 import com.zinhao.chtholly.entity.Message
 import com.zinhao.chtholly.entity.NetAiAskAble
 import com.zinhao.chtholly.entity.NetAiAskAble.DelayReplyCallback
+import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody
@@ -39,7 +41,7 @@ class GeminiSession private constructor(private var chatUrl: String?) : NekoSess
 
             data.put(ROLE_SYSTEM, systemInstruction)
 
-            data.put("contents", chats)
+            data.put(CONTENTS, chats)
 
             val t = JSONObject()
             t.put("thinkingLevel", "low")
@@ -63,7 +65,7 @@ class GeminiSession private constructor(private var chatUrl: String?) : NekoSess
             st.put("text", agentSys)
             partsArray.put(st)
 
-            systemInstruction.put(CONTENT, partsArray)
+            systemInstruction.put("parts", partsArray)
             Log.d(TAG, "setChara: " + chats.get(0))
         } catch (e: JSONException) {
             Log.d(TAG, "setChara: failed.")
@@ -72,7 +74,7 @@ class GeminiSession private constructor(private var chatUrl: String?) : NekoSess
 
     override fun getChara(): String {
         try {
-            return systemInstruction.getString(CONTENT)
+            return systemInstruction.getString(CONTENTS)
         } catch (e: JSONException) {
             throw RuntimeException(e)
         }
@@ -96,7 +98,7 @@ class GeminiSession private constructor(private var chatUrl: String?) : NekoSess
         val function_call_result_message = JSONObject()
         try {
             function_call_result_message.put(ROLE, ROLE_TOOL)
-            function_call_result_message.put(CONTENT, content)
+            function_call_result_message.put(CONTENTS, content)
             function_call_result_message.put(TOOL_CALL_ID, callId)
         } catch (e: JSONException) {
             throw RuntimeException(e)
@@ -112,8 +114,8 @@ class GeminiSession private constructor(private var chatUrl: String?) : NekoSess
             textObj.put("text", text)
             parts.put(textObj)
 
-            newChat.put("role", role)
-            newChat.put("parts", parts)
+            newChat.put(ROLE, role)
+            newChat.put(PARTS, parts)
             Log.d(TAG, String.format(Locale.CHINA, "addChat: %s: %s", role, text))
         } catch (e: JSONException) {
             Log.e(TAG, String.format(Locale.CHINA, "addChat: %s: %s", role, text))
@@ -124,7 +126,7 @@ class GeminiSession private constructor(private var chatUrl: String?) : NekoSess
     @Throws(JSONException::class)
     override fun startAsk(message: NetAiAskAble): Boolean {
         addTextChat(ROLE_USER, message.getQuestion().getMessage())
-        data.put("contents", chats)
+        data.put(CONTENTS, chats)
         return requestChatCompletions(message)
     }
 
@@ -139,7 +141,7 @@ class GeminiSession private constructor(private var chatUrl: String?) : NekoSess
     override fun requestChatSummarize() {
         NekoChatService.getInstance().addLogcat("requestChatSummarize:length")
         val question = Message("SYSTEM", "使用不超过50字总结对话", System.currentTimeMillis())
-        val summarizeMessage = NetAiAskAble(
+        val summarizeMessage = GeminiAIAskAble(
             BotApp.getInstance().getPackageName(),
             question,
             object : DelayReplyCallback {
@@ -151,12 +153,11 @@ class GeminiSession private constructor(private var chatUrl: String?) : NekoSess
                     addTextChat(ROLE_SYSTEM, message.getAnswer().getMessage())
                 }
             })
-        summarizeMessage.ask()
+        summarizeMessage.handle()
     }
 
     override fun requestChatCompletions(message: NetAiAskAble): Boolean {
-        val requestBody: RequestBody = "application/json;charset=utf-8".toRequestBody()
-
+        val requestBody: RequestBody = data.toString().toRequestBody("application/json;charset=utf-8".toMediaType())
         Log.d(TAG, "requestAsk: $data")
         val request = Request.Builder().post(requestBody)
             .url("$chatUrl/models/$MODEL_GEMINI_3_FL_PRE:generateContent")
@@ -172,7 +173,8 @@ class GeminiSession private constructor(private var chatUrl: String?) : NekoSess
         private const val TAG = "GeminiSession"
 
         private const val ROLE = "role"
-        private const val CONTENT = "content"
+        private const val CONTENTS = "contents"
+        private const val PARTS = "parts"
         private const val TOOL_CALL_ID = "tool_call_id"
 
         private const val ROLE_SYSTEM = "system_instruction"
@@ -188,7 +190,7 @@ class GeminiSession private constructor(private var chatUrl: String?) : NekoSess
         var instance: GeminiSession? = null
             get() {
                 if (field == null) {
-                    field = GeminiSession(BotApp.getInstance().getChatUrl())
+                    field = GeminiSession(BotApp.getInstance().chatUrl)
                 }
                 return field
             }

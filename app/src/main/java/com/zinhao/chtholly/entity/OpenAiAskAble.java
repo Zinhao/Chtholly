@@ -22,12 +22,16 @@ public class OpenAiAskAble extends NetAiAskAble{
     }
 
     @Override
-    public boolean ask() {
-        if(super.ask()){
-            return true;
-        }
+    protected boolean handleAsk() {
+        Log.i("Command","OpenAiAskAble -> handleAsk");
+        return super.handleAsk();
+    }
+
+    @Override
+    protected boolean throwToChild() {
+        Log.i("Command","OpenAiAskAble throwToChild");
         try {
-            return OpenAiSession.getInstance().startAsk(this);
+            return  OpenAiSession.getInstance().startAsk(this);
         } catch (JSONException e) {
             throw new RuntimeException(e);
         }

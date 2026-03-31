@@ -180,10 +180,13 @@ public class MainActivity extends AppCompatActivity {
     protected void onResume() {
         super.onResume();
         binding.toggleButton.setChecked(isAccessibilitySettingsOn(this));
-        ChatSession session = NekoChatService.getInstance().getSession();
-        if(session!=null){
-            binding.textView.setText(session.getChara());
+        if(NekoChatService.getInstance()!=null){
+            ChatSession session = NekoChatService.getInstance().getSession();
+            if(session!=null){
+                binding.textView.setText(session.getChara());
+            }
         }
+
 
     }
 

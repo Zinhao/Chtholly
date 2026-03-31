@@ -45,20 +45,11 @@ public class NetAiAskAble extends NekoAskAble implements Callback{
     }
 
     @Override
-    public boolean ask() {
-        if(super.ask()) {
-            return true;
-        }
-        return beforeAskCheck();
+    protected boolean handleAsk() {
+        Log.i("Command","NetAiAskAble handleAsk");
+        return super.handleAsk();
     }
 
-    private boolean beforeAskCheck(){
-        if(BotApp.getInstance().apiKey.isEmpty()){
-            return NekoSession.getInstance().startAsk(this);
-        }else{
-            return false;
-        }
-    }
 
     public void doTextReply(String content){
         getAnswer().setMessage(content);

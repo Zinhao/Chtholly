@@ -226,7 +226,7 @@ public class OpenAiSession extends NekoSession implements ChatSession{
                 addTextChat(ROLE_SYSTEM,message.getAnswer().getMessage());
             }
         });
-        summarizeMessage.ask();
+        summarizeMessage.handle();
     }
 
     @Override

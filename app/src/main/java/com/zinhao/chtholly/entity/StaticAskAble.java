@@ -9,8 +9,12 @@ public class StaticAskAble extends Command{
     }
 
     @Override
-    public boolean ask() {
-        super.ask();
+    protected boolean throwToChild() {
+        return false;
+    }
+
+    @Override
+    public boolean handleAsk() {
         getAnswer().setMessage(staticAnswer);
         return true;
     }

@@ -3,6 +3,7 @@ package com.zinhao.chtholly.session;
 import com.koushikdutta.async.http.AsyncHttpClient;
 import com.koushikdutta.async.http.AsyncHttpResponse;
 import com.zinhao.chtholly.BotApp;
+import com.zinhao.chtholly.NekoChatService;
 import com.zinhao.chtholly.entity.Command;
 import com.zinhao.chtholly.entity.NekoAskAble;
 import com.zinhao.chtholly.utils.LocalFileCache;
@@ -159,16 +160,23 @@ public class NekoSession{
 
         if(nekoAskAble.getQuestion().message.contains("早上好") || nekoAskAble.getQuestion().message.contains("早安")){
             nekoAskAble.getAnswer().setMessage(ASK_NORMAL_TEMP.replace("$","早")+ randomFaceEmo());
+            return true;
         }else if(nekoAskAble.getQuestion().message.contains("中午好") || nekoAskAble.getQuestion().message.contains("午安")){
             nekoAskAble.getAnswer().setMessage(ASK_NORMAL_TEMP.replace("$","午")+ randomFaceEmo());
+            return true;
         }else if(nekoAskAble.getQuestion().message.contains("晚安")){
             nekoAskAble.getAnswer().setMessage(ASK_NORMAL_TEMP.replace("$","晚") + randomFaceEmo());
+            return true;
         }else if(nekoAskAble.getQuestion().message.contains("晚上好")){
             nekoAskAble.getAnswer().setMessage(nekoAskAble.getQuestion().message + randomFaceEmo());
-        }else {
-            miaomiaojiao(nekoAskAble);
+            return true;
         }
-        return true;
+
+        if(NekoChatService.mode == NekoSession.class){
+            miaomiaojiao(nekoAskAble);
+            return true;
+        }
+        return false;
     }
 
     public void miaomiaojiao(Command qaMessage){

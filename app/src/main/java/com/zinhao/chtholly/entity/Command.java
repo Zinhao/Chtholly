@@ -11,6 +11,7 @@ import android.util.Log;
 import android.view.accessibility.AccessibilityNodeInfo;
 import androidx.annotation.CallSuper;
 import com.zinhao.chtholly.BotApp;
+import com.zinhao.chtholly.BuildConfig;
 import com.zinhao.chtholly.NekoChatService;
 import com.zinhao.chtholly.session.ChatSession;
 import com.zinhao.chtholly.session.GeminiSession;
@@ -27,7 +28,7 @@ import java.util.*;
 import java.util.regex.Pattern;
 
 /** @noinspection ALL*/
-public class Command implements AskAble {
+public abstract class Command{
     private static final String TAG = "Command";
     private static final String SWITCH_COMMAND_EN = "/switchBotOrAI";
 
@@ -94,28 +95,41 @@ public class Command implements AskAble {
         return steps == null || steps.isEmpty();
     }
 
-    @CallSuper
-    @Override
-    public boolean ask() {
-        if(answer == null){
-            answer = new Message(BotApp.getInstance().getBotName(),null,System.currentTimeMillis());
+    // 对外暴露的统一入口（不可重写）
+    public final void handle() {
+        Log.i(TAG,"handle:"+getQuestion().getMessage());
+        if (handleAsk()) {
+            Log.i(TAG,"handleAsk true:"+getQuestion().getMessage());
+            return;
+        }else {
+            throwToChild();
         }
-        if(!getQuestion().getMessage().startsWith("/")){
+    }
+
+    protected abstract boolean throwToChild();
+
+    protected boolean handleAsk() {
+        Log.i(TAG,"Command handleAsk");
+        if(getQuestion().getMessage().startsWith("/")){
+            Log.i(TAG,"Command invoke");
+            try {
+                String[] methodAndArgs = args();
+                String MethodName = methodAndArgs[0];
+                if(methodAndArgs.length>1){
+                    args = new String[methodAndArgs.length-1];
+                    System.arraycopy(methodAndArgs, 1, args, 0, methodAndArgs.length - 1);
+                }
+                Method method = Command.class.getDeclaredMethod(MethodName.replace('/',' ').trim());
+                method.invoke(this);
+                return true;
+            } catch (NoSuchMethodException | InvocationTargetException | IllegalAccessException e) {
+                Log.e(getClass().getSimpleName(), "Command invoke err: " + getClass().getSimpleName(), e);
+                return true;
+            }
+        }else{
             return false;
         }
-        try {
-            String[] methodAndArgs = args();
-            String MethodName = methodAndArgs[0];
-            if(methodAndArgs.length>1){
-                args = new String[methodAndArgs.length-1];
-                System.arraycopy(methodAndArgs, 1, args, 0, methodAndArgs.length - 1);
-            }
-            Method method = Command.class.getDeclaredMethod(MethodName.replace('/',' ').trim());
-            return (boolean) method.invoke(this);
-        } catch (NoSuchMethodException | InvocationTargetException | IllegalAccessException e) {
-            Log.e(getClass().getSimpleName(), "ask: ", e);
-            return true;
-        }
+
     }
 
     private boolean openAutoAction() {
@@ -131,8 +145,12 @@ public class Command implements AskAble {
     }
 
     private boolean help() {
-        StringBuilder stringBuilder = getHelpStringBuilder();
-        getAnswer().setMessage(stringBuilder.toString());
+        getAnswer().setMessage(getHelpStringBuilder().toString());
+        return true;
+    }
+
+    private boolean runInfo(){
+        getAnswer().setMessage(getRunInfo().toString());
         return true;
     }
 
@@ -289,13 +307,13 @@ public class Command implements AskAble {
 
     private boolean switchBotOrAI() {
         if(geminiIgnoreCase.matcher(question.getMessage()).find()){
-            answer.setMessage(NekoAskAble.OK +" => gemini ai");
+            getAnswer().setMessage(NekoAskAble.OK +" => gemini ai");
             NekoChatService.mode = GeminiSession.class;
         } else if(openaiIgnoreCase.matcher(question.getMessage()).find()){
-            answer.setMessage(NekoAskAble.OK+" => open ai");
+            getAnswer().setMessage(NekoAskAble.OK+" => open ai");
             NekoChatService.mode = OpenAiSession.class;
         }else{
-            answer.setMessage(NekoAskAble.KOU_WAI +"=> neko");
+            getAnswer().setMessage(NekoAskAble.KOU_WAI +"=> neko");
             NekoChatService.mode = NekoSession.class;
         }
         return true;
@@ -426,6 +444,7 @@ public class Command implements AskAble {
     @NotNull
     public static StringBuilder getHelpStringBuilder() {
         StringBuilder stringBuilder = new StringBuilder();
+        stringBuilder.append("Chtholly Ver").append(BuildConfig.VERSION_NAME).append('\n');
         stringBuilder.append(COMMAND_LIST).append(' ').append("查看帮助").append('\n');
         stringBuilder.append(SWITCH_COMMAND_EN).append(' ').append("切换模式，openai或者其他(只会喵喵叫)").append('\n');
         stringBuilder.append(SEVER_BATTERY).append(' ').append("宿主手机电量").append('\n');
@@ -451,6 +470,19 @@ public class Command implements AskAble {
             }
         }
         return stringBuilder;
+    }
+
+    public static StringBuilder getRunInfo(){
+        StringBuilder stringBuilder = new StringBuilder();
+        stringBuilder.append("Ver:").append(BuildConfig.VERSION_NAME).append("\n");
+        stringBuilder.append("Mode:").append(NekoChatService.mode.getSimpleName()).append("\n");
+        stringBuilder.append("BaseUrl:").append(BotApp.getInstance().getChatUrl()).append("\n");
+        stringBuilder.append("AdminName:").append(BotApp.getInstance().getAdminName()).append("\n");
+        String apiKey = BotApp.getInstance().apiKey;
+        String apiKeySub = apiKey.substring(apiKey.length()-5);
+        stringBuilder.append("ApiKey:").append("sk-***********").append(apiKeySub).append("\n");
+        stringBuilder.append("CharacterId:").append(BotApp.getInstance().getCharacterId()).append("\n");
+        return  stringBuilder;
     }
 
     public static final Pattern openaiIgnoreCase = Pattern.compile("(?i)openai");
@@ -483,6 +515,9 @@ public class Command implements AskAble {
     }
 
     public Message getAnswer() {
+        if(answer == null){
+            answer = new Message("base",null,System.currentTimeMillis());
+        }
         return answer;
     }
 
