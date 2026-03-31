@@ -1,12 +1,8 @@
 package com.zinhao.chtholly.utils;
 
-import android.accessibilityservice.AccessibilityService;
-import android.accessibilityservice.GestureDescription;
-import android.os.Bundle;
 import android.util.Log;
 import android.view.accessibility.AccessibilityEvent;
 import android.view.accessibility.AccessibilityNodeInfo;
-import androidx.media3.common.C;
 import com.zinhao.chtholly.BotApp;
 import com.zinhao.chtholly.NekoChatService;
 import com.zinhao.chtholly.entity.Command;

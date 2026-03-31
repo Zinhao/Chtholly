@@ -5,6 +5,9 @@ import org.junit.Test;
 import static org.junit.Assert.*;
 import static org.junit.Assert.assertEquals;
 
+import com.zinhao.chtholly.entity.Command;
+import com.zinhao.chtholly.entity.Message;
+
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -23,5 +26,12 @@ public class ExampleUnitTest {
         boolean result = m.find();
         assertTrue(result);
 
+    }
+
+    @Test
+    public void testReply(){
+        Command command = new Command("org.test",new Message("test","/help",System.currentTimeMillis()));
+        command.ask();
+        System.out.println("result:"+command.getAnswer().getMessage());
     }
 }

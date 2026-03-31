@@ -15,6 +15,7 @@ import com.zinhao.chtholly.NekoChatService;
 import com.zinhao.chtholly.session.ChatSession;
 import com.zinhao.chtholly.session.GeminiSession;
 import com.zinhao.chtholly.session.NekoSession;
+import com.zinhao.chtholly.session.OpenAiSession;
 import com.zinhao.chtholly.utils.ChatPageViewIds;
 import com.zinhao.chtholly.utils.QQChatHandler;
 import org.jetbrains.annotations.NotNull;
