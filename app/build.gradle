@@ -107,6 +107,8 @@ dependencies {
     implementation "org.jetbrains.kotlin:kotlin-reflect:1.9.0"
     // Moshi Kotlin适配器（核心修复包）
     implementation "com.squareup.moshi:moshi-kotlin:1.15.0"
+
+    implementation("com.google.genai:google-genai:1.45.0")
 }
 
 class RoomSchemaArgProvider implements CommandLineArgumentProvider {
