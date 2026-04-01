@@ -89,6 +89,7 @@ class GeminiSession private constructor(private var chatUrl: String?) : NekoSess
     }
 
     fun addAssistantChat(message: String?) {
+        addTextChat(ROLE_MODEL,message)
     }
 
     fun addSystemChat(message: String?) {
