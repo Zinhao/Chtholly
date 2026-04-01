@@ -456,10 +456,13 @@ public class QQChatHandler extends BaseChatHandler {
 
     @RequiresApi(Build.VERSION_CODES.P)
     public List<Step> switchChatQuery() {
-        int position = NekoChatService.getInstance().getChatsIndex();
+        int position = 0;
+        if(NekoChatService.getInstance() != null){
+            position = NekoChatService.getInstance().getChatsIndex();
+        }
         List<Step> steps = new Vector<>();
         steps.add(new Step(null, null, AccessibilityService.GLOBAL_ACTION_BACK, true));
-        steps.add(new Step(null, null, AccessibilityService.GLOBAL_ACTION_TAKE_SCREENSHOT, true,500));
+        steps.add(new Step(null, null, AccessibilityService.GLOBAL_ACTION_TAKE_SCREENSHOT, true,1000));
         steps.add(new Step(QQChatHandler.PACKAGE_NAME,":id/recent_chat_list", AccessibilityNodeInfo.ACTION_CLICK,false,500,true,new int[]{position+1}));
         steps.add(new Step(QQChatHandler.PACKAGE_NAME, QQChatHandler.getPicButtonId(), AccessibilityNodeInfo.ACTION_CLICK,false,500));
         steps.add(new Step(QQChatHandler.PACKAGE_NAME, chatPageViewIds.getFirstPicCheckBoxViewId(), AccessibilityNodeInfo.ACTION_CLICK,false,500));

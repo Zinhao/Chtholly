@@ -1,8 +1,8 @@
 package com.zinhao.chtholly;
 
+import android.content.Context;
 import android.graphics.PixelFormat;
-import android.view.Gravity;
-import android.view.WindowManager;
+import android.view.*;
 
 public class OverlayUtils {
 
@@ -56,5 +56,9 @@ public class OverlayUtils {
         params.x = (int) x;
         params.y = (int) y;
         return params;
+    }
+
+    public static View createView(Context context, int res){
+        return LayoutInflater.from(context).inflate(res,null,false);
     }
 }

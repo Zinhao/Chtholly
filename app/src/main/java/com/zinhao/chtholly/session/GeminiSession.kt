@@ -21,19 +21,17 @@ import java.util.Locale
 import java.util.concurrent.TimeUnit
 
 class GeminiSession private constructor(private var chatUrl: String?) : NekoSession(), ChatSession {
-    private val data: JSONObject
+    private val data: JSONObject = JSONObject()
     private var chats: JSONArray
-    private val okHttpClient: OkHttpClient
+    private val okHttpClient: OkHttpClient = OkHttpClient.Builder()
+        .callTimeout(100, TimeUnit.SECONDS)
+        .writeTimeout(100, TimeUnit.SECONDS)
+        .readTimeout(100, TimeUnit.SECONDS)
+        .addInterceptor(LoggingInterceptor())
+        .build()
     private val systemInstruction: JSONObject
 
     init {
-        okHttpClient = OkHttpClient.Builder()
-            .callTimeout(100, TimeUnit.SECONDS)
-            .writeTimeout(100, TimeUnit.SECONDS)
-            .readTimeout(100, TimeUnit.SECONDS)
-            .addInterceptor(LoggingInterceptor())
-            .build()
-        data = JSONObject()
         chats = JSONArray()
         systemInstruction = JSONObject()
         try {
@@ -54,6 +52,7 @@ class GeminiSession private constructor(private var chatUrl: String?) : NekoSess
     }
 
     fun setModel(model: String?) {
+
     }
 
     override fun setChara(charaDesc: String) {
@@ -85,14 +84,13 @@ class GeminiSession private constructor(private var chatUrl: String?) : NekoSess
     }
 
     override fun summarize(): Int {
-        return -1
+        val chatLen = chats.length()
+        requestChatSummarize()
+        return chatLen
     }
 
     fun addAssistantChat(message: String?) {
         addTextChat(ROLE_MODEL,message)
-    }
-
-    fun addSystemChat(message: String?) {
     }
 
     fun addToolCallResult(content: JSONObject?, callId: String?) {
@@ -148,10 +146,10 @@ class GeminiSession private constructor(private var chatUrl: String?) : NekoSess
             object : DelayReplyCallback {
                 override fun onReply(message: NetAiAskAble) {
                     chats = JSONArray()
-                    chats.put(systemInstruction)
-                    NekoChatService.getInstance()
-                        .addLogcat("requestChatSummarize:" + message.getAnswer().getMessage())
-                    addTextChat(ROLE_SYSTEM, message.getAnswer().getMessage())
+                    addAssistantChat(message.getAnswer().getMessage())
+                    NekoChatService.getInstance().addLogcat("requestChatSummarize:" + message.getAnswer().getMessage())
+                    NekoChatService.getInstance().onReply(message)
+
                 }
             })
         summarizeMessage.handle()

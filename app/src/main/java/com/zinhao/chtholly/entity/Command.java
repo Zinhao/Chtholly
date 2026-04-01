@@ -2,6 +2,7 @@ package com.zinhao.chtholly.entity;
 
 import android.accessibilityservice.GestureDescription;
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.graphics.Path;
 import android.graphics.PointF;
 import android.graphics.Rect;
@@ -9,10 +10,10 @@ import android.os.BatteryManager;
 import android.os.Build;
 import android.util.Log;
 import android.view.accessibility.AccessibilityNodeInfo;
-import androidx.annotation.CallSuper;
 import com.zinhao.chtholly.BotApp;
 import com.zinhao.chtholly.BuildConfig;
 import com.zinhao.chtholly.NekoChatService;
+import com.zinhao.chtholly.db.AICharacterDao;
 import com.zinhao.chtholly.session.ChatSession;
 import com.zinhao.chtholly.session.GeminiSession;
 import com.zinhao.chtholly.session.NekoSession;
@@ -21,14 +22,22 @@ import com.zinhao.chtholly.utils.ChatPageViewIds;
 import com.zinhao.chtholly.utils.QQChatHandler;
 import org.jetbrains.annotations.NotNull;
 
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.lang.reflect.Modifier;
 import java.util.*;
 import java.util.regex.Pattern;
 
 /** @noinspection ALL*/
 public abstract class Command{
+    @Target({ElementType.METHOD})
+    @Retention(RetentionPolicy.RUNTIME)
+    public @interface HelpDoc {
+        String desc();      // 格式要求，如 "yyyy-MM-dd"
+    }
     private static final String TAG = "Command";
     private static final String SWITCH_COMMAND_EN = "/switchBotOrAI";
 
@@ -113,7 +122,7 @@ public abstract class Command{
         if(getQuestion().getMessage().startsWith("/")){
             Log.i(TAG,"Command invoke");
             try {
-                String[] methodAndArgs = args();
+                String[] methodAndArgs = parseArgs();
                 String MethodName = methodAndArgs[0];
                 if(methodAndArgs.length>1){
                     args = new String[methodAndArgs.length-1];
@@ -132,28 +141,30 @@ public abstract class Command{
 
     }
 
+    @HelpDoc(desc = "开启早中晚定时问侯")
     private boolean openAutoAction() {
         NekoChatService.getInstance().autoAsk = true;
         getAnswer().setMessage("已打开问候功能");
         return true;
     }
-
+    @HelpDoc(desc = "关闭早中晚定时问侯")
     private boolean closeAutoAction() {
         NekoChatService.getInstance().autoAsk = false;
         getAnswer().setMessage("已关闭问候功能");
         return true;
     }
 
+    @HelpDoc(desc = "帮助")
     private boolean help() {
         getAnswer().setMessage(getHelpStringBuilder().toString());
         return true;
     }
-
+    @HelpDoc(desc = "运行信息")
     private boolean runInfo(){
         getAnswer().setMessage(getRunInfo().toString());
         return true;
     }
-
+    @HelpDoc(desc = "查看相册")
     private boolean sendGallery() {
         //todo 仅适配QQ
         // /c /gnt /p2 /lmy
@@ -173,6 +184,7 @@ public abstract class Command{
         return true;
     }
 
+    @HelpDoc(desc = "[1 int arg]切换对话")
     private boolean switchChat() {
         ChatPageViewIds cpvi = NekoChatService.getInstance().currentChatPageIds(getPackageName());
         if(cpvi == null){
@@ -212,6 +224,7 @@ public abstract class Command{
         return true;
     }
 
+    @HelpDoc(desc = "自动群打卡")
     private boolean everyDayCheck() {
        if(QQChatHandler.PACKAGE_NAME.equals(packageName)){
            steps = NekoChatService.getInstance().getQqChatHandler().everyDayCheck();
@@ -219,7 +232,7 @@ public abstract class Command{
         getAnswer().setMessage(NekoAskAble.OK);
         return true;
     }
-
+    @HelpDoc(desc = "截图")
     private boolean screenShot() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
             if(QQChatHandler.PACKAGE_NAME.equals(packageName)){
@@ -232,6 +245,7 @@ public abstract class Command{
         return true;
     }
 
+    @HelpDoc(desc = "发送最新图片")
     private boolean sendNewestPic() {
         // 发送最新一张图 /gnt /qhp /fun_btn /gnt  三星
         // 发送最新一张图 /gnt /qhq /send_btn /gnt  pixel3
@@ -242,7 +256,7 @@ public abstract class Command{
         getAnswer().setMessage(NekoAskAble.OK);
         return true;
     }
-
+    @HelpDoc(desc = "拍照")
     private boolean takePhoto() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
             if(QQChatHandler.PACKAGE_NAME.equals(packageName)){
@@ -254,7 +268,7 @@ public abstract class Command{
         }
         return true;
     }
-
+    @HelpDoc(desc = "录视频")
     private boolean recordVideo(){
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
             if(packageName.equals(QQChatHandler.PACKAGE_NAME)){
@@ -266,7 +280,7 @@ public abstract class Command{
         }
         return true;
     }
-
+    @HelpDoc(desc = "点击界面元素")
     private boolean clickViewId() {
         steps = new Vector<>();
         String[] ids = getQuestion().getMessage().split(" ");
@@ -276,14 +290,14 @@ public abstract class Command{
         getAnswer().setMessage(NekoAskAble.OK);
         return true;
     }
-
+    @HelpDoc(desc = "系统电量")
     private boolean battery() {
         BatteryManager manager = (BatteryManager)BotApp.context().getSystemService(Context.BATTERY_SERVICE);
         int currentLevel = manager.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY);
         getAnswer().setMessage(String.format(Locale.CHINA,"%d%%,喵～",currentLevel));
         return true;
     }
-
+    @HelpDoc(desc = "消息上下文")
     private boolean printMessage() {
         ChatSession chatSession = NekoChatService.getInstance().getSession();
         String his = chatSession.getContextChat();
@@ -291,20 +305,21 @@ public abstract class Command{
         return true;
     }
 
+    @HelpDoc(desc = "打印AI设定")
     private boolean printCharacter() {
         ChatSession chatSession = NekoChatService.getInstance().getSession();
         String chara = chatSession.getChara();
         getAnswer().setMessage(String.format(Locale.CHINA,"这是%s的设定： %s。",BotApp.getInstance().getBotName(),chara));
         return true;
     }
-
+    @HelpDoc(desc = "总结对话")
     private boolean summarizeChat() {
         ChatSession chatSession = NekoChatService.getInstance().getSession();
         int len = chatSession.summarize();
         getAnswer().setMessage(String.format(Locale.CHINA,"%s 将为主人总结%d条对话。",BotApp.getInstance().getBotName(),len));
         return true;
     }
-
+    @HelpDoc(desc = "[1 str arg]切换模式")
     private boolean switchBotOrAI() {
         if(geminiIgnoreCase.matcher(question.getMessage()).find()){
             getAnswer().setMessage(NekoAskAble.OK +" => gemini ai");
@@ -318,7 +333,7 @@ public abstract class Command{
         }
         return true;
     }
-
+    @HelpDoc(desc = "视频通话")
     private boolean videoCall() {
         // :id/gny [:id/icon_viewPager 1->2] :id/bbt
         boolean mainCamera;
@@ -339,7 +354,7 @@ public abstract class Command{
         getAnswer().setMessage(NekoAskAble.OK);
         return true;
     }
-
+    @HelpDoc(desc = "分享屏幕")
     private boolean shareScreen(){
         steps = new Vector<>();
         //将步骤委托给 QQChatHandler
@@ -350,15 +365,104 @@ public abstract class Command{
         }
         getAnswer().setMessage(NekoAskAble.HARD);
         return true;
+    }
+    @HelpDoc(desc = "like(\"newSoul name souldesc\" )")
+    private boolean newSoul(){
+        if(args.length<2){
+            return true;
+        }
+        final AICharacter newChara = new AICharacter(args[0],args[1]);
+        BotApp.getInstance().insert(newChara, new Runnable() {
+            @Override
+            public void run() {
+                BotApp.getInstance().setCharacterId(newChara.getId());
+                BotApp.getInstance().setCurrentCharacter(newChara);
 
+                SharedPreferences.Editor editor = BotApp.getInstance().getSharedPreferences().edit();
+                editor.putLong(BotApp.CONFIG_CURRENT_CHARACTER_ID,newChara.getId());
+                editor.apply();
+
+                ChatSession session = NekoChatService.getInstance().getSession();
+                if(session!=null){
+                    session.setChara(newChara.getDesc());
+                }
+            }
+        });
+        getAnswer().setMessage(NekoAskAble.OK);
+        return true;
+    }
+    @HelpDoc(desc = "like(\"switchSoul 1\")")
+    private boolean switchSoul(){
+        if(args == null || args.length == 0){
+            BotApp.getInstance().select(new AICharacterDao.AICharacterGetAllListener() {
+                @Override
+                public void onSuccess(List<AICharacter> result) {
+                    StringBuilder stringBuilder = new StringBuilder();
+                    for (AICharacter character:result){
+                        stringBuilder.append(character.getId()).append('.').append(character.getName()).append('\n');
+                    }
+                    getAnswer().setMessage(stringBuilder.toString());
+                }
+            });
+            return true;
+        }
+        BotApp.getInstance().select(new AICharacterDao.AICharacterGetAllListener() {
+            @Override
+            public void onSuccess(List<AICharacter> result) {
+                StringBuilder stringBuilder = new StringBuilder();
+                for (AICharacter character:result){
+                    if(args[0].equals(String.valueOf(character.getId()))){
+                        BotApp.getInstance().switchAISoul(character);
+                        break;
+                    }
+                }
+                stringBuilder.append('\n');
+                getAnswer().setMessage(stringBuilder.toString() + NekoAskAble.OK);
+            }
+        });
+        return true;
     }
 
-    private String[] args(){
-        if(getQuestion().getMessage().contains(" ")){
-            return getQuestion().getMessage().split(" ");
-        }else {
-            return new String[]{getQuestion().getMessage().trim()};
+    private String[] parseArgs() {
+        String input = getQuestion().getMessage().trim();
+        if (input.isEmpty()) {
+            return new String[0];
         }
+
+        List<String> args = new ArrayList<>();
+        StringBuilder currentArg = new StringBuilder();
+        boolean inQuotes = false;
+        char quoteChar = 0;
+
+        for (int i = 0; i < input.length(); i++) {
+            char c = input.charAt(i);
+
+            if (!inQuotes && (c == '"' || c == '\'')) {
+                // 进入引号
+                inQuotes = true;
+                quoteChar = c;
+            } else if (inQuotes && c == quoteChar) {
+                // 退出引号
+                inQuotes = false;
+                quoteChar = 0;
+            } else if (!inQuotes && Character.isWhitespace(c)) {
+                // 参数分隔（不在引号内）
+                if (currentArg.length() > 0) {
+                    args.add(currentArg.toString());
+                    currentArg.setLength(0);
+                }
+            } else {
+                // 普通字符
+                currentArg.append(c);
+            }
+        }
+
+        // 添加最后一个参数
+        if (currentArg.length() > 0) {
+            args.add(currentArg.toString());
+        }
+
+        return args.toArray(new String[0]);
     }
 
 
@@ -445,44 +549,45 @@ public abstract class Command{
     public static StringBuilder getHelpStringBuilder() {
         StringBuilder stringBuilder = new StringBuilder();
         stringBuilder.append("Chtholly Ver").append(BuildConfig.VERSION_NAME).append('\n');
-        stringBuilder.append(COMMAND_LIST).append(' ').append("查看帮助").append('\n');
-        stringBuilder.append(SWITCH_COMMAND_EN).append(' ').append("切换模式，openai或者其他(只会喵喵叫)").append('\n');
-        stringBuilder.append(SEVER_BATTERY).append(' ').append("宿主手机电量").append('\n');
-        stringBuilder.append(FIRST_PIC).append(' ').append("发送最新得一张图片").append('\n');
-        stringBuilder.append(CLICK_ID).append(' ').append("点击界面元素，开发用").append('\n');
-        stringBuilder.append(TAKE_PHOTO).append(' ').append("拍一张照片并发送").append('\n');
-        stringBuilder.append(SCREEN_SHOT).append(' ').append("截图并发送").append('\n');
-        stringBuilder.append(SUMMARIZE_CHAT).append(' ').append("开始总结对话，一般不用手动调用").append('\n');
-        stringBuilder.append(PRINT_CHARA).append(' ').append("AI得性格描述").append('\n');
-        stringBuilder.append(PRINT_CHATS).append(' ').append("消息上下文").append('\n');
-        stringBuilder.append(CLOSE_AUTO).append(' ').append("开启早中晚定时问侯").append('\n');
-        stringBuilder.append(OPEN_AUTO).append(' ').append("关闭早中晚定时问侯").append('\n');
-        stringBuilder.append(VIDEO_CALL).append(' ').append("视频全群通话").append('\n');
-        stringBuilder.append(EVERY_DAY_CHECK).append(' ').append("会打卡，并无什么用处").append('\n');
-        stringBuilder.append(SWITCH_CHATS).append(' ').append("切换聊天群").append('\n');
-        stringBuilder.append(SEND_GALLERY).append(' ').append("发送相册截图").append('\n');
-        stringBuilder.append(SHARE_SCREEN).append(' ').append("发起分享屏幕").append('\n');
-        Method[] methods = Command.class.getMethods();
-        for (Method method : methods) {
-            // 检查方法的修饰符是否为私有
-            if (Modifier.isPrivate(method.getModifiers())) {
-                stringBuilder.append('/').append(method.getName()).append(' ').append("").append('\n');
-            }
+        // 使用 getDeclaredMethods() 获取所有声明的方法（含 private）
+        Map<String, String> methodsMap = getMethodDescMap(Command.class);
+        for (String methodKey :methodsMap.keySet()){
+            stringBuilder.append('/')
+                    .append(methodKey)
+                    .append(' ')
+                    .append(methodsMap.get(methodKey))
+                    .append('\n');
         }
         return stringBuilder;
     }
 
-    public static StringBuilder getRunInfo(){
+    private static StringBuilder getRunInfo(){
         StringBuilder stringBuilder = new StringBuilder();
         stringBuilder.append("Ver:").append(BuildConfig.VERSION_NAME).append("\n");
         stringBuilder.append("Mode:").append(NekoChatService.mode.getSimpleName()).append("\n");
         stringBuilder.append("BaseUrl:").append(BotApp.getInstance().getChatUrl()).append("\n");
         stringBuilder.append("AdminName:").append(BotApp.getInstance().getAdminName()).append("\n");
+        stringBuilder.append("SoulName:").append(BotApp.getInstance().getCurrentCharacter().getName()).append("\n");
         String apiKey = BotApp.getInstance().apiKey;
         String apiKeySub = apiKey.substring(apiKey.length()-5);
         stringBuilder.append("ApiKey:").append("sk-***********").append(apiKeySub).append("\n");
         stringBuilder.append("CharacterId:").append(BotApp.getInstance().getCharacterId()).append("\n");
         return  stringBuilder;
+    }
+
+    /**
+     * 获取方法及其 desc 的映射
+     */
+    public static Map<String, String> getMethodDescMap(Class<?> clazz) {
+        Map<String, String> map = new HashMap<>();
+
+        for (Method method : clazz.getDeclaredMethods()) {
+            HelpDoc helpDoc = method.getAnnotation(HelpDoc.class);
+            if (helpDoc != null) {
+                map.put(method.getName(), helpDoc.desc());
+            }
+        }
+        return map;
     }
 
     public static final Pattern openaiIgnoreCase = Pattern.compile("(?i)openai");

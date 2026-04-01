@@ -27,10 +27,10 @@ class SetupViewModel(application: Application) : AndroidViewModel(application) {
     val ttsVoiceId: LiveData<String> = _ttsVoiceId
 
     // 步骤3: 角色配置
-    private val _adminName = MutableLiveData<String>("主人")
+    private val _adminName = MutableLiveData<String>("狗秀金什麽")
     val adminName: LiveData<String> = _adminName
 
-    private val _botName = MutableLiveData<String>("助手")
+    private val _botName = MutableLiveData<String>("红豆")
     val botName: LiveData<String> = _botName
 
     private val _botDescription = MutableLiveData<String>("")
@@ -166,7 +166,7 @@ class SetupViewModel(application: Application) : AndroidViewModel(application) {
 
     private fun finishSetup() {
         // 保存到 SharedPreferences
-        val prefs = BotApp.getInstance().getSharedPreferences()
+        val prefs = BotApp.getInstance().sharedPreferences
         prefs.edit().apply {
             putString("base_url", _baseUrl.value)
             putString("api_key", _apiKey.value)
@@ -182,8 +182,8 @@ class SetupViewModel(application: Application) : AndroidViewModel(application) {
         // 更新 BotApp 运行时配置
         BotApp.getInstance().apply {
             apiKey = _apiKey.value ?: ""
-            setBotName(_botName.value ?: "助手")
-            setAdminName(_adminName.value ?: "主人")
+            botName = _botName.value ?: "狗秀金什麽"
+            adminName = _adminName.value ?: "红豆"
         }
 
         _setupComplete.value = true
@@ -198,10 +198,10 @@ class SetupViewModel(application: Application) : AndroidViewModel(application) {
     fun applyPresetConfig(preset: ServerPreset) {
         when (preset) {
             is ServerPreset.OpenAI -> {
-                _baseUrl.value = "https://api.openai.com/v1"
+                _baseUrl.value = "https://api.openai-proxy.org/v1/chat/completions"
             }
             is ServerPreset.Gemini -> {
-                _baseUrl.value = "https://generativelanguage.googleapis.com/v1beta"
+                _baseUrl.value = "https://api.openai-proxy.org/google/v1beta"
             }
             is ServerPreset.Custom -> {
                 // 保持当前值或清空

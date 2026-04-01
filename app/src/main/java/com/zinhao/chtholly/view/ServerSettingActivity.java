@@ -20,6 +20,7 @@ import com.koushikdutta.async.http.AsyncHttpResponse;
 import com.zinhao.chtholly.BotApp;
 import com.zinhao.chtholly.network.VoiceHttpApi;
 import com.zinhao.chtholly.databinding.ActivityVoiceServerSettingBinding;
+import com.zinhao.chtholly.utils.HostConsts;
 import org.jetbrains.annotations.NotNull;
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -126,12 +127,12 @@ public class ServerSettingActivity extends AppCompatActivity {
          *     "isContinued": false
          * }
          */
-        serverList.add(new ServerInfo("gemini","https://api.openai-proxy.org/google/v1beta"));
 
-        serverList.add(new ServerInfo("close ai proxy 1","https://api.openai-proxy.org/v1/chat/completions"));
-        serverList.add(new ServerInfo("close ai proxy 2","https://api.closeai-proxy.xyz/v1/chat/completions"));
-        serverList.add(new ServerInfo("close ai proxy 3","https://api.openai-proxy.live/v1/chat/completions"));
-        serverList.add(new ServerInfo("open ai","https://api.openai.com/v1/chat/completions"));
+        serverList.add(new ServerInfo("open ai", HostConsts.OPENAI_API_HOST));
+        serverList.add(new ServerInfo("gemini", HostConsts.GEMINI_PROXY_API_HOST));
+        serverList.add(new ServerInfo("close ai proxy 1", HostConsts.OPENAI_PROXY_API_HOST));
+        serverList.add(new ServerInfo("close ai proxy 2", HostConsts.PROXY_2));
+        serverList.add(new ServerInfo("close ai proxy 3", HostConsts.PROXY_3));
         serverList.add(new ServerInfo("通意千问","https://dashscope.aliyuncs.com/compatible-mode/v1"));
         serverList.add(localNetWork);
 

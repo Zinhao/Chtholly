@@ -4,6 +4,7 @@ import android.accessibilityservice.AccessibilityButtonController;
 import android.accessibilityservice.AccessibilityService;
 import android.accessibilityservice.AccessibilityServiceInfo;
 import android.accessibilityservice.GestureDescription;
+import android.annotation.SuppressLint;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
@@ -16,10 +17,12 @@ import android.hardware.SensorManager;
 import android.os.Handler;
 import android.provider.Settings;
 import android.util.Log;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.WindowManager;
 import android.view.accessibility.AccessibilityEvent;
 import android.view.accessibility.AccessibilityNodeInfo;
+import android.widget.Button;
 import androidx.media3.common.MediaItem;
 import androidx.media3.common.MediaMetadata;
 import androidx.media3.common.Player;
@@ -35,9 +38,11 @@ import com.zinhao.chtholly.session.OpenAiSession;
 import com.zinhao.chtholly.utils.*;
 import com.zinhao.chtholly.view.FloatWindowActivity;
 
+import com.zinhao.chtholly.view.MainActivity;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.lang.ref.WeakReference;
 import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 import java.util.*;
@@ -46,9 +51,11 @@ import static com.zinhao.chtholly.utils.QQChatHandler.*;
 
 public class NekoChatService extends AccessibilityService implements NetAiAskAble.DelayReplyCallback, MessageCallback, SensorEventListener {
     private static final String TAG = "NekoChatService";
+
     public static Class<?> mode = GeminiSession.class;
     private static final SimpleDateFormat dateTimeFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss", Locale.CHINA);
-    private static NekoChatService instance;
+    public static WeakReference<NekoChatService> instance;
+
     private Handler mHandler;
     private ExoPlayer mediaPlayer;
     private AccessibilityButtonController accessibilityButtonController;
@@ -56,17 +63,17 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
 
     private boolean accShow;
     private boolean accIsAlpha;
-    private View accView;
+    private View accBoundView;
     private WindowManager.LayoutParams accViewParams;
 
     private boolean logcatShow;
-    private boolean logcatAlpha;
-    private View aclv;
+    private boolean logcatAlpha0;
+    private View logcatView;
     private AccessibilityLogcatView accessibilityLogcatView;
     private WindowManager.LayoutParams logcatViewParams;
 
     private boolean ctrlShow;
-    private View ctrlView;
+    private View floatControllerView;
     boolean lockScreen = false;
     private WindowManager.LayoutParams ctrlViewParams;
     private AccessibilityBoundView accessibilityBoundView;
@@ -93,7 +100,10 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
     }
 
     public static NekoChatService getInstance() {
-        return instance;
+        if(instance != null){
+            return instance.get();
+        }
+        return null;
     }
 
     private final List<RemindMessage> remindMessages = new Vector<>();
@@ -108,7 +118,7 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
     public void onCreate() {
         super.onCreate();
         serviceCreateTime= System.currentTimeMillis();
-        instance = this;
+        instance = new WeakReference<>(this);
         mHandler = new Handler(getMainLooper());
         calendar = Calendar.getInstance();
         dayCount = calendar.get(Calendar.DAY_OF_MONTH);
@@ -119,6 +129,7 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
         windowManager = getSystemService(WindowManager.class);
         accViewParams = OverlayUtils.makeNotTouchWindowParams(0,0,0,0);
         ctrlViewParams = OverlayUtils.makeFloatWindowParams(0,0,1,1);
+
         speakStartVoice();
 
         createNotificationChannel();
@@ -137,6 +148,18 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
     }
 
     @Override
+    public void onRebind(Intent intent) {
+        super.onRebind(intent);
+    }
+
+
+    @Override
+    public boolean onUnbind(Intent intent) {
+        instance = null;
+        return super.onUnbind(intent);
+    }
+
+    @Override
     public void onAccessibilityEvent(AccessibilityEvent event) {
         if (event == null)
             return;
@@ -146,9 +169,9 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
         autoMission(event.getPackageName().toString());
         AccessibilityNodeInfo root = getRootInActiveWindow();
         AccessibilityNodeInfo source = event.getSource();
-        if(accView !=null){
+        if(accBoundView !=null){
             if(accessibilityBoundView == null)
-                accessibilityBoundView = accView.findViewById(R.id.acbv);
+                accessibilityBoundView = accBoundView.findViewById(R.id.acbv);
             if(source == null && root!=null){
                 accessibilityBoundView.setNodeInfo(root);
             }else if(source !=null && root == null){
@@ -159,11 +182,11 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
             accessibilityBoundView.postInvalidate();
         }
 
-        if(aclv!=null){
+        if(logcatView !=null){
             if(accessibilityLogcatView == null)
-                accessibilityLogcatView = aclv.findViewById(R.id.aclv);
+                accessibilityLogcatView = logcatView.findViewById(R.id.aclv);
             if(vibrationGraphView== null)
-                vibrationGraphView = aclv.findViewById(R.id.vgv);
+                vibrationGraphView = logcatView.findViewById(R.id.vgv);
         }
 
 
@@ -218,7 +241,7 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
         }
         String pageName = processNotChatPage(event.getSource());
         if(!UNKNOWN_PAGE.equals(pageName) && !NULL_ROOT.equals(pageName)){
-            NekoChatService.getInstance().addLogcat( "onAccessibilityEvent: " + pageName);
+            addLogcat( "onAccessibilityEvent: " + pageName);
             Log.d(TAG, "onAccessibilityEvent: " + pageName);
         }
 
@@ -240,7 +263,10 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
                                     .replace("/", "_")
                                     .replace(":", "_");
                         }
-                        LocalFileCache.getInstance().saveJSONObject(getApplicationContext(), layoutTree, "tree" + fileName + ".json");
+
+                        String jsonFileName = "tree" + fileName + ".json";
+                        Log.i(TAG,"current_page_fileName: "+jsonFileName);
+                        LocalFileCache.getInstance().saveJSONObject(getApplicationContext(), layoutTree, jsonFileName);
                     }
 
                 } catch (JSONException e) {
@@ -559,6 +585,13 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
     protected void onServiceConnected() {
         super.onServiceConnected();
         addLogcat("onServiceConnected: ");
+
+        instance = new WeakReference<>(this);
+        logcatView = OverlayUtils.createView(this,R.layout.float_logcat);
+        accBoundView = OverlayUtils.createView(this,R.layout.float_helper);
+        createDragFloatMenu();
+
+
         accessibilityButtonController = getAccessibilityButtonController();
         mIsAccessibilityButtonAvailable = accessibilityButtonController.isAccessibilityButtonAvailable();
         if (!mIsAccessibilityButtonAvailable) {
@@ -589,43 +622,40 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
         return Math.round(Math.random() * max * 60 * 1000) + min * 60 * 1000;
     }
 
-    public void setAccView(View accView) {
-        this.accView = accView;
+    boolean isControllerMinSize = false;
+    public void controllerViewToMinSize() {
+        Button b1 = floatControllerView.findViewById(R.id.b1);
+        Button b2 = floatControllerView.findViewById(R.id.b2);
+        Button b3 = floatControllerView.findViewById(R.id.b3);
+        b1.setVisibility(View.GONE);
+        b2.setVisibility(View.GONE);
+        b3.setVisibility(View.GONE);
+        isControllerMinSize = true;
     }
 
-    public View getAccView() {
-        return accView;
-    }
-
-    public View getCtrlView() {
-        return ctrlView;
-    }
-
-    public void setCtrlView(View ctrlView) {
-        this.ctrlView = ctrlView;
-    }
-
-    public WindowManager.LayoutParams getAccViewParams() {
-        return accViewParams;
-    }
-
-    public WindowManager.LayoutParams getCtrlViewParams() {
-        return ctrlViewParams;
+    public void controllerViewToDefaultSize() {
+        Button b1 = floatControllerView.findViewById(R.id.b1);
+        Button b2 = floatControllerView.findViewById(R.id.b2);
+        Button b3 = floatControllerView.findViewById(R.id.b3);
+        b1.setVisibility(View.VISIBLE);
+        b2.setVisibility(View.VISIBLE);
+        b3.setVisibility(View.VISIBLE);
+        isControllerMinSize = false;
     }
 
     public void showAccWindow() {
-        if (!Settings.canDrawOverlays(getApplicationContext()) || accView == null) {
+        if (!Settings.canDrawOverlays(getApplicationContext()) || accBoundView == null) {
             Intent rqIntent = new Intent(getApplicationContext(), FloatWindowActivity.class);
             rqIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             startActivity(rqIntent);
         } else {
             if (!accShow) {
-                windowManager.removeView(ctrlView);
-                windowManager.addView(accView, accViewParams);
+                windowManager.removeView(floatControllerView);
+                windowManager.addView(accBoundView, accViewParams);
                 if(accessibilityBoundView!=null){
                     accessibilityBoundView.postInvalidate();
                 }
-                windowManager.addView(ctrlView, ctrlViewParams);
+                windowManager.addView(floatControllerView, ctrlViewParams);
 
             }
             accShow = true;
@@ -638,7 +668,7 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
 
     public void setAccIsAlpha(boolean alpha){
         accIsAlpha = alpha;
-        accView.setAlpha(alpha?0:1);
+        accBoundView.setAlpha(alpha?0:1);
     }
 
     public boolean isAccIsAlpha() {
@@ -649,39 +679,31 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
         return logcatShow;
     }
 
-    public boolean isLogcatAlpha() {
-        return logcatAlpha;
+    public boolean isLogcatAlpha0() {
+        return logcatAlpha0;
     }
 
-    public void setLogcatAlpha(boolean logcatAlpha) {
-        this.logcatAlpha = logcatAlpha;
-        accessibilityLogcatView.setAlpha(logcatAlpha?0:1);
-        vibrationGraphView.setAlpha(logcatAlpha?0:1);
-    }
-
-    public View getAccessibilityLogcatView() {
-        return aclv;
-    }
-
-    public void setAccessibilityLogcatView(View aclv) {
-        this.aclv = aclv;
+    public void setLogcatAlpha0(boolean logcatAlpha0) {
+        this.logcatAlpha0 = logcatAlpha0;
+        accessibilityLogcatView.setAlpha(logcatAlpha0 ?0:1);
+        vibrationGraphView.setAlpha(logcatAlpha0 ?0:1);
     }
 
     public void showLogcat() {
-        if (!Settings.canDrawOverlays(getApplicationContext()) || accView == null) {
+        if (!Settings.canDrawOverlays(getApplicationContext()) || accBoundView == null) {
             Intent rqIntent = new Intent(getApplicationContext(), FloatWindowActivity.class);
             rqIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             startActivity(rqIntent);
         } else {
             if (!logcatShow) {
-                windowManager.removeView(ctrlView);
+                windowManager.removeView(floatControllerView);
 
-                windowManager.addView(aclv, accViewParams);
-                if(aclv!=null){
-                    aclv.postInvalidate();
+                windowManager.addView(logcatView, accViewParams);
+                if(logcatView !=null){
+                    logcatView.postInvalidate();
                 }
 
-                windowManager.addView(ctrlView, ctrlViewParams);
+                windowManager.addView(floatControllerView, ctrlViewParams);
 
             }
             logcatShow = true;
@@ -689,23 +711,23 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
     }
 
     public void showCtrlWindow() {
-        if (!Settings.canDrawOverlays(getApplicationContext()) || ctrlView == null) {
+        if (!Settings.canDrawOverlays(getApplicationContext()) || floatControllerView == null) {
             Intent rqIntent = new Intent(getApplicationContext(), FloatWindowActivity.class);
             rqIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             startActivity(rqIntent);
         } else {
             if (!ctrlShow) {
-                windowManager.addView(ctrlView, ctrlViewParams);
+                windowManager.addView(floatControllerView, ctrlViewParams);
             }
             ctrlShow = true;
         }
     }
 
     public void hideCtrlWindow() {
-        if (ctrlView == null)
+        if (floatControllerView == null)
             return;
         if (ctrlShow) {
-            windowManager.removeView(ctrlView);
+            windowManager.removeView(floatControllerView);
         }
         ctrlShow = false;
     }
@@ -739,7 +761,7 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
         addLogcat("waitQAs["+waitQAs.size()+"] " +message.getSpeaker()+ ": "+message.getMessage());
 
     }
-
+    //============================================陀螺仪====================================================//
     private long lastReportVibration = 0;
     private static final long REPORT_RANGE = 15000;
     private SensorManager sensorManager;
@@ -775,16 +797,13 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
                 dataPoints.add(strength);
             }
             if(vibrationGraphView!=null){
-//                Log.i(TAG, "onVibrationStrengthChanged: "+strength);
-                if(logcatShow && !logcatAlpha){
+                if(logcatShow && !logcatAlpha0){
                     vibrationGraphView.updateData(strength);
                 }
             }else{
-//                Log.e(TAG, "onVibrationStrengthChanged: null");
             }
         }
     };
-
     private void delayReportVibration(){
         mHandler.postDelayed(new Runnable() {
             @Override
@@ -878,5 +897,92 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
 
     public WXChatHandler getWxChatHandler() {
         return wxChatHandler;
+    }
+
+
+    public void createDragFloatMenu() {
+        View view = OverlayUtils.createView(this,R.layout.float_bt);
+        Button menu1 = view.findViewById(R.id.b1);
+        menu1.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if(isAccShow()){
+                   setAccIsAlpha(!isAccIsAlpha());
+                }else{
+                    showAccWindow();
+                }
+
+            }
+        });
+
+        Button menu2 = view.findViewById(R.id.b2);
+        menu2.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if(logcatShow){
+                    setLogcatAlpha0(!isLogcatAlpha0());
+                }else {
+                    showLogcat();
+                }
+
+            }
+        });
+
+        Button toMainActivity = view.findViewById(R.id.b3);
+        toMainActivity.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                //FLAG_ACTIVITY_NEW_TASK
+                Intent newTaskIntent =new Intent(v.getContext(), MainActivity.class);
+                newTaskIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                startActivity(newTaskIntent);
+            }
+        });
+
+        Button toMin = view.findViewById(R.id.b4);
+        toMin.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if(isControllerMinSize){
+                    controllerViewToDefaultSize();
+                }else {
+                    controllerViewToMinSize();
+                }
+            }
+        });
+
+        View cv = view.findViewById(R.id.ctrl);
+        cv.setOnTouchListener(new View.OnTouchListener() {
+            private float downX, downY;
+            @SuppressLint("ClickableViewAccessibility")
+            @Override
+            public boolean onTouch(View v, MotionEvent event) {
+                if (event.getAction() == MotionEvent.ACTION_DOWN) {
+                    downX = event.getRawX();
+                    downY = event.getRawY();
+                }else if (event.getAction() == MotionEvent.ACTION_MOVE) {
+                    float nowX = event.getRawX();
+                    float nowY = event.getRawY();
+                    float moveX = nowX - downX;
+                    float moveY = nowY - downY;
+                    if (NekoChatService.getInstance() != null) {
+                        ctrlViewParams.x += (int) moveX;
+                        ctrlViewParams.y += (int) moveY;
+                        windowManager.updateViewLayout(
+                                floatControllerView,
+                                ctrlViewParams);
+                    }
+                    downX = nowX;
+                    downY = nowY;
+                }
+                return true;
+            }
+        });
+        floatControllerView = view;
+
+        if (Settings.canDrawOverlays(this)) {
+            // 有权限
+            showCtrlWindow();
+        }
     }
 }

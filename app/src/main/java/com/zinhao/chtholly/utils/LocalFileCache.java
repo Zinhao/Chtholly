@@ -18,7 +18,6 @@ public class LocalFileCache implements Runnable, Closeable {
     private static final String CONFIG_PLAY_LIST = "playList.json";
     private static final String CONFIG_USERS = "users.json";
     private static LocalFileCache instance;
-    private Thread workThread;
     private final List<Runnable> mission;
     private boolean running = true;
 
@@ -31,8 +30,8 @@ public class LocalFileCache implements Runnable, Closeable {
 
     public LocalFileCache() {
         mission = new ArrayList<>();
-        this.workThread = new Thread(this);
-        this.workThread.start();
+        Thread workThread = new Thread(this);
+        workThread.start();
     }
 
     public File getExternalAppRootDir() throws FileNotFoundException {

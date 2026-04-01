@@ -50,7 +50,8 @@ class GeminiAIAskAble : NetAiAskAble {
                         val candidate = geminiAnswerResult?.candidates?.firstOrNull()
                         candidate?.let {
                             if (candidate.finishReason == "length") {
-                                instance!!.requestChatSummarize()
+                                //自动总结
+                                instance?.requestChatSummarize()
                             } else if (candidate.finishReason == "tool_calls") {
                             } else if (candidate.finishReason.lowercase() == "stop") {
                                 val content = candidate.content.parts.firstOrNull()?.text

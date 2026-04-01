@@ -10,6 +10,8 @@ import com.zinhao.chtholly.db.AppDatabase;
 import com.zinhao.chtholly.db.MessageDao;
 import com.zinhao.chtholly.entity.AICharacter;
 import com.zinhao.chtholly.entity.Message;
+import com.zinhao.chtholly.session.ChatSession;
+import com.zinhao.chtholly.utils.HostConsts;
 import com.zinhao.chtholly.utils.LocalFileCache;
 
 import java.util.List;
@@ -72,8 +74,8 @@ public class BotApp extends Application {
         botName = sharedPreferences.getString(CONFIG_BOT_NAME,"bot name");
         adminName = sharedPreferences.getString(CONFIG_ADMIN_NAME,"");
         characterId = sharedPreferences.getLong(CONFIG_CURRENT_CHARACTER_ID,0);
-        chatUrl = sharedPreferences.getString(CONFIG_CHAT_URL,"https://api.openai.com/v1/chat/completions");
-        ttsUrl = sharedPreferences.getString(CONFIG_TTS_URL,"http://localhost");
+        chatUrl = sharedPreferences.getString(CONFIG_CHAT_URL,HostConsts.GEMINI_PROXY_API_HOST);
+        ttsUrl = sharedPreferences.getString(CONFIG_TTS_URL, HostConsts.LOCAL_HOST);
         isFirstRun = sharedPreferences.getBoolean(CONFIG_IS_FIRST_RUN,true);
         database = Room.databaseBuilder(this,AppDatabase.class,"app_data")
                 .build();
@@ -82,7 +84,7 @@ public class BotApp extends Application {
         LocalFileCache.getInstance().doSomething(()->{
             currentCharacter = aiCharacterDao.getAICharacterById(characterId);
             if(currentCharacter == null){
-                currentCharacter = new AICharacter("人工智能",getApplicationContext().getString(R.string.chara_default));
+                currentCharacter = new AICharacter("红豆",getApplicationContext().getString(R.string.neko_chara_1));
             }
         });
 
@@ -173,6 +175,16 @@ public class BotApp extends Application {
             }
         });
     }
+    public void insert(AICharacter character,Runnable callback){
+        LocalFileCache.getInstance().doSomething(new Runnable() {
+            @Override
+            public void run() {
+                long id = aiCharacterDao.insert(character);
+                character.setId(id);
+                callback.run();
+            }
+        });
+    }
 
     public void select(AICharacterDao.AICharacterGetAllListener listener){
         LocalFileCache.getInstance().doSomething(new Runnable() {
@@ -182,5 +194,17 @@ public class BotApp extends Application {
                 listener.onSuccess(result);
             }
         });
+    }
+
+    public void switchAISoul(AICharacter character){
+        BotApp.getInstance().setCharacterId(character.getId());
+        BotApp.getInstance().setCurrentCharacter(character);
+        SharedPreferences.Editor editor = BotApp.getInstance().getSharedPreferences().edit();
+        editor.putLong(BotApp.CONFIG_CURRENT_CHARACTER_ID,character.getId());
+        editor.apply();
+        ChatSession session = NekoChatService.getInstance().getSession();
+        if(session!=null){
+            session.setChara(character.getDesc());
+        }
     }
 }

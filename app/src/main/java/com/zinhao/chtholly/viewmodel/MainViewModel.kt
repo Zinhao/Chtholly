@@ -68,8 +68,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     init {
         // 从 BotApp 加载初始值
         _apiKey.value = BotApp.getInstance().apiKey ?: ""
-        _botName.value = BotApp.getInstance().getBotName() ?: ""
-        _adminName.value = BotApp.getInstance().getAdminName() ?: ""
+        _botName.value = BotApp.getInstance().botName ?: ""
+        _adminName.value = BotApp.getInstance().adminName ?: ""
     }
 
     // ==================== 数据绑定方法 ====================
@@ -132,7 +132,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun refreshCurrentChara() {
         val service = NekoChatService.getInstance()
         val session = service?.getSession()
-        _currentChara.value = session?.getChara() ?: ""
+        _currentChara.value = BotApp.getInstance().currentCharacter.desc
     }
 
     // ==================== 点击事件处理 ====================
