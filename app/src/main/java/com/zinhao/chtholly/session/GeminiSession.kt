@@ -2,7 +2,7 @@ package com.zinhao.chtholly.session
 
 import android.util.Log
 import com.zinhao.chtholly.BotApp
-import com.zinhao.chtholly.LoggingInterceptor
+import com.zinhao.chtholly.network.LoggingInterceptor
 import com.zinhao.chtholly.NekoChatService
 import com.zinhao.chtholly.entity.GeminiAIAskAble
 import com.zinhao.chtholly.entity.Message
@@ -74,7 +74,7 @@ class GeminiSession private constructor(private var chatUrl: String?) : NekoSess
 
     override fun getChara(): String {
         try {
-            return systemInstruction.getString(CONTENTS)
+            return systemInstruction.optString(CONTENTS)
         } catch (e: JSONException) {
             throw RuntimeException(e)
         }

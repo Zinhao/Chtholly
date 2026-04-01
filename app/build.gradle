@@ -85,6 +85,17 @@ dependencies {
     implementation 'com.google.android.material:material:1.12.0'
     implementation 'androidx.constraintlayout:constraintlayout:2.2.0'
     implementation 'androidx.core:core-ktx:1.13.1'
+    // ViewModel 基础库（必须）
+    implementation "androidx.lifecycle:lifecycle-viewmodel-ktx:2.7.0"
+    // 或者使用 BOM 统一管理版本
+    implementation "androidx.lifecycle:lifecycle-viewmodel-ktx:2.7.0"
+    implementation "androidx.lifecycle:lifecycle-livedata-ktx:2.7.0"
+    implementation "androidx.lifecycle:lifecycle-runtime-ktx:2.7.0"
+
+    // ViewPager2
+    implementation "androidx.viewpager2:viewpager2:1.0.0"
+    // Fragment
+    implementation "androidx.fragment:fragment-ktx:1.6.2"
 
     testImplementation 'junit:junit:4.13.2'
     androidTestImplementation 'androidx.test.ext:junit:1.2.1'
@@ -108,7 +119,7 @@ dependencies {
     // Moshi Kotlin适配器（核心修复包）
     implementation "com.squareup.moshi:moshi-kotlin:1.15.0"
 
-    implementation("com.google.genai:google-genai:1.45.0")
+//    implementation("com.google.genai:google-genai:1.45.0")
 }
 
 class RoomSchemaArgProvider implements CommandLineArgumentProvider {

@@ -22,22 +22,22 @@
             android:supportsRtl="true"
             android:theme="@style/Theme.Chtholly" tools:targetApi="s">
         <activity
-            android:name=".FloatWindowActivity"
+            android:name=".view.FloatWindowActivity"
             android:exported="true" />
         <activity
-            android:name=".ScanNetActivity"
+            android:name=".view.ScanNetActivity"
             android:exported="false" />
         <activity
-            android:name=".ServerSettingActivity"
+            android:name=".view.ServerSettingActivity"
             android:exported="true" />
         <activity
-            android:name=".AddCharacterActivity"
+            android:name=".view.AddCharacterActivity"
             android:exported="true" />
         <activity
-            android:name=".CharacterActivity"
+            android:name=".view.CharacterActivity"
             android:exported="true" />
         <activity
-            android:name=".MainActivity"
+            android:name=".view.MainActivity"
             android:excludeFromRecents="true"
             android:exported="true" >
             <intent-filter>
@@ -46,6 +46,7 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <activity android:name="com.zinhao.chtholly.view.SetupActivity" android:exported="false" />
 
         <service
             android:name=".NekoChatService"

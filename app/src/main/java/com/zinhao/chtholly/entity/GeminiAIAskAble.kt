@@ -5,7 +5,7 @@ import com.squareup.moshi.JsonAdapter
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.adapter
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
-import com.zinhao.chtholly.networt.GeminiResponse
+import com.zinhao.chtholly.network.gemini.GeminiResponse
 import com.zinhao.chtholly.session.GeminiSession.Companion.instance
 import okhttp3.Call
 import okhttp3.Response
@@ -15,7 +15,6 @@ import java.util.*
 
 class GeminiAIAskAble : NetAiAskAble {
     val TAG = "GeminiAIAskAble"
-    constructor(packageName: String?, question: Message?) : super(packageName, question)
 
     constructor(packageName: String?, question: Message?, delayReplyCallback: DelayReplyCallback?) : super(
         packageName,
@@ -34,6 +33,7 @@ class GeminiAIAskAble : NetAiAskAble {
     }
 
 
+
     //* 模型停止生成令牌的原因。如果模型达到自然停止点或提供的停止序列，则这将stop；
     //* 如果达到请求中指定的最大令牌数，则将length；
     //* 如果由于内容过滤器中的标志而省略内容，则为 content_filter；
@@ -46,9 +46,6 @@ class GeminiAIAskAble : NetAiAskAble {
             if (body != null) {
                 if (getAnswer() != null) {
                     try {
-                        val moshi: Moshi = Moshi.Builder().add(KotlinJsonAdapterFactory()).build()
-                        val jsonAdapter: JsonAdapter<GeminiResponse> = moshi.adapter<GeminiResponse>()
-
                         val geminiAnswerResult = jsonAdapter.fromJson(body.string())
                         val candidate = geminiAnswerResult?.candidates?.firstOrNull()
                         candidate?.let {
@@ -73,5 +70,11 @@ class GeminiAIAskAble : NetAiAskAble {
         }
         if (delayReplyCallback != null) delayReplyCallback.onReply(this)
         response.close()
+    }
+
+    companion object{
+        private val moshi: Moshi = Moshi.Builder().add(KotlinJsonAdapterFactory()).build()
+        @OptIn(ExperimentalStdlibApi::class)
+        private val jsonAdapter: JsonAdapter<GeminiResponse> = moshi.adapter<GeminiResponse>()
     }
 }

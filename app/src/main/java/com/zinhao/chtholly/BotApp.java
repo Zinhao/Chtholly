@@ -4,6 +4,10 @@ import android.app.Application;
 import android.content.Context;
 import android.content.SharedPreferences;
 import androidx.room.Room;
+
+import com.zinhao.chtholly.db.AICharacterDao;
+import com.zinhao.chtholly.db.AppDatabase;
+import com.zinhao.chtholly.db.MessageDao;
 import com.zinhao.chtholly.entity.AICharacter;
 import com.zinhao.chtholly.entity.Message;
 import com.zinhao.chtholly.utils.LocalFileCache;
@@ -11,7 +15,7 @@ import com.zinhao.chtholly.utils.LocalFileCache;
 import java.util.List;
 
 public class BotApp extends Application {
-    public String apiKey;
+
     public static final String CONFIG_API_KEY = "api_kye_config";
     public static final String CONFIG_BOT_NAME = "bot_name";
     public static final String CONFIG_CURRENT_CHARACTER_ID = "current_character_id";
@@ -19,6 +23,9 @@ public class BotApp extends Application {
     public static final String CONFIG_CHAT_URL = "chat_url";
     public static final String CONFIG_TTS_URL = "tts_url";
     public static final String CONFIG_IS_FIRST_RUN = "is_first_run";
+
+    private boolean isFirstRun;
+    public String apiKey;
     private String botName;
     private String adminName;
     private long characterId;
@@ -67,7 +74,7 @@ public class BotApp extends Application {
         characterId = sharedPreferences.getLong(CONFIG_CURRENT_CHARACTER_ID,0);
         chatUrl = sharedPreferences.getString(CONFIG_CHAT_URL,"https://api.openai.com/v1/chat/completions");
         ttsUrl = sharedPreferences.getString(CONFIG_TTS_URL,"http://localhost");
-        boolean isFirstRun = sharedPreferences.getBoolean(CONFIG_IS_FIRST_RUN,true);
+        isFirstRun = sharedPreferences.getBoolean(CONFIG_IS_FIRST_RUN,true);
         database = Room.databaseBuilder(this,AppDatabase.class,"app_data")
                 .build();
         messageDao = database.messageDao();
@@ -76,11 +83,6 @@ public class BotApp extends Application {
             currentCharacter = aiCharacterDao.getAICharacterById(characterId);
             if(currentCharacter == null){
                 currentCharacter = new AICharacter("人工智能",getApplicationContext().getString(R.string.chara_default));
-            }
-            if(isFirstRun){
-                insert(new AICharacter("猫娘",getString(R.string.neko_chara_1)));
-                insert(new AICharacter("VTuber",getString(R.string.v_tuber_desc)));
-                sharedPreferences.edit().putBoolean(CONFIG_IS_FIRST_RUN,false).apply();
             }
         });
 
@@ -121,6 +123,14 @@ public class BotApp extends Application {
 
     public void setCurrentCharacter(AICharacter currentCharacter) {
         this.currentCharacter = currentCharacter;
+    }
+
+    public boolean isFirstRun() {
+        return isFirstRun;
+    }
+
+    public void setFirstRun(boolean firstRun) {
+        isFirstRun = firstRun;
     }
 
     public void setAdminName(String adminName) {

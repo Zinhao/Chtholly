@@ -2,7 +2,7 @@ package com.zinhao.chtholly.session;
 
 import android.util.Log;
 import com.zinhao.chtholly.BotApp;
-import com.zinhao.chtholly.LoggingInterceptor;
+import com.zinhao.chtholly.network.LoggingInterceptor;
 import com.zinhao.chtholly.NekoChatService;
 import com.zinhao.chtholly.entity.*;
 import okhttp3.MediaType;
