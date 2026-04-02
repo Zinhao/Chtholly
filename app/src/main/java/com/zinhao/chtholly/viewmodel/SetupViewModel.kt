@@ -7,6 +7,9 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import com.zinhao.chtholly.BotApp
+import com.zinhao.chtholly.entity.AICharacter
+import com.zinhao.chtholly.utils.HostConsts
+import androidx.core.content.edit
 
 class SetupViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -96,12 +99,14 @@ class SetupViewModel(application: Application) : AndroidViewModel(application) {
 
     fun updateBotDescription(desc: String) {
         _botDescription.value = desc.trim()
-//        BotApp.getInstance()
     }
 
     // ==================== 步骤控制 ====================
 
     fun goToNextStep() {
+        if(_currentStep.value == 1){
+            BotApp.getInstance().insert(AICharacter(_botName.value,_botDescription.value))
+        }
         val next = (_currentStep.value ?: 0) + 1
         if (next < (_totalSteps.value ?: 4)) {
             _currentStep.value = next
@@ -165,27 +170,28 @@ class SetupViewModel(application: Application) : AndroidViewModel(application) {
     // ==================== 完成设置 ====================
 
     private fun finishSetup() {
-        // 保存到 SharedPreferences
-        val prefs = BotApp.getInstance().sharedPreferences
-        prefs.edit().apply {
-            putString("base_url", _baseUrl.value)
-            putString("api_key", _apiKey.value)
-            putString("tts_server_url", _ttsServerUrl.value)
-            putString("tts_voice_id", _ttsVoiceId.value)
-            putString("admin_name", _adminName.value)
-            putString("bot_name", _botName.value)
-            putString("bot_description", _botDescription.value)
-            putBoolean("setup_completed", true)
-            apply()
-        }
-
         // 更新 BotApp 运行时配置
         BotApp.getInstance().apply {
             apiKey = _apiKey.value ?: ""
-            botName = _botName.value ?: "狗秀金什麽"
-            adminName = _adminName.value ?: "红豆"
+            botName = _botName.value ?: "红豆"
+            adminName = _adminName.value ?: "狗秀金什麽"
+            aiSoul = _botDescription.value
+            ttsUrl = _ttsServerUrl.value
+            chatUrl = _baseUrl.value
+            isFirstRun = false
         }
-
+        // 保存到 SharedPreferences
+        val prefs = BotApp.getInstance().sharedPreferences
+        prefs.edit().apply {
+            putString(BotApp.CONFIG_CHAT_URL, _baseUrl.value)
+            putString(BotApp.CONFIG_API_KEY, _apiKey.value)
+            putString(BotApp.CONFIG_TTS_URL, _ttsServerUrl.value)
+            putString(BotApp.CONFIG_ADMIN_NAME, _adminName.value)
+            putString(BotApp.CONFIG_BOT_NAME, _botName.value)
+            putString(BotApp.CONFIG_SOUL_DESC, _botDescription.value)
+            putBoolean(BotApp.CONFIG_IS_FIRST_RUN, false)
+            apply()
+        }
         _setupComplete.value = true
     }
 
@@ -198,10 +204,10 @@ class SetupViewModel(application: Application) : AndroidViewModel(application) {
     fun applyPresetConfig(preset: ServerPreset) {
         when (preset) {
             is ServerPreset.OpenAI -> {
-                _baseUrl.value = "https://api.openai-proxy.org/v1/chat/completions"
+                _baseUrl.value = HostConsts.OPENAI_API_HOST
             }
             is ServerPreset.Gemini -> {
-                _baseUrl.value = "https://api.openai-proxy.org/google/v1beta"
+                _baseUrl.value = HostConsts.GEMINI_PROXY_API_HOST
             }
             is ServerPreset.Custom -> {
                 // 保持当前值或清空
@@ -221,20 +227,5 @@ class SetupViewModel(application: Application) : AndroidViewModel(application) {
     override fun onCleared() {
         super.onCleared()
         handler.removeCallbacksAndMessages(null)
-    }
-
-    // 在 SetupViewModel 中添加
-    private val _ttsSpeed = MutableLiveData<Float>(1.0f)
-    val ttsSpeed: LiveData<Float> = _ttsSpeed
-
-    private val _ttsPitch = MutableLiveData<Float>(1.0f)
-    val ttsPitch: LiveData<Float> = _ttsPitch
-
-    fun updateTtsSpeed(speed: Float) {
-        _ttsSpeed.value = speed
-    }
-
-    fun updateTtsPitch(pitch: Float) {
-        _ttsPitch.value = pitch
     }
 }

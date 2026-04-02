@@ -167,7 +167,7 @@ class SetupTtsFragment : Fragment() {
         binding.btnTestTts.text = "测试中..."
         binding.tvTestResult.text = "正在连接 TTS 服务器..."
 
-        // 模拟测试（实际应发起网络请求）
+        //todo  模拟测试（实际应发起网络请求）
         binding.root.postDelayed({
             binding.btnTestTts.isEnabled = true
             binding.btnTestTts.text = "测试连接"

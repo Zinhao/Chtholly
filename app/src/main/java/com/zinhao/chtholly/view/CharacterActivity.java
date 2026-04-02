@@ -2,7 +2,6 @@ package com.zinhao.chtholly.view;
 
 import android.content.DialogInterface;
 import android.content.Intent;
-import android.content.SharedPreferences;
 import android.net.Uri;
 import android.view.View;
 import androidx.annotation.Nullable;
@@ -15,10 +14,8 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import com.zinhao.chtholly.db.AICharacterDao;
 import com.zinhao.chtholly.BotApp;
 import com.zinhao.chtholly.view.adapter.CharacterAdapter;
-import com.zinhao.chtholly.NekoChatService;
 import com.zinhao.chtholly.databinding.ActivityCharacterBinding;
 import com.zinhao.chtholly.entity.AICharacter;
-import com.zinhao.chtholly.session.ChatSession;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -147,18 +144,7 @@ public class CharacterActivity extends AppCompatActivity implements CharacterAda
         builder.setPositiveButton("ok", new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int which) {
-                BotApp.getInstance().setCharacterId(character.getId());
-                BotApp.getInstance().setCurrentCharacter(character);
-
-                SharedPreferences.Editor editor = BotApp.getInstance().getSharedPreferences().edit();
-                editor.putLong(BotApp.CONFIG_CURRENT_CHARACTER_ID,character.getId());
-                editor.apply();
-
-                ChatSession session = NekoChatService.getInstance().getSession();
-                if(session!=null){
-                    session.setChara(character.getDesc());
-                }
-
+                BotApp.getInstance().switchAISoul(character);
                 dialog.dismiss();
             }
         });

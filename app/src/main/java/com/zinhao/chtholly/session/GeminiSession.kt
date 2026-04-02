@@ -35,7 +35,7 @@ class GeminiSession private constructor(private var chatUrl: String?) : NekoSess
         chats = JSONArray()
         systemInstruction = JSONObject()
         try {
-            setChara(BotApp.getInstance().getCurrentCharacter().desc)
+            setChara(BotApp.getInstance().aiSoul)
 
             data.put(ROLE_SYSTEM, systemInstruction)
 

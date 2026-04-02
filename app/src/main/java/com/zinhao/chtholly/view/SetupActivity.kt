@@ -5,7 +5,9 @@ import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.ViewModelProvider
 import androidx.viewpager2.widget.ViewPager2
+import com.zinhao.chtholly.R
 import com.zinhao.chtholly.databinding.ActivitySetupBinding
+import com.zinhao.chtholly.utils.HostConsts
 import com.zinhao.chtholly.view.adapter.SetupPagerAdapter
 import com.zinhao.chtholly.viewmodel.SetupViewModel
 
@@ -17,12 +19,6 @@ class SetupActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
-        // 检查是否已完成设置
-        if (isSetupCompleted()) {
-            startMainActivity()
-            return
-        }
 
         binding = ActivitySetupBinding.inflate(layoutInflater)
         setContentView(binding.root)
@@ -109,11 +105,6 @@ class SetupActivity : AppCompatActivity() {
         binding.progressBar.progress = ((currentStep + 1) * 100 / 4)
     }
 
-    private fun isSetupCompleted(): Boolean {
-        return getSharedPreferences("app_config", MODE_PRIVATE)
-            .getBoolean("setup_completed", false)
-    }
-
     private fun startMainActivity() {
         startActivity(Intent(this, MainActivity::class.java))
         finish()
@@ -121,14 +112,22 @@ class SetupActivity : AppCompatActivity() {
 
     private fun finishSetupWithDefaults() {
         // 使用默认配置完成设置
-        viewModel.apply {
-            updateBaseUrl("https://api.openai.com/v1")
-            updateApiKey("sk-default")
-            updateAdminName("主人")
-            updateBotName("助手")
+        if(viewModel.currentStep.value == 0){
+            viewModel.apply {
+                updateBaseUrl(HostConsts.GEMINI_PROXY_API_HOST)
+                updateApiKey("sk-default")
+            }
+        }else if(viewModel.currentStep.value == 1){
+            viewModel.apply {
+                updateTtsServerUrl(HostConsts.LOCAL_HOST)
+            }
+        }else if(viewModel.currentStep.value == 2){
+            viewModel.apply {
+                updateAdminName("主人")
+                updateBotName("助手")
+                updateBotDescription(getString(R.string.chara_default))
+            }
         }
-        viewModel.goToNextStep()
-        viewModel.goToNextStep()
         viewModel.goToNextStep()
     }
 

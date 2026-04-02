@@ -375,17 +375,7 @@ public abstract class Command{
         BotApp.getInstance().insert(newChara, new Runnable() {
             @Override
             public void run() {
-                BotApp.getInstance().setCharacterId(newChara.getId());
-                BotApp.getInstance().setCurrentCharacter(newChara);
-
-                SharedPreferences.Editor editor = BotApp.getInstance().getSharedPreferences().edit();
-                editor.putLong(BotApp.CONFIG_CURRENT_CHARACTER_ID,newChara.getId());
-                editor.apply();
-
-                ChatSession session = NekoChatService.getInstance().getSession();
-                if(session!=null){
-                    session.setChara(newChara.getDesc());
-                }
+                BotApp.getInstance().switchAISoul(newChara);
             }
         });
         getAnswer().setMessage(NekoAskAble.OK);
@@ -571,7 +561,6 @@ public abstract class Command{
         String apiKey = BotApp.getInstance().apiKey;
         String apiKeySub = apiKey.substring(apiKey.length()-5);
         stringBuilder.append("ApiKey:").append("sk-***********").append(apiKeySub).append("\n");
-        stringBuilder.append("CharacterId:").append(BotApp.getInstance().getCharacterId()).append("\n");
         return  stringBuilder;
     }
 

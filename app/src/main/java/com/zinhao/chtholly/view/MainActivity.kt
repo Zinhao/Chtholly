@@ -10,6 +10,7 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.ViewModelProvider
 import com.zinhao.chtholly.BotApp
+import com.zinhao.chtholly.BuildConfig
 import com.zinhao.chtholly.MainViewModel
 import com.zinhao.chtholly.databinding.ActivityMainBinding
 import com.zinhao.chtholly.entity.AICharacter
@@ -24,25 +25,20 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        binding = ActivityMainBinding.inflate(layoutInflater)
-        setContentView(binding.root)
-
         viewModel = ViewModelProvider(this)[MainViewModel::class.java]
-
         if(BotApp.getInstance().isFirstRun){
             viewModel.doFirstRun(this)
             startActivity(Intent(this, SetupActivity::class.java))
             finish()
+            return
         }
-
+        binding = ActivityMainBinding.inflate(layoutInflater)
+        setContentView(binding.root)
         viewModel.checkAccessibilityStatus(this)
         viewModel.refreshCurrentChara()
 
         setupObservers()
         setupUI()
-
-        // 加载数据
-        viewModel.loadMessages()
     }
 
     private fun setupObservers() {
@@ -80,30 +76,12 @@ class MainActivity : AppCompatActivity() {
             binding.textView.text = chara
         }
 
-        // 观察消息对话框准备状态
-        viewModel.isMessageDialogReady.observe(this) { ready ->
-            binding.button2.isEnabled = ready
-        }
 
         // 观察 Toast 消息
         viewModel.toastMessage.observe(this) { message ->
             message?.let {
                 Toast.makeText(this, it, Toast.LENGTH_SHORT).show()
                 viewModel.consumeToastMessage()
-            }
-        }
-
-        // 观察对话框显示事件
-        viewModel.showDialogEvent.observe(this) { dialogContent ->
-            dialogContent?.let {
-                DialogLayer(this)
-                    .setContentView(it)
-                    .setGravity(Gravity.BOTTOM)
-                    .setSwipeDismiss(SwipeLayout.Direction.BOTTOM)
-                    .setBackgroundDimDefault()
-                    .setContentAnimator(AnimStyle.BOTTOM)
-                    .show()
-                viewModel.consumeDialogEvent()
             }
         }
     }
@@ -146,7 +124,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         binding.button2.setOnClickListener {
-            viewModel.showMessageDialog(this)
+            startActivity(Intent(this, ChatActivity::class.java))
         }
 
         binding.button.setOnClickListener {

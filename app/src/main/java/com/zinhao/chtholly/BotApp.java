@@ -17,20 +17,24 @@ import com.zinhao.chtholly.utils.LocalFileCache;
 import java.util.List;
 
 public class BotApp extends Application {
+    public static final String CONFIG_ADMIN_NAME = "admin_name";
 
+    public static final String CONFIG_CHAT_URL = "chat_url";
     public static final String CONFIG_API_KEY = "api_kye_config";
     public static final String CONFIG_BOT_NAME = "bot_name";
-    public static final String CONFIG_CURRENT_CHARACTER_ID = "current_character_id";
-    public static final String CONFIG_ADMIN_NAME = "admin_name";
-    public static final String CONFIG_CHAT_URL = "chat_url";
+
+    public static final String CONFIG_SOUL_DESC = "soul_description";
+
     public static final String CONFIG_TTS_URL = "tts_url";
     public static final String CONFIG_IS_FIRST_RUN = "is_first_run";
+
 
     private boolean isFirstRun;
     public String apiKey;
     private String botName;
     private String adminName;
-    private long characterId;
+    private String aiSoul;
+
     private String chatUrl;
     private AICharacter currentCharacter;
     private String ttsUrl;
@@ -71,24 +75,17 @@ public class BotApp extends Application {
         instance = this;
         sharedPreferences = getSharedPreferences("app_data", MODE_PRIVATE);
         apiKey = sharedPreferences.getString(CONFIG_API_KEY,"");
-        botName = sharedPreferences.getString(CONFIG_BOT_NAME,"bot name");
+        botName = sharedPreferences.getString(CONFIG_BOT_NAME,"");
+        aiSoul = sharedPreferences.getString(CONFIG_SOUL_DESC,"");
         adminName = sharedPreferences.getString(CONFIG_ADMIN_NAME,"");
-        characterId = sharedPreferences.getLong(CONFIG_CURRENT_CHARACTER_ID,0);
         chatUrl = sharedPreferences.getString(CONFIG_CHAT_URL,HostConsts.GEMINI_PROXY_API_HOST);
         ttsUrl = sharedPreferences.getString(CONFIG_TTS_URL, HostConsts.LOCAL_HOST);
         isFirstRun = sharedPreferences.getBoolean(CONFIG_IS_FIRST_RUN,true);
+
         database = Room.databaseBuilder(this,AppDatabase.class,"app_data")
                 .build();
         messageDao = database.messageDao();
         aiCharacterDao = database.characterDao();
-        LocalFileCache.getInstance().doSomething(()->{
-            currentCharacter = aiCharacterDao.getAICharacterById(characterId);
-            if(currentCharacter == null){
-                currentCharacter = new AICharacter("红豆",getApplicationContext().getString(R.string.neko_chara_1));
-            }
-        });
-
-
     }
 
     public SharedPreferences getSharedPreferences() {
@@ -111,12 +108,12 @@ public class BotApp extends Application {
         return adminName;
     }
 
-    public void setCharacterId(long characterId) {
-        this.characterId = characterId;
+    public String getAiSoul() {
+        return aiSoul;
     }
 
-    public long getCharacterId() {
-        return characterId;
+    public void setAiSoul(String aiSoul) {
+        this.aiSoul = aiSoul;
     }
 
     public AICharacter getCurrentCharacter() {
@@ -125,6 +122,7 @@ public class BotApp extends Application {
 
     public void setCurrentCharacter(AICharacter currentCharacter) {
         this.currentCharacter = currentCharacter;
+        this.aiSoul = currentCharacter.desc;
     }
 
     public boolean isFirstRun() {
@@ -197,14 +195,9 @@ public class BotApp extends Application {
     }
 
     public void switchAISoul(AICharacter character){
-        BotApp.getInstance().setCharacterId(character.getId());
         BotApp.getInstance().setCurrentCharacter(character);
         SharedPreferences.Editor editor = BotApp.getInstance().getSharedPreferences().edit();
-        editor.putLong(BotApp.CONFIG_CURRENT_CHARACTER_ID,character.getId());
+        editor.putString(BotApp.CONFIG_SOUL_DESC,character.getDesc());
         editor.apply();
-        ChatSession session = NekoChatService.getInstance().getSession();
-        if(session!=null){
-            session.setChara(character.getDesc());
-        }
     }
 }

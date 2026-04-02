@@ -47,6 +47,7 @@
             </intent-filter>
         </activity>
         <activity android:name="com.zinhao.chtholly.view.SetupActivity" android:exported="false" />
+        <activity android:name="com.zinhao.chtholly.view.ChatActivity" />
 
         <service
             android:name=".NekoChatService"

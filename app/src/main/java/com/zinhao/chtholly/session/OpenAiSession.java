@@ -91,7 +91,7 @@ public class OpenAiSession extends NekoSession implements ChatSession{
         try {
             firstSystemChat.put(ROLE,ROLE_SYSTEM);
             firstSystemChat.put(CONTENT,
-                    BotApp.getInstance().getCurrentCharacter().desc.replace("$name",BotApp.getInstance().getBotName()));
+                    BotApp.getInstance().getAiSoul().replace("$name",BotApp.getInstance().getBotName()));
             chats.put(firstSystemChat);
 
             JSONArray tools = new JSONArray();

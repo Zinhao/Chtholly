@@ -39,7 +39,6 @@ class SetupServerFragment : Fragment() {
         val presets = listOf("OpenAI", "Gemini", "自定义")
         val adapter = ArrayAdapter(requireContext(), android.R.layout.simple_dropdown_item_1line, presets)
         binding.presetDropdown.setAdapter(adapter)
-
         binding.presetDropdown.setOnItemClickListener { _, _, position, _ ->
             when (position) {
                 0 -> viewModel.applyPresetConfig(SetupViewModel.ServerPreset.OpenAI)
@@ -47,6 +46,7 @@ class SetupServerFragment : Fragment() {
                 2 -> viewModel.applyPresetConfig(SetupViewModel.ServerPreset.Custom)
             }
         }
+        viewModel.applyPresetConfig(SetupViewModel.ServerPreset.Custom)
     }
 
     private fun setupInputListeners() {

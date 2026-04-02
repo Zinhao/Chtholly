@@ -47,21 +47,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _currentChara = MutableLiveData<String>()
     val currentChara: LiveData<String> = _currentChara
 
-    // 消息列表
-    private val _messages = MutableLiveData<List<Message>>(emptyList())
-    val messages: LiveData<List<Message>> = _messages
-
-    // 消息对话框是否可显示（数据加载完成后）
-    private val _isMessageDialogReady = MutableLiveData<Boolean>(false)
-    val isMessageDialogReady: LiveData<Boolean> = _isMessageDialogReady
-
     // Toast 消息
     private val _toastMessage = MutableLiveData<String?>()
     val toastMessage: LiveData<String?> = _toastMessage
-
-    // 对话框显示事件
-    private val _showDialogEvent = MutableLiveData<View?>()
-    val showDialogEvent: LiveData<View?> = _showDialogEvent
 
     // ==================== 初始化 ====================
 
@@ -98,6 +86,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 putString(BotApp.CONFIG_BOT_NAME, _botName.value ?: "")
                 putString(BotApp.CONFIG_ADMIN_NAME, _adminName.value ?: "")
                 putString(BotApp.CONFIG_API_KEY, _apiKey.value ?: "")
+                putBoolean(BotApp.CONFIG_IS_FIRST_RUN, BotApp.getInstance().isFirstRun)
                 apply()
             }
         }
@@ -112,27 +101,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _accessibilityEnabled.value = isAccessibilitySettingsOn(context)
     }
 
-    /**
-     * 加载消息列表
-     */
-    fun loadMessages() {
-        viewModelScope.launch(Dispatchers.IO) {
-            BotApp.getInstance().select(object : MessageDao.MessageGetAllListener {
-                override fun onSuccess(result: List<Message>) {
-                    _messages.postValue(result)
-                    _isMessageDialogReady.postValue(true)
-                }
-            })
-        }
-    }
+
 
     /**
      * 获取当前会话角色信息
      */
     fun refreshCurrentChara() {
-        val service = NekoChatService.getInstance()
-        val session = service?.getSession()
-        _currentChara.value = BotApp.getInstance().currentCharacter.desc
+        _currentChara.value = BotApp.getInstance().aiSoul
     }
 
     // ==================== 点击事件处理 ====================
@@ -149,19 +124,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    /**
-     * 显示消息对话框
-     */
-    fun showMessageDialog(context: Context) {
-        val messagesList = _messages.value ?: return
-
-        val dialogContent = LayoutInflater.from(context).inflate(R.layout.bottom_dialog, null, false)
-        val listView = dialogContent.findViewById<ListView>(R.id.list)
-        listView?.adapter = MessageAdapter(context, android.R.layout.simple_list_item_2, messagesList)
-
-        _showDialogEvent.value = dialogContent
-    }
-
     // ==================== 生命周期方法 ====================
 
     /**
@@ -169,13 +131,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
      */
     fun consumeToastMessage() {
         _toastMessage.value = null
-    }
-
-    /**
-     * 消费对话框事件
-     */
-    fun consumeDialogEvent() {
-        _showDialogEvent.value = null
     }
 
     // ==================== 私有工具方法 ====================
@@ -213,43 +168,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             }
         }
         return false
-    }
-
-    // ==================== 数据类定义 ====================
-
-    sealed class NavigationEvent {
-        object AccessibilitySettings : NavigationEvent()
-        object CharacterSettings : NavigationEvent()
-        object VoiceSettings : NavigationEvent()
-    }
-
-    // ==================== Adapter（可移到单独文件）====================
-
-    class MessageAdapter(
-        context: Context,
-        resource: Int,
-        objects: List<Message>
-    ) : ArrayAdapter<Message>(context, resource, objects) {
-
-        @NonNull
-        override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
-            var view = convertView
-
-            if (view == null) {
-                view = LayoutInflater.from(parent.context)
-                    .inflate(android.R.layout.simple_list_item_2, parent, false)
-            }
-
-            view?.let {
-                val tvTitle = it.findViewById<TextView>(android.R.id.text1)
-                tvTitle.text = getItem(position)?.getSpeaker()
-
-                val tvResult = it.findViewById<TextView>(android.R.id.text2)
-                tvResult.text = getItem(position)?.getMessage()
-            }
-
-            return view!!
-        }
     }
 
     // ==================== 清理 ====================
