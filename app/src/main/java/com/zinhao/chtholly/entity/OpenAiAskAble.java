@@ -79,7 +79,11 @@ public class OpenAiAskAble extends NetAiAskAble{
                     getAnswer().setMessage(e.getMessage());
                 }
             }
+        }else{
+            getAnswer().setSpeaker("ServerErr");
+            getAnswer().setMessage(response.message());
         }
+        replay = true;
         if(delayReplyCallback !=null)
             delayReplyCallback.onReply(this);
         response.close();

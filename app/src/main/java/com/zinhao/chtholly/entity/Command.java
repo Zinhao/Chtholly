@@ -2,7 +2,6 @@ package com.zinhao.chtholly.entity;
 
 import android.accessibilityservice.GestureDescription;
 import android.content.Context;
-import android.content.SharedPreferences;
 import android.graphics.Path;
 import android.graphics.PointF;
 import android.graphics.Rect;
@@ -39,32 +38,18 @@ public abstract class Command{
         String desc();      // 格式要求，如 "yyyy-MM-dd"
     }
     private static final String TAG = "Command";
-    private static final String SWITCH_COMMAND_EN = "/switchBotOrAI";
-
-    private static final String SEVER_BATTERY = "/battery";
-    private static final String COMMAND_LIST = "/help";
-    private static final String FIRST_PIC = "/sendNewestPic";
-    private static final String CLICK_ID = "/clickViewId";
-    private static final String TAKE_PHOTO = "/takePhoto";
-    private static final String SCREEN_SHOT = "/screenShot";
-    private static final String SUMMARIZE_CHAT = "/summarizeChat";
-    private static final String PRINT_CHARA = "/printCharacter";
-    private static final String PRINT_CHATS = "/printMessage";
-    private static final String CLOSE_AUTO = "/closeAutoAction";
-    private static final String OPEN_AUTO = "/openAutoAction";
-    private static final String VIDEO_CALL = "/videoCall";
-    private static final String EVERY_DAY_CHECK = "/everyDayCheck";
-    private static final String SWITCH_CHATS = "/switchChat";
-    private static final String SEND_GALLERY = "/sendGallery";
-    private static final String SHARE_SCREEN = "/shareScreen";
-    private static final String RECORD_VIDEO = "/recordVideo";
 
     private final String packageName;
+
     private final Message question;
     private Message answer;
+
     private boolean write = false;
     private boolean send = false;
+
     private boolean outTime = false;
+    protected boolean replay = false;
+
     private String[] args;
 
     private List<Step> steps;
@@ -106,9 +91,7 @@ public abstract class Command{
 
     // 对外暴露的统一入口（不可重写）
     public final void handle() {
-        Log.i(TAG,"handle:"+getQuestion().getMessage());
         if (handleAsk()) {
-            Log.i(TAG,"handleAsk true:"+getQuestion().getMessage());
             return;
         }else {
             throwToChild();
@@ -130,6 +113,7 @@ public abstract class Command{
                 }
                 Method method = Command.class.getDeclaredMethod(MethodName.replace('/',' ').trim());
                 method.invoke(this);
+                replay = true;
                 return true;
             } catch (NoSuchMethodException | InvocationTargetException | IllegalAccessException e) {
                 Log.e(getClass().getSimpleName(), "Command invoke err: " + getClass().getSimpleName(), e);
@@ -176,7 +160,7 @@ public abstract class Command{
         if(args == null || args.length == 0){
             // todo 发送最近照片截图，尚未测试
             steps = NekoChatService.getInstance().getQqChatHandler().sendGalleryPreview();
-            getAnswer().setMessage("需要发送具体照片，请在按一下格式发送,如发送第1张和第5张("+SEND_GALLERY+" 0 4),");
+            getAnswer().setMessage("需要发送具体照片，请在按一下格式发送,如发送第1张和第5张($command 0 4),");
         }else{
             steps = NekoChatService.getInstance().getQqChatHandler().sendGalleryPicture(args);
             getAnswer().setMessage(NekoAskAble.OK);
@@ -214,7 +198,7 @@ public abstract class Command{
                 if(QQChatHandler.PACKAGE_NAME.equals(packageName)){
                     steps = NekoChatService.getInstance().getQqChatHandler().switchChatQuery();
                 }
-                getAnswer().setMessage("看好需要切换的聊天的位置，使用("+SWITCH_CHATS+" 0)切换至第一个聊天，数字表示聊天的索引。");
+                getAnswer().setMessage("看好需要切换的聊天的位置，使用($command 0)切换至第一个聊天，数字表示聊天的索引。");
                 return true;
             }else {
                 getAnswer().setMessage(NekoAskAble.HARD);
@@ -298,29 +282,28 @@ public abstract class Command{
         return true;
     }
     @HelpDoc(desc = "消息上下文")
-    private boolean printMessage() {
+    private boolean printContext() {
         ChatSession chatSession = NekoChatService.getInstance().getSession();
         String his = chatSession.getContextChat();
         getAnswer().setMessage(his);
         return true;
     }
 
-    @HelpDoc(desc = "打印AI设定")
-    private boolean printCharacter() {
-        ChatSession chatSession = NekoChatService.getInstance().getSession();
-        String chara = chatSession.getChara();
+    @HelpDoc(desc = "AI人设")
+    private boolean printSoul() {
+        String chara = BotApp.getInstance().getAiSoul();
         getAnswer().setMessage(String.format(Locale.CHINA,"这是%s的设定： %s。",BotApp.getInstance().getBotName(),chara));
         return true;
     }
     @HelpDoc(desc = "总结对话")
-    private boolean summarizeChat() {
+    private boolean summarize() {
         ChatSession chatSession = NekoChatService.getInstance().getSession();
         int len = chatSession.summarize();
         getAnswer().setMessage(String.format(Locale.CHINA,"%s 将为主人总结%d条对话。",BotApp.getInstance().getBotName(),len));
         return true;
     }
     @HelpDoc(desc = "[1 str arg]切换模式")
-    private boolean switchBotOrAI() {
+    private boolean switchMode() {
         if(geminiIgnoreCase.matcher(question.getMessage()).find()){
             getAnswer().setMessage(NekoAskAble.OK +" => gemini ai");
             NekoChatService.mode = GeminiSession.class;
@@ -355,7 +338,7 @@ public abstract class Command{
         return true;
     }
     @HelpDoc(desc = "分享屏幕")
-    private boolean shareScreen(){
+    private boolean screenShare(){
         steps = new Vector<>();
         //将步骤委托给 QQChatHandler
         if(packageName.equals(QQChatHandler.PACKAGE_NAME)){
@@ -384,7 +367,7 @@ public abstract class Command{
     @HelpDoc(desc = "like(\"switchSoul 1\")")
     private boolean switchSoul(){
         if(args == null || args.length == 0){
-            BotApp.getInstance().select(new AICharacterDao.AICharacterGetAllListener() {
+            BotApp.getInstance().loadAICharacter(new AICharacterDao.AICharacterGetAllListener() {
                 @Override
                 public void onSuccess(List<AICharacter> result) {
                     StringBuilder stringBuilder = new StringBuilder();
@@ -396,7 +379,7 @@ public abstract class Command{
             });
             return true;
         }
-        BotApp.getInstance().select(new AICharacterDao.AICharacterGetAllListener() {
+        BotApp.getInstance().loadAICharacter(new AICharacterDao.AICharacterGetAllListener() {
             @Override
             public void onSuccess(List<AICharacter> result) {
                 StringBuilder stringBuilder = new StringBuilder();
@@ -561,6 +544,11 @@ public abstract class Command{
         String apiKey = BotApp.getInstance().apiKey;
         String apiKeySub = apiKey.substring(apiKey.length()-5);
         stringBuilder.append("ApiKey:").append("sk-***********").append(apiKeySub).append("\n");
+        if(NekoChatService.getInstance()!=null){
+            stringBuilder.append("auto:").append(NekoChatService.getInstance().autoAsk).append("\n");
+            stringBuilder.append("chat index:").append(NekoChatService.getInstance().getChatsIndex()).append("\n");
+        }
+
         return  stringBuilder;
     }
 
@@ -590,7 +578,9 @@ public abstract class Command{
     }
 
     public void finishStepAction(){
-        steps.clear();
+        if(steps!=null){
+            steps.clear();
+        }
     }
 
     public void finishTextReply(){
@@ -604,13 +594,17 @@ public abstract class Command{
         }
     }
 
+    public boolean isReplay() {
+        return replay;
+    }
+
     public Message getQuestion() {
         return question;
     }
 
     public Message getAnswer() {
         if(answer == null){
-            answer = new Message("base",null,System.currentTimeMillis());
+            answer = new Message("System",null,System.currentTimeMillis());
         }
         return answer;
     }

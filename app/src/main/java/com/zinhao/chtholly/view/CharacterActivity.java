@@ -49,7 +49,7 @@ public class CharacterActivity extends AppCompatActivity implements CharacterAda
                 startActivityForResult(addIntent,2);
             }
         });
-        BotApp.getInstance().select(new AICharacterDao.AICharacterGetAllListener() {
+        BotApp.getInstance().loadAICharacter(new AICharacterDao.AICharacterGetAllListener() {
             @Override
             public void onSuccess(List<AICharacter> result) {
                 runOnUiThread(new Runnable() {

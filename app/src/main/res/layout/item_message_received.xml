@@ -18,23 +18,30 @@
             android:id="@+id/tv_speaker"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:textColor="#388E3C"
+            android:textColor="@color/lighter_gray"
             android:textSize="12sp"
+            android:text="@string/app_name"
             android:textStyle="bold" />
 
         <TextView
-            android:id="@+id/tv_message"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:textColor="#212121"
-            android:textSize="16sp"
-            android:layout_marginTop="4dp" />
+                android:id="@+id/tv_message"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@color/white"
+                android:textSize="16sp"
+                android:textIsSelectable="true"
+                android:enabled="true"
+                android:focusable="true"
+                android:longClickable="true"
+                android:text="接收到的消息"
+                android:layout_marginTop="4dp"/>
 
         <TextView
             android:id="@+id/tv_time"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:textColor="#757575"
+            android:textColor="@color/lighter_gray"
+            android:text="10:08:01"
             android:textSize="11sp"
             android:layout_marginTop="4dp" />
 

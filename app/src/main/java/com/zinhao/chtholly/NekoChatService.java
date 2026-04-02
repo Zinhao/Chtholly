@@ -134,10 +134,13 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
 
         createNotificationChannel();
         startForeground(1, getNotification());
+
         sensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
         if (sensorManager != null) {
             Sensor accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
-            Log.d(TAG, "onCreate: accelerometer is WakeUpSensor:" +  accelerometer.isWakeUpSensor());
+            if (accelerometer != null) {
+                Log.d(TAG, "onCreate: accelerometer is WakeUpSensor:" +  accelerometer.isWakeUpSensor());
+            }
             sensorManager.registerListener(this, accelerometer, SensorManager.SENSOR_DELAY_NORMAL);
         }
     }
@@ -192,7 +195,7 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
 
         if (BuildConfig.DEBUG) {
             StringBuilder stringBuilder = LayoutTreeUtils.getEventStringBuilder(event);
-            Log.i(TAG, "getEventStringBuilder: "+stringBuilder);
+            addLogcat("getEventStringBuilder: "+stringBuilder);
             //EventType: TYPE_WINDOW_CONTENT_CHANGED; EventTime: 338363649;
             // PackageName: com.android.systemui; MovementGranularity: 0; Action: 0;
             // ContentChangeTypes: [CONTENT_CHANGE_TYPE_CONTENT_DESCRIPTION];
@@ -214,11 +217,10 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
                     sourcePackageName = event.getSource().getPackageName().toString();
                 }
                 String logcat ="package:" + event.getPackageName() + ", class:"+event.getClassName()+", text: " + event.getText() + ", desc: " + event.getContentDescription() +",source:"+sourcePackageName;
-                Log.i(TAG, logcat);
+                addLogcat(logcat);
                 // 锁屏 动作package:com.android.systemui, class:android.widget.FrameLayout, text: [锁定屏幕。], desc: null,source:com.android.systemui
                 if(event.getPackageName().equals("com.android.systemui") && event.getText().toString().equals("[锁定屏幕。]")){
-                    Log.i(TAG, "onAccessibilityEvent: lock screen!");
-                    addLogcat("lock screen");
+                    addLogcat("onAccessibilityEvent: lock screen!");
                     lockScreen = true;
                 }else {
                     if(lockScreen){
@@ -242,7 +244,6 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
         String pageName = processNotChatPage(event.getSource());
         if(!UNKNOWN_PAGE.equals(pageName) && !NULL_ROOT.equals(pageName)){
             addLogcat( "onAccessibilityEvent: " + pageName);
-            Log.d(TAG, "onAccessibilityEvent: " + pageName);
         }
 
 
@@ -250,7 +251,7 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
             if(BuildConfig.DEBUG){
                 try {
                     if("com.android.systemui:id/clock".equals(event.getSource().getViewIdResourceName())){
-//                        Log.d(TAG, "onAccessibilityEvent: " + "s");
+                        
                     }else{
                         JSONObject layoutTree = LayoutTreeUtils.treeAndPrintLayout(event.getSource(), 0);
                         //com.tencent.mobileqq:id/listView1
@@ -265,7 +266,7 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
                         }
 
                         String jsonFileName = "tree" + fileName + ".json";
-                        Log.i(TAG,"current_page_fileName: "+jsonFileName);
+                        addLogcat("current_page_fileName: "+jsonFileName);
                         LocalFileCache.getInstance().saveJSONObject(getApplicationContext(), layoutTree, jsonFileName);
                     }
 
@@ -375,7 +376,7 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
 
     @Override
     public void onInterrupt() {
-        Log.d(TAG, "onInterrupt: ");
+        FileLogger.INSTANCE.d(TAG, "onInterrupt: ");
     }
 
     // 检查队列的消息
@@ -772,11 +773,11 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
     private static final int VIBRATION_LOG_END= 324;
     private static final int VIBRATION_LOGGING= 325;
     private int currentVibrationLogStatus;
-    private boolean enableReportVibration = false;
+    private static final boolean ENABLE_REPORT_VIBRATION = false;
     private OnVibrationStrengthListener listener = new OnVibrationStrengthListener() {
         @Override
         public void onVibrationStrengthChanged(float strength) {
-            if(enableReportVibration && strength >= MIN_STR && System.currentTimeMillis() - lastReportVibration > REPORT_RANGE
+            if(ENABLE_REPORT_VIBRATION && strength >= MIN_STR && System.currentTimeMillis() - lastReportVibration > REPORT_RANGE
                     && System.currentTimeMillis() - serviceCreateTime > 30000){
                 //开始记录10秒内的震动数据
                 dataPoints.clear();

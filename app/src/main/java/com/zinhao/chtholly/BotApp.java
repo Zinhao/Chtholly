@@ -10,9 +10,11 @@ import com.zinhao.chtholly.db.AppDatabase;
 import com.zinhao.chtholly.db.MessageDao;
 import com.zinhao.chtholly.entity.AICharacter;
 import com.zinhao.chtholly.entity.Message;
-import com.zinhao.chtholly.session.ChatSession;
+import com.zinhao.chtholly.utils.AsyncHelper;
 import com.zinhao.chtholly.utils.HostConsts;
 import com.zinhao.chtholly.utils.LocalFileCache;
+import kotlinx.coroutines.AbstractCoroutine;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
 
@@ -41,7 +43,6 @@ public class BotApp extends Application {
 
     private static BotApp instance;
     private SharedPreferences sharedPreferences;
-    private AppDatabase database;
     private MessageDao messageDao;
     private AICharacterDao aiCharacterDao;
 
@@ -81,8 +82,8 @@ public class BotApp extends Application {
         chatUrl = sharedPreferences.getString(CONFIG_CHAT_URL,HostConsts.GEMINI_PROXY_API_HOST);
         ttsUrl = sharedPreferences.getString(CONFIG_TTS_URL, HostConsts.LOCAL_HOST);
         isFirstRun = sharedPreferences.getBoolean(CONFIG_IS_FIRST_RUN,true);
-
-        database = Room.databaseBuilder(this,AppDatabase.class,"app_data")
+        currentCharacter = new AICharacter(botName,aiSoul);
+        AppDatabase database = Room.databaseBuilder(this, AppDatabase.class, "app_data")
                 .build();
         messageDao = database.messageDao();
         aiCharacterDao = database.characterDao();
@@ -120,7 +121,7 @@ public class BotApp extends Application {
         return currentCharacter;
     }
 
-    public void setCurrentCharacter(AICharacter currentCharacter) {
+    public void setCurrentCharacter(@NotNull AICharacter currentCharacter) {
         this.currentCharacter = currentCharacter;
         this.aiSoul = currentCharacter.desc;
     }
@@ -146,7 +147,7 @@ public class BotApp extends Application {
     }
 
     public void insert(Message message){
-        LocalFileCache.getInstance().doSomething(new Runnable() {
+        AsyncHelper.INSTANCE.doAsyncPart(new Runnable() {
             @Override
             public void run() {
                 messageDao.insert(message);
@@ -154,8 +155,8 @@ public class BotApp extends Application {
         });
     }
 
-    public void select(MessageDao.MessageGetAllListener listener){
-        LocalFileCache.getInstance().doSomething(new Runnable() {
+    public void loadMessage(MessageDao.MessageGetAllListener listener){
+        AsyncHelper.INSTANCE.doAsyncPart(new Runnable() {
             @Override
             public void run() {
                 List<Message> result = messageDao.getAll();
@@ -165,7 +166,7 @@ public class BotApp extends Application {
     }
 
     public void insert(AICharacter character){
-        LocalFileCache.getInstance().doSomething(new Runnable() {
+        AsyncHelper.INSTANCE.doAsyncPart(new Runnable() {
             @Override
             public void run() {
                 long id = aiCharacterDao.insert(character);
@@ -174,7 +175,7 @@ public class BotApp extends Application {
         });
     }
     public void insert(AICharacter character,Runnable callback){
-        LocalFileCache.getInstance().doSomething(new Runnable() {
+        AsyncHelper.INSTANCE.doAsyncPart(new Runnable() {
             @Override
             public void run() {
                 long id = aiCharacterDao.insert(character);
@@ -184,8 +185,8 @@ public class BotApp extends Application {
         });
     }
 
-    public void select(AICharacterDao.AICharacterGetAllListener listener){
-        LocalFileCache.getInstance().doSomething(new Runnable() {
+    public void loadAICharacter(AICharacterDao.AICharacterGetAllListener listener){
+        AsyncHelper.INSTANCE.doAsyncPart(new Runnable() {
             @Override
             public void run() {
                 List<AICharacter> result = aiCharacterDao.getAll();

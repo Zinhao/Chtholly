@@ -29,6 +29,7 @@ class GeminiAIAskAble : NetAiAskAble {
 
     override fun onFailure(call: Call, e: IOException) {
         getAnswer().setMessage(String.format(Locale.CHINA, "\uD83D\uDE44发生错误了:%s %s", e.message, e.cause))
+        replay = true
         if (delayReplyCallback != null) delayReplyCallback.onReply(this)
     }
 
@@ -44,32 +45,35 @@ class GeminiAIAskAble : NetAiAskAble {
         if (response.code == 200) {
             val body = response.body
             if (body != null) {
-                if (getAnswer() != null) {
-                    try {
-                        val geminiAnswerResult = jsonAdapter.fromJson(body.string())
-                        val candidate = geminiAnswerResult?.candidates?.firstOrNull()
-                        candidate?.let {
-                            if (candidate.finishReason == "length") {
-                                //自动总结
-                                instance?.requestChatSummarize()
-                            } else if (candidate.finishReason == "tool_calls") {
-                            } else if (candidate.finishReason.lowercase() == "stop") {
-                                val content = candidate.content.parts.firstOrNull()?.text
-                                if (content != null && content.trim { it <= ' ' } != "null") {
-                                    doTextReply(content)
-                                    doTTSReply(content)
-                                    instance!!.addAssistantChat(content)
-                                }
+                try {
+                    val geminiAnswerResult = jsonAdapter.fromJson(body.string())
+                    val candidate = geminiAnswerResult?.candidates?.firstOrNull()
+                    candidate?.let {
+                        if (candidate.finishReason == "length") {
+                            //自动总结
+                            instance?.requestChatSummarize()
+                        } else if (candidate.finishReason == "tool_calls") {
+                        } else if (candidate.finishReason.lowercase() == "stop") {
+                            val content = candidate.content.parts.firstOrNull()?.text
+                            if (content != null && content.trim { it <= ' ' } != "null") {
+                                doTextReply(content)
+                                doTTSReply(content)
+                                instance!!.addAssistantChat(content)
                             }
                         }
-
-                    } catch (e: JSONException) {
-                        throw RuntimeException(e)
                     }
+
+                } catch (e: JSONException) {
+                    throw RuntimeException(e)
                 }
             }
+        }else{
+            answer.message = response.message
+            answer.speaker = "ServerError"
         }
-        if (delayReplyCallback != null) delayReplyCallback.onReply(this)
+        replay = true
+        if (delayReplyCallback != null)
+            delayReplyCallback.onReply(this)
         response.close()
     }
 

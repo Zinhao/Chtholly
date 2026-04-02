@@ -1,6 +1,7 @@
 package com.zinhao.chtholly.entity;
 
 import android.util.Log;
+import com.zinhao.chtholly.BotApp;
 import com.zinhao.chtholly.NekoChatService;
 import com.zinhao.chtholly.session.NekoSession;
 
@@ -34,6 +35,7 @@ public class NekoAskAble extends Command {
     @Override
     protected boolean handleAsk() {
         Log.i("Command","NekoAskAble handleAsk");
+        getAnswer().setSpeaker(BotApp.getInstance().getBotName());
         return super.handleAsk();
     }
 }

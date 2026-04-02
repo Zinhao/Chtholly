@@ -13,13 +13,9 @@ import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
 
-public class LocalFileCache implements Runnable, Closeable {
+public class LocalFileCache{
     private static final String TAG = "LocalFileCache";
-    private static final String CONFIG_PLAY_LIST = "playList.json";
-    private static final String CONFIG_USERS = "users.json";
     private static LocalFileCache instance;
-    private final List<Runnable> mission;
-    private boolean running = true;
 
     public static synchronized LocalFileCache getInstance() {
         if (instance == null) {
@@ -28,11 +24,7 @@ public class LocalFileCache implements Runnable, Closeable {
         return instance;
     }
 
-    public LocalFileCache() {
-        mission = new ArrayList<>();
-        Thread workThread = new Thread(this);
-        workThread.start();
-    }
+    private LocalFileCache() {}
 
     public File getExternalAppRootDir() throws FileNotFoundException {
         File rootDir;
@@ -60,7 +52,7 @@ public class LocalFileCache implements Runnable, Closeable {
     }
 
     public void writeText(final File save, final String text) {
-        mission.add(new Runnable() {
+        AsyncHelper.INSTANCE.doAsyncPart(new Runnable() {
             @Override
             public void run() {
                 try {
@@ -80,7 +72,7 @@ public class LocalFileCache implements Runnable, Closeable {
     }
 
     public void readText(final File save, AsyncHttpClient.StringCallback callback) {
-        mission.add(new Runnable() {
+        AsyncHelper.INSTANCE.doAsyncPart(new Runnable() {
             @Override
             public void run() {
                 try {
@@ -119,7 +111,7 @@ public class LocalFileCache implements Runnable, Closeable {
     public void saveJSONObject(Context context, JSONObject jsonObject, String name) {
         if (jsonObject == null)
             return;
-        mission.add(new Runnable() {
+        AsyncHelper.INSTANCE.doAsyncPart(new Runnable() {
             @Override
             public void run() {
                 File file = new File(context.getCacheDir(), name);
@@ -137,7 +129,7 @@ public class LocalFileCache implements Runnable, Closeable {
      */
     public void readJSONObject(Context context, String name, AsyncHttpClient.JSONObjectCallback callback) {
         File file = new File(context.getCacheDir(), name);
-        mission.add(new Runnable() {
+        AsyncHelper.INSTANCE.doAsyncPart(new Runnable() {
             @Override
             public void run() {
                 try {
@@ -150,35 +142,5 @@ public class LocalFileCache implements Runnable, Closeable {
                 }
             }
         });
-    }
-
-    public void doSomething(Runnable runnable){
-        mission.add(runnable);
-    }
-
-    @Override
-    public void run() {
-        running = true;
-        while (running) {
-            synchronized (mission) {
-                if (!mission.isEmpty()) {
-                    Runnable runnable = mission.get(0);
-                    if(runnable!=null){
-                        runnable.run();
-                    }
-                    mission.remove(0);
-                }
-            }
-            try {
-                Thread.sleep(1);
-            } catch (InterruptedException e) {
-                Log.e(TAG, "run: ", e);
-            }
-        }
-    }
-
-    @Override
-    public void close() throws IOException {
-        running = false;
     }
 }

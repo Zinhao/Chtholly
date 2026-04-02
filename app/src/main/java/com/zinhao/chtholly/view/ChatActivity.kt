@@ -1,14 +1,17 @@
 package com.zinhao.chtholly.view
 
+import android.content.Context
 import android.os.Bundle
 import android.view.KeyEvent
 import android.view.View
 import android.view.inputmethod.EditorInfo
+import android.view.inputmethod.InputMethodManager
 import android.widget.TextView
 import android.widget.TextView.OnEditorActionListener
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.zinhao.chtholly.BotApp
 import com.zinhao.chtholly.databinding.ActivityChatBinding
 import com.zinhao.chtholly.view.adapter.AppChatAdapter
 import com.zinhao.chtholly.viewmodel.ChatViewModel
@@ -39,7 +42,7 @@ class ChatActivity : AppCompatActivity() {
     }
 
     private fun initRecyclerView() {
-        adapter = AppChatAdapter(CURRENT_USER)
+        adapter = AppChatAdapter(BotApp.getInstance().adminName)
         val layoutManager = LinearLayoutManager(this)
         layoutManager.setStackFromEnd(true) // 从底部开始显示
         binding.recyclerView.setLayoutManager(layoutManager)
@@ -58,7 +61,7 @@ class ChatActivity : AppCompatActivity() {
         // 观察加载状态
         viewModel.isMessageDialogReady.observe(this, { isLoading ->
             binding.btnSend.setEnabled(!isLoading)
-            binding.progressBar.setVisibility(if (isLoading) View.VISIBLE else View.GONE)
+            binding.progressBar.visibility = if (isLoading) View.VISIBLE else View.GONE
         })
     }
 
@@ -66,8 +69,9 @@ class ChatActivity : AppCompatActivity() {
         binding.btnSend.setOnClickListener { v: View? ->
             val content = binding.etInput.text.toString().trim { it <= ' ' }
             if (!content.isEmpty()) {
-                viewModel.sendMessage(CURRENT_USER, content)
+                viewModel.sendMessage(BotApp.getInstance().adminName, content)
                 binding.etInput.setText("")
+                binding.etInput.hideKeyboard()
             }
         }
 
@@ -78,5 +82,11 @@ class ChatActivity : AppCompatActivity() {
             }
             false
         })
+    }
+
+    // 定义扩展函数
+    fun View.hideKeyboard() {
+        val imm = context.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+        imm.hideSoftInputFromWindow(windowToken, 0)
     }
 }

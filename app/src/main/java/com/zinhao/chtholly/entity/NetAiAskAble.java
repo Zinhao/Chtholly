@@ -53,11 +53,14 @@ public class NetAiAskAble extends NekoAskAble implements Callback{
 
     public void doTextReply(String content){
         getAnswer().setMessage(content);
+        getAnswer().setSpeaker(BotApp.getInstance().getBotName());
         BotApp.getInstance().insert(getAnswer());
     }
 
     public void doTTSReply(String text){
-        NekoChatService.getInstance().playTTSVoiceFromNetWork(text);
+        if(NekoChatService.getInstance()!=null){
+            NekoChatService.getInstance().playTTSVoiceFromNetWork(text);
+        }
     }
 
     /***
