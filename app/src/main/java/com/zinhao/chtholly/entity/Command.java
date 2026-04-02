@@ -101,8 +101,8 @@ public abstract class Command{
     protected abstract boolean throwToChild();
 
     protected boolean handleAsk() {
-        Log.i(TAG,"Command handleAsk");
-        if(getQuestion().getMessage().startsWith("/")){
+        Log.i(TAG,"Command handleAsk:"+ getQuestion().speaker);
+        if(getQuestion().getMessage().startsWith("/") && isAdminMessage()){
             Log.i(TAG,"Command invoke");
             try {
                 String[] methodAndArgs = parseArgs();
@@ -631,5 +631,9 @@ public abstract class Command{
 
     public boolean haveAction(){
         return steps!=null && !steps.isEmpty();
+    }
+
+    public boolean isAdminMessage(){
+        return question.speaker.equals(BotApp.getInstance().getAdminName());
     }
 }

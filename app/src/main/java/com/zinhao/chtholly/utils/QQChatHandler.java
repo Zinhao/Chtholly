@@ -165,6 +165,18 @@ public class QQChatHandler extends BaseChatHandler {
             }
         }
 
+
+        List<AccessibilityNodeInfo> messageItemList = nodeInfo.findAccessibilityNodeInfosByViewId(getChatMessageItemId());
+        for (int i = 0; i < messageItemList.size(); i++) {
+            AccessibilityNodeInfo messageItem = messageItemList.get(i);
+            for (int j = 0; j < messageItem.getChildCount(); j++) {
+                AccessibilityNodeInfo messageItemChild = messageItem.getChild(j);
+                //todo
+//                if(messageItemChild.getViewIdResourceName().equals())
+            }
+
+        }
+
         List<AccessibilityNodeInfo> nickNodes = nodeInfo.findAccessibilityNodeInfosByViewId(getChatNickId());
         List<AccessibilityNodeInfo> messageNodes = nodeInfo.findAccessibilityNodeInfosByViewId(getChatTextId());
         Message emptyMessage = new Message(null,null,System.currentTimeMillis());
@@ -177,6 +189,7 @@ public class QQChatHandler extends BaseChatHandler {
             int lastIndex = nickNodes.size()-1;
             CharSequence text = messageNodes.get(lastIndex).getText();
             if(text!=null){
+
                 emptyMessage.setSpeaker(nickNodes.get(lastIndex).getText()+"");
                 emptyMessage.setMessage(text.toString());
                 emptyMessage.setNodeInfo(messageNodes.get(lastIndex));
@@ -323,7 +336,17 @@ public class QQChatHandler extends BaseChatHandler {
     public static String getChatTitleId(){
         return PACKAGE_NAME + ":id/title";
     }
+    public static String getChatMessageItemId(){
+        // ab6[0] = chat_item_time_stamp[text] = 23:02
 
+        // ab6[2] = nbt[0]["desc"]= 成员等级
+        // ab6[2] = nbt[1]["desc"] = 6
+        // ab6[2] = nbt[2]["text"] = 群主
+
+        // ab6[3] = chat_item_nick_name[text] = 发言人
+        // ab6[4] = chat_item_content_layout[text] = 消息正文
+        return PACKAGE_NAME + ":id/a6b";
+    }
     public static String getChatNickId(){
         return PACKAGE_NAME + ":id/chat_item_nick_name";
     }

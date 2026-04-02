@@ -745,6 +745,7 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
         if(accessibilityLogcatView!=null){
             accessibilityLogcatView.appendLogcat(l);
         }
+        FileLogger.INSTANCE.d(TAG,l);
     }
 
     @Override
