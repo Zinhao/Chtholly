@@ -5,6 +5,8 @@ import com.zinhao.chtholly.BotApp;
 import com.zinhao.chtholly.network.LoggingInterceptor;
 import com.zinhao.chtholly.NekoChatService;
 import com.zinhao.chtholly.entity.*;
+import com.zinhao.chtholly.network.openai.OpenAiMethodTool;
+
 import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
@@ -14,10 +16,12 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.TimeUnit;
 
-public class OpenAiSession extends NekoSession implements ChatSession{
+public class OpenAiSession extends NekoSession implements RemoteChatApiSession {
     private static final String TAG = "OpenAiSession";
 
     private static final String ROLE = "role";
@@ -33,7 +37,6 @@ public class OpenAiSession extends NekoSession implements ChatSession{
     public static final String MODEL_GPT_4_TURBO = "gpt-4-turbo";
     public static final String MODEL_GPT_4O_MINI = "gpt-4o-mini";
     public static final String MODEL_GPT_4O = "gpt-4o";
-    public static final String MODEL_GEMINI_3_FL_PRE = "gemini-3.1-flash-lite-preview";
 
     private static final SimpleDateFormat dateFormat = new SimpleDateFormat("yyyyMMdd", Locale.CHINA);
     private static final SimpleDateFormat dateTimeFormat = new SimpleDateFormat("yyyy年MM月dd日 HH:mm:ss", Locale.CHINA);
@@ -42,17 +45,18 @@ public class OpenAiSession extends NekoSession implements ChatSession{
     private final OkHttpClient okHttpClient;
     private static OpenAiSession instance;
     private final JSONObject firstSystemChat;
-
+    private RemoteModel currentModel;
+    private final List<RemoteModel> modelList = new ArrayList<>();
     private String chatUrl;
 
 
-    private static final Tool TOOL_1 = new Tool("function",AIMethodTool.REMIND_TOOL);
-    private static final Tool TOOL_2 = new Tool("function",AIMethodTool.HELP_TOOL);
+    private static final Tool TOOL_1 = new Tool("function", OpenAiMethodTool.REMIND_TOOL);
+    private static final Tool TOOL_2 = new Tool("function", OpenAiMethodTool.HELP_TOOL);
     static class Tool{
         String type;
-        AIMethodTool function;
+        OpenAiMethodTool function;
         // 构造函数
-        public Tool(String type, AIMethodTool function) {
+        public Tool(String type, OpenAiMethodTool function) {
             this.type = type;
             this.function = function;
         }
@@ -61,7 +65,7 @@ public class OpenAiSession extends NekoSession implements ChatSession{
             return type;
         }
 
-        public AIMethodTool getFunction() {
+        public OpenAiMethodTool getFunction() {
             return function;
         }
 
@@ -78,6 +82,12 @@ public class OpenAiSession extends NekoSession implements ChatSession{
 
     private OpenAiSession(String chatUrl) {
         this.chatUrl = chatUrl;
+        modelList.add(new RemoteModel(MODEL_GPT_3_5_TURBO));
+        modelList.add(new RemoteModel(MODEL_GPT_4O));
+        modelList.add(new RemoteModel(MODEL_GPT_4_TURBO));
+        modelList.add(new RemoteModel(MODEL_GPT_4O_MINI));
+
+        currentModel = modelList.get(0);
         okHttpClient = new OkHttpClient.Builder()
                 .callTimeout(100, TimeUnit.SECONDS)
                 .writeTimeout(100, TimeUnit.SECONDS)
@@ -98,9 +108,9 @@ public class OpenAiSession extends NekoSession implements ChatSession{
             tools.put(TOOL_1.toJson());
             tools.put(TOOL_2.toJson());
 
-            data.put("model",MODEL_GEMINI_3_FL_PRE);
+            data.put("model", currentModel.getStr());
             data.put("temperature",1);
-            data.put("max_completion_tokens", 100*1000);
+            data.put("max_completion_tokens", 1000);
             data.put("top_p",1);
             data.put("messages",chats);
             data.put("tools",tools);
@@ -155,6 +165,23 @@ public class OpenAiSession extends NekoSession implements ChatSession{
         return len;
     }
 
+    @Override
+    public void setModelIndex(int index) {
+        if(index>=0 && index<modelList.size()){
+            this.currentModel = modelList.get(index);
+        }
+    }
+
+    @Override
+    public RemoteModel getCurrentModel() {
+        return currentModel;
+    }
+
+    @Override
+    public List<RemoteModel> getModelList() {
+        return modelList;
+    }
+
     public void addAssistantChat(String message){
         addTextChat(ROLE_ASSISTANT,message);
     }
@@ -198,7 +225,7 @@ public class OpenAiSession extends NekoSession implements ChatSession{
         return instance;
     }
 
-    public boolean startAsk(NetAiAskAble message) throws JSONException {
+    public boolean callApi(NetAiAskAble message) throws JSONException {
         addTextChat(ROLE_USER,message.getQuestion().getMessage());
         data.put("messages",chats);
         return requestChatCompletions(message);

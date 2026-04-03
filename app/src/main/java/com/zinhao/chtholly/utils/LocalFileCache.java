@@ -28,12 +28,12 @@ public class LocalFileCache{
 
     public File getExternalAppRootDir() throws FileNotFoundException {
         File rootDir;
-        rootDir = BotApp.context().getExternalCacheDir();
+        rootDir = BotApp.getInstance().getExternalCacheDir();
         return rootDir;
     }
 
 
-    public File getExternalWorkDir(int id) {
+    public File getExternalWorkDir() {
         File cacheDir = null;
         try {
             cacheDir = getExternalAppRootDir();
@@ -41,14 +41,13 @@ public class LocalFileCache{
             e.printStackTrace();
             return null;
         }
-        File worksLibDir = new File(cacheDir, "libs_work");
-        File workLibDir = new File(worksLibDir, String.valueOf(id));
-        if (!workLibDir.exists()) {
-            if (!workLibDir.mkdirs()) {
+        File worksLibDir = new File(cacheDir, "WorkSpace");
+        if (!worksLibDir.exists()) {
+            if (!worksLibDir.mkdirs()) {
                 return null;
             }
         }
-        return workLibDir;
+        return worksLibDir;
     }
 
     public void writeText(final File save, final String text) {

@@ -13,7 +13,7 @@ import com.zinhao.chtholly.BotApp;
 import com.zinhao.chtholly.BuildConfig;
 import com.zinhao.chtholly.NekoChatService;
 import com.zinhao.chtholly.db.AICharacterDao;
-import com.zinhao.chtholly.session.ChatSession;
+import com.zinhao.chtholly.session.RemoteChatApiSession;
 import com.zinhao.chtholly.session.GeminiSession;
 import com.zinhao.chtholly.session.NekoSession;
 import com.zinhao.chtholly.session.OpenAiSession;
@@ -101,7 +101,7 @@ public abstract class Command{
     protected abstract boolean throwToChild();
 
     protected boolean handleAsk() {
-        Log.i(TAG,"Command handleAsk:"+ getQuestion().speaker);
+        Log.i(TAG,"Command handleAsk:"+ getQuestion().speaker +": "+getQuestion().getMessage());
         if(getQuestion().getMessage().startsWith("/") && isAdminMessage()){
             Log.i(TAG,"Command invoke");
             try {
@@ -139,17 +139,17 @@ public abstract class Command{
     }
 
     @HelpDoc(desc = "帮助")
-    private boolean help() {
+    protected boolean help() {
         getAnswer().setMessage(getHelpStringBuilder().toString());
         return true;
     }
     @HelpDoc(desc = "运行信息")
-    private boolean runInfo(){
+    protected boolean runInfo(){
         getAnswer().setMessage(getRunInfo().toString());
         return true;
     }
     @HelpDoc(desc = "查看相册")
-    private boolean sendGallery() {
+    protected boolean sendGallery() {
         //todo 仅适配QQ
         // /c /gnt /p2 /lmy
         ChatPageViewIds cpvi = NekoChatService.getInstance().currentChatPageIds(getPackageName());
@@ -209,7 +209,7 @@ public abstract class Command{
     }
 
     @HelpDoc(desc = "自动群打卡")
-    private boolean everyDayCheck() {
+    protected boolean everyDayCheck() {
        if(QQChatHandler.PACKAGE_NAME.equals(packageName)){
            steps = NekoChatService.getInstance().getQqChatHandler().everyDayCheck();
        }
@@ -217,7 +217,7 @@ public abstract class Command{
         return true;
     }
     @HelpDoc(desc = "截图")
-    private boolean screenShot() {
+    protected boolean screenShot() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
             if(QQChatHandler.PACKAGE_NAME.equals(packageName)){
                 steps = NekoChatService.getInstance().getQqChatHandler().screenShot();
@@ -230,7 +230,7 @@ public abstract class Command{
     }
 
     @HelpDoc(desc = "发送最新图片")
-    private boolean sendNewestPic() {
+    protected boolean sendNewestPic() {
         // 发送最新一张图 /gnt /qhp /fun_btn /gnt  三星
         // 发送最新一张图 /gnt /qhq /send_btn /gnt  pixel3
         // 发送最新一张图 /gnt /dpo /send_btn /gnt  ONE PLUS
@@ -241,7 +241,7 @@ public abstract class Command{
         return true;
     }
     @HelpDoc(desc = "拍照")
-    private boolean takePhoto() {
+    protected boolean takePhoto() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
             if(QQChatHandler.PACKAGE_NAME.equals(packageName)){
                 steps = NekoChatService.getInstance().getQqChatHandler().takePhoto();
@@ -253,7 +253,7 @@ public abstract class Command{
         return true;
     }
     @HelpDoc(desc = "录视频")
-    private boolean recordVideo(){
+    protected boolean recordVideo(){
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
             if(packageName.equals(QQChatHandler.PACKAGE_NAME)){
                 steps = NekoChatService.getInstance().getQqChatHandler().recordVideo();
@@ -275,30 +275,52 @@ public abstract class Command{
         return true;
     }
     @HelpDoc(desc = "系统电量")
-    private boolean battery() {
+    protected boolean battery() {
         BatteryManager manager = (BatteryManager)BotApp.context().getSystemService(Context.BATTERY_SERVICE);
         int currentLevel = manager.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY);
         getAnswer().setMessage(String.format(Locale.CHINA,"%d%%,喵～",currentLevel));
         return true;
     }
     @HelpDoc(desc = "消息上下文")
-    private boolean printContext() {
-        ChatSession chatSession = NekoChatService.getInstance().getSession();
-        String his = chatSession.getContextChat();
+    protected boolean printContext() {
+        RemoteChatApiSession remoteChatApiSession = BotApp.getInstance().getSession();
+        String his = remoteChatApiSession.getContextChat();
         getAnswer().setMessage(his);
         return true;
     }
 
+    @HelpDoc(desc = "切换模型")
+    private boolean setModel() {
+        RemoteChatApiSession remoteChatApiSession = BotApp.getInstance().getSession();
+        if(args!=null && args.length>0){
+            remoteChatApiSession.setModelIndex(Integer.parseInt(args[0]));
+            getAnswer().setMessage(NekoAskAble.OK + " => "+  remoteChatApiSession.getCurrentModel().getStr());
+        }else{
+            List<RemoteChatApiSession.RemoteModel> models=remoteChatApiSession.getModelList();
+            StringBuilder stringBuilder = new StringBuilder();
+            stringBuilder.append("当前可用模型:\n");
+            for (int i = 0;i<models.size();i++){
+                RemoteChatApiSession.RemoteModel model = models.get(i);
+                if(model.getStr().equals(remoteChatApiSession.getCurrentModel().getStr())){
+                    stringBuilder.append("=> ");
+                }
+                stringBuilder.append(i).append(". ").append(model.getStr()).append("\n");
+            }
+            getAnswer().setMessage(stringBuilder.toString());
+        }
+        return true;
+    }
+
     @HelpDoc(desc = "AI人设")
-    private boolean printSoul() {
+    protected boolean printSoul() {
         String chara = BotApp.getInstance().getAiSoul();
         getAnswer().setMessage(String.format(Locale.CHINA,"这是%s的设定： %s。",BotApp.getInstance().getBotName(),chara));
         return true;
     }
     @HelpDoc(desc = "总结对话")
-    private boolean summarize() {
-        ChatSession chatSession = NekoChatService.getInstance().getSession();
-        int len = chatSession.summarize();
+    protected boolean summarize() {
+        RemoteChatApiSession remoteChatApiSession = BotApp.getInstance().getSession();
+        int len = remoteChatApiSession.summarize();
         getAnswer().setMessage(String.format(Locale.CHINA,"%s 将为主人总结%d条对话。",BotApp.getInstance().getBotName(),len));
         return true;
     }
@@ -306,18 +328,18 @@ public abstract class Command{
     private boolean switchMode() {
         if(geminiIgnoreCase.matcher(question.getMessage()).find()){
             getAnswer().setMessage(NekoAskAble.OK +" => gemini ai");
-            NekoChatService.mode = GeminiSession.class;
+            BotApp.mode = GeminiSession.class;
         } else if(openaiIgnoreCase.matcher(question.getMessage()).find()){
             getAnswer().setMessage(NekoAskAble.OK+" => open ai");
-            NekoChatService.mode = OpenAiSession.class;
+            BotApp.mode = OpenAiSession.class;
         }else{
             getAnswer().setMessage(NekoAskAble.KOU_WAI +"=> neko");
-            NekoChatService.mode = NekoSession.class;
+            BotApp.mode = NekoSession.class;
         }
         return true;
     }
     @HelpDoc(desc = "视频通话")
-    private boolean videoCall() {
+    protected boolean videoCall() {
         // :id/gny [:id/icon_viewPager 1->2] :id/bbt
         boolean mainCamera;
         if(args == null){
@@ -338,7 +360,7 @@ public abstract class Command{
         return true;
     }
     @HelpDoc(desc = "分享屏幕")
-    private boolean screenShare(){
+    protected boolean screenShare(){
         steps = new Vector<>();
         //将步骤委托给 QQChatHandler
         if(packageName.equals(QQChatHandler.PACKAGE_NAME)){
@@ -537,7 +559,7 @@ public abstract class Command{
     private static StringBuilder getRunInfo(){
         StringBuilder stringBuilder = new StringBuilder();
         stringBuilder.append("Ver:").append(BuildConfig.VERSION_NAME).append("\n");
-        stringBuilder.append("Mode:").append(NekoChatService.mode.getSimpleName()).append("\n");
+        stringBuilder.append("Mode:").append(BotApp.mode.getSimpleName()).append("\n");
         stringBuilder.append("BaseUrl:").append(BotApp.getInstance().getChatUrl()).append("\n");
         stringBuilder.append("AdminName:").append(BotApp.getInstance().getAdminName()).append("\n");
         stringBuilder.append("SoulName:").append(BotApp.getInstance().getCurrentCharacter().getName()).append("\n");

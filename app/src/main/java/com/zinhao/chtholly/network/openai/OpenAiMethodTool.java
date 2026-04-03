@@ -1,8 +1,14 @@
-package com.zinhao.chtholly.entity;
+package com.zinhao.chtholly.network.openai;
 
 import android.util.Log;
 import com.zinhao.chtholly.CallAble;
 import com.zinhao.chtholly.NekoChatService;
+import com.zinhao.chtholly.entity.Command;
+import com.zinhao.chtholly.entity.NekoAskAble;
+import com.zinhao.chtholly.entity.NetAiAskAble;
+import com.zinhao.chtholly.entity.OpenAiAskAble;
+import com.zinhao.chtholly.utils.FileLogger;
+
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -10,34 +16,35 @@ import org.json.JSONObject;
 import java.util.HashMap;
 import java.util.Map;
 
-public class AIMethodTool{
+public class OpenAiMethodTool {
     private static final String TAG = "AIMethodTool";
     private final String name;
     private final String description;
     private final Parameters parameters;
     private final CallAble callAble;
-    public static final Map<String,AIMethodTool> TOTAL_TOOL = new HashMap<>();
+    public static final Map<String, OpenAiMethodTool> TOTAL_TOOL = new HashMap<>();
 
-    public static final Map<String, AIMethodTool.Property> EMPTY_ARG_MAP = new HashMap<>();
-    public static final Map<String, AIMethodTool.Property> REMIND_ARG_MAP = new HashMap<>();
+    public static final Map<String, OpenAiMethodTool.Property> EMPTY_ARG_MAP = new HashMap<>();
+    public static final Map<String, OpenAiMethodTool.Property> REMIND_ARG_MAP = new HashMap<>();
     static {
         EMPTY_ARG_MAP.put("text",new Property("string","可选参数，热情的话语"));
 
-        REMIND_ARG_MAP.put("time",new AIMethodTool.Property("string","触发时间，相对于现在的时间，单位是秒"));
-        REMIND_ARG_MAP.put("action",new AIMethodTool.Property("string","需要提醒的事情，口语化表达，通常以“要记得”或者“不要忘了”开头，语气调皮而不失温馨"));
+        REMIND_ARG_MAP.put("time",new OpenAiMethodTool.Property("string","触发时间，相对于现在的时间，单位是秒"));
+        REMIND_ARG_MAP.put("action",new OpenAiMethodTool.Property("string","需要提醒的事情，口语化表达，通常以“要记得”或者“不要忘了”开头，语气调皮而不失温馨"));
     }
 
-    public static final AIMethodTool REMIND_TOOL = new AIMethodTool(
-            "remind_me", "提醒工具", new AIMethodTool.Parameters(
+    public static final OpenAiMethodTool REMIND_TOOL = new OpenAiMethodTool(
+            "remind_me", "提醒工具", new OpenAiMethodTool.Parameters(
             "object", REMIND_ARG_MAP, new String[]{"time", "action"}, false
     ), new CallAble() {
+                //五分钟后提醒我抢票
         @Override
         public boolean call(Map<String, Object> argMap,String callId) {
             String timeStr = (String) argMap.get("time");
             long t = Long.parseLong(timeStr);
             String actionStr = (String) argMap.get("action");
-            if(argMap.containsKey(NetAiAskAble.class.getName())) {
-                NetAiAskAble message = (NetAiAskAble) argMap.get(NetAiAskAble.class.getName());
+            if(argMap.containsKey(OpenAiAskAble.class.getName())) {
+                OpenAiAskAble message = (OpenAiAskAble) argMap.get(OpenAiAskAble.class.getName());
                 if(message!=null){
                     message.doTextReply(NekoAskAble.OK);
                     message.doTTSReply(NekoAskAble.OK);
@@ -50,7 +57,9 @@ public class AIMethodTool{
                         Log.d(TAG, "call: ",e);
                     }
                     assert message.getQuestion()!=null;
-                    NekoChatService.getInstance().addRemind(t,actionStr,message.getQuestion().getSpeaker());
+                    if(NekoChatService.getInstance()!=null){
+                        NekoChatService.getInstance().addRemind(t,actionStr,message.getQuestion().getSpeaker());
+                    }
                     return true;
                 }
             }
@@ -58,15 +67,16 @@ public class AIMethodTool{
         }
     });
 
-    public static final AIMethodTool HELP_TOOL = new AIMethodTool(
-            "help", "帮助", new AIMethodTool.Parameters(
+    public static final OpenAiMethodTool HELP_TOOL = new OpenAiMethodTool(
+            "help", "帮助", new OpenAiMethodTool.Parameters(
             "object", EMPTY_ARG_MAP, new String[]{"text"}, false
     ), new CallAble() {
         @Override
         public boolean call(Map<String, Object> argMap,String callId) {
             String hotMessage = (String) argMap.get("text");
-            if(argMap.containsKey(NetAiAskAble.class.getName())) {
-                NetAiAskAble message = (NetAiAskAble) argMap.get(NetAiAskAble.class.getName());
+            FileLogger.INSTANCE.i(TAG,"text"+hotMessage);
+            if(argMap.containsKey(OpenAiAskAble.class.getName())) {
+                OpenAiAskAble message = (OpenAiAskAble) argMap.get(OpenAiAskAble.class.getName());
                 if(message!=null){
                     JSONObject content = new JSONObject();
                     try {
@@ -75,7 +85,6 @@ public class AIMethodTool{
                     } catch (JSONException e) {
                         Log.d(TAG, "call: ",e);
                     }
-
                     message.doTTSReply(hotMessage);
                     message.doTextReply(hotMessage + '\n' + Command.getHelpStringBuilder());
                     return true;
@@ -90,7 +99,7 @@ public class AIMethodTool{
         TOTAL_TOOL.put(HELP_TOOL.name,HELP_TOOL);
     }
 
-    public AIMethodTool(String name, String description, Parameters parameters, CallAble callAble) {
+    public OpenAiMethodTool(String name, String description, Parameters parameters, CallAble callAble) {
         this.name = name;
         this.description = description;
         this.parameters = parameters;
@@ -148,10 +157,11 @@ public class AIMethodTool{
     }
 
     public static class Parameters {
-        private String type;
         private Map<String, Property> properties;
         private String[] required;
+        private String type;
         private boolean additionalProperties;
+
 
         public Parameters(String type, Map<String, Property> properties, String[] required, boolean additionalProperties) {
             this.type = type;

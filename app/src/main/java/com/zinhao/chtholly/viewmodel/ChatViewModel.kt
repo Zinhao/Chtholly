@@ -64,9 +64,9 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) , 
 
     fun createMessage(message: Message): Command {
         val mainMessage: Command?
-        if (NekoChatService.mode == OpenAiSession::class.java) {
+        if (BotApp.mode == OpenAiSession::class.java) {
             mainMessage = OpenAiAskAble(BotApp.getInstance().packageName, message, this)
-        } else if (NekoChatService.mode == GeminiSession::class.java) {
+        } else if (BotApp.mode == GeminiSession::class.java) {
             mainMessage = GeminiAIAskAble(BotApp.getInstance().packageName, message, this)
         } else {
             mainMessage = NekoAskAble(BotApp.getInstance().packageName, message)

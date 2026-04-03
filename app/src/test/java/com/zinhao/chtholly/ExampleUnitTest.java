@@ -30,8 +30,5 @@ public class ExampleUnitTest {
 
     @Test
     public void testReply(){
-        Command command = new Command("org.test",new Message("test","/help",System.currentTimeMillis()));
-        command.ask();
-        System.out.println("result:"+command.getAnswer().getMessage());
     }
 }

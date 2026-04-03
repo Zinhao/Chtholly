@@ -32,7 +32,6 @@ import com.zinhao.chtholly.customview.AccessibilityBoundView;
 import com.zinhao.chtholly.customview.AccessibilityLogcatView;
 import com.zinhao.chtholly.customview.VibrationGraphView;
 import com.zinhao.chtholly.entity.*;
-import com.zinhao.chtholly.session.ChatSession;
 import com.zinhao.chtholly.session.GeminiSession;
 import com.zinhao.chtholly.session.OpenAiSession;
 import com.zinhao.chtholly.utils.*;
@@ -47,13 +46,15 @@ import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 import java.util.*;
 
+import static com.zinhao.chtholly.BotApp.mode;
 import static com.zinhao.chtholly.utils.QQChatHandler.*;
 
 public class NekoChatService extends AccessibilityService implements NetAiAskAble.DelayReplyCallback, MessageCallback, SensorEventListener {
     private static final String TAG = "NekoChatService";
 
-    public static Class<?> mode = GeminiSession.class;
+
     private static final SimpleDateFormat dateTimeFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss", Locale.CHINA);
+    private static final SimpleDateFormat dateTimeFormat1 = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.CHINA);
     public static WeakReference<NekoChatService> instance;
 
     private Handler mHandler;
@@ -145,6 +146,31 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
         }
     }
 
+    public void updateFloatView(AccessibilityEvent event){
+        AccessibilityNodeInfo root = getRootInActiveWindow();
+        AccessibilityNodeInfo source = event.getSource();
+        if(accBoundView !=null){
+            if(accessibilityBoundView == null){
+                accessibilityBoundView = accBoundView.findViewById(R.id.acbv);
+            }
+            if(source == null && root!=null){
+                accessibilityBoundView.setNodeInfo(root);
+            }else if(source !=null && root == null){
+                accessibilityBoundView.setNodeInfo(source);
+            }else if(source != null){
+                accessibilityBoundView.setNodeInfo(source);
+            }
+            accessibilityBoundView.postInvalidate();
+        }
+
+        if(logcatView !=null){
+            if(accessibilityLogcatView == null)
+                accessibilityLogcatView = logcatView.findViewById(R.id.aclv);
+            if(vibrationGraphView== null)
+                vibrationGraphView = logcatView.findViewById(R.id.vgv);
+        }
+    }
+
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         return super.onStartCommand(intent, flags, startId);
@@ -170,30 +196,36 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
             return;
 
         autoMission(event.getPackageName().toString());
+
+        updateFloatView(event);
+
+        debugOnAccessibilityEvent(event);
+
+        if (event.getSource() != null && BuildConfig.DEBUG) {
+            saveTreeToJsonFile(event);
+        }
+        String pageName = processNotChatPage(event.getSource());
+        if(!UNKNOWN_PAGE.equals(pageName) && !NULL_ROOT.equals(pageName)){
+            addLogcat( "onAccessibilityEvent: " + pageName);
+        }
+        if(QQChatHandler.PACKAGE_NAME.equals(event.getPackageName().toString())){
+
+            qqChatHandler.handle(event);
+        }else if(WXChatHandler.WX_PACKAGE_NAME.equals(event.getPackageName().toString())){
+            wxChatHandler.handle(event);
+        }else if(RBChatHandler.PACKAGE_NAME.equals(event.getPackageName().toString())){
+            rbChatHandler.handle(event);
+        }
+        if (waitQAs.isEmpty()) {
+            return;
+        }
         AccessibilityNodeInfo root = getRootInActiveWindow();
-        AccessibilityNodeInfo source = event.getSource();
-        if(accBoundView !=null){
-            if(accessibilityBoundView == null)
-                accessibilityBoundView = accBoundView.findViewById(R.id.acbv);
-            if(source == null && root!=null){
-                accessibilityBoundView.setNodeInfo(root);
-            }else if(source !=null && root == null){
-                accessibilityBoundView.setNodeInfo(source);
-            }else if(source != null){
-                accessibilityBoundView.setNodeInfo(source);
-            }
-            accessibilityBoundView.postInvalidate();
-        }
-
-        if(logcatView !=null){
-            if(accessibilityLogcatView == null)
-                accessibilityLogcatView = logcatView.findViewById(R.id.aclv);
-            if(vibrationGraphView== null)
-                vibrationGraphView = logcatView.findViewById(R.id.vgv);
-        }
-
-
+        handleQAs(root);
+        removeSuccessMessage();
+    }
+    private void debugOnAccessibilityEvent(AccessibilityEvent event){
         if (BuildConfig.DEBUG) {
+            AccessibilityNodeInfo root = getRootInActiveWindow();
             StringBuilder stringBuilder = LayoutTreeUtils.getEventStringBuilder(event);
             addLogcat("getEventStringBuilder: "+stringBuilder);
             //EventType: TYPE_WINDOW_CONTENT_CHANGED; EventTime: 338363649;
@@ -236,64 +268,20 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
                         return;
                     }
                 }
-
-
-
             }
         }
-        String pageName = processNotChatPage(event.getSource());
-        if(!UNKNOWN_PAGE.equals(pageName) && !NULL_ROOT.equals(pageName)){
-            addLogcat( "onAccessibilityEvent: " + pageName);
-        }
-
-
-        if (event.getSource() != null) {
-            if(BuildConfig.DEBUG){
-                try {
-                    if("com.android.systemui:id/clock".equals(event.getSource().getViewIdResourceName())){
-                        
-                    }else{
-                        JSONObject layoutTree = LayoutTreeUtils.treeAndPrintLayout(event.getSource(), 0);
-                        //com.tencent.mobileqq:id/listView1
-                        String idString = event.getSource().getViewIdResourceName();
-                        String fileName;
-                        if (idString == null) {
-                            fileName = "_null";
-                        } else {
-                            fileName = event.getSource().getViewIdResourceName().replace(event.getPackageName() + ":id/", "_")
-                                    .replace("/", "_")
-                                    .replace(":", "_");
-                        }
-
-                        String jsonFileName = "tree" + fileName + ".json";
-                        addLogcat("current_page_fileName: "+jsonFileName);
-                        LocalFileCache.getInstance().saveJSONObject(getApplicationContext(), layoutTree, jsonFileName);
-                    }
-
-                } catch (JSONException e) {
-                    throw new RuntimeException(e);
-                }
-            }
-        }
-        if(PACKAGE_NAME.equals(event.getPackageName().toString())){
-            qqChatHandler.handle(event);
-        }else if(WXChatHandler.WX_PACKAGE_NAME.equals(event.getPackageName().toString())){
-            wxChatHandler.handle(event);
-        }else if(RBChatHandler.PACKAGE_NAME.equals(event.getPackageName().toString())){
-            rbChatHandler.handle(event);
-        }
-        if (waitQAs.isEmpty()) {
-            return;
-        }
-        handleQAs(root);
-        removeSuccessMessage();
     }
 
     private String processNotChatPage(AccessibilityNodeInfo root) {
         if (root == null) {
             return NULL_ROOT;
         }
-        return QQChatHandler.checkWhatPage(root);
+        if(QQChatHandler.PACKAGE_NAME.equals(root.getPackageName().toString())){
+            return QQChatHandler.checkWhatPage(root);
+        }else{
+            return UNKNOWN_PAGE;
+        }
+
     }
 
     private void removeSuccessMessage() {
@@ -308,7 +296,7 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
         }
         remindMessages.removeIf(remindMessage -> {
             if (remindMessage.getSendTime() < System.currentTimeMillis()) {
-                Message message = new Message(remindMessage.getMaster(), "/SYSTEM MESSAGE", System.currentTimeMillis());
+                Message message = new Message(remindMessage.getMaster(), "from remind tool", System.currentTimeMillis());
                 StaticAskAble staticAskAble = new StaticAskAble(getPackageName(), message, remindMessage.message);
                 playTTSVoiceFromNetWork(remindMessage.message);
                 staticAskAble.handle();
@@ -827,15 +815,6 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
         },REPORT_RANGE);
     }
 
-    public ChatSession getSession() {
-        if(mode == OpenAiSession.class){
-            return OpenAiSession.getInstance();
-        }else if(mode == GeminiSession.class){
-            return  GeminiSession.getInstance();
-        }
-        return null;
-    }
-
     public interface OnVibrationStrengthListener {
         void onVibrationStrengthChanged(float strength);
     }
@@ -986,5 +965,44 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
             // 有权限
             showCtrlWindow();
         }
+    }
+
+    private void saveTreeToJsonFile(AccessibilityEvent event){
+        if(event == null){
+            return;
+        }
+        if(event.getSource() == null){
+            return;
+        }
+        try {
+            if("com.android.systemui:id/clock".equals(event.getSource().getViewIdResourceName())){
+
+            }else{
+                String jsonFileName = treeFileName(event);
+                JSONObject layoutTree = LayoutTreeUtils.treeAndPrintLayout(event.getSource(), 0,true);
+                //com.tencent.mobileqq:id/listView1
+                addLogcat("current_page_fileName: "+jsonFileName);
+                LocalFileCache.getInstance().saveJSONObject(getApplicationContext(), layoutTree, jsonFileName);
+            }
+        } catch (JSONException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private static String treeFileName(AccessibilityEvent event){
+        if(event == null){
+            return "tree_null_"+ dateTimeFormat1.format(System.currentTimeMillis());
+        }
+        String idString = event.getSource().getViewIdResourceName();
+        String fileName;
+        if (idString == null) {
+            fileName = "_null";
+        } else {
+            fileName = event.getSource().getViewIdResourceName().replace(event.getPackageName() + ":id/", "_")
+                    .replace("/", "_")
+                    .replace(":", "_");
+        }
+
+        return "tree" + fileName + ".json";
     }
 }

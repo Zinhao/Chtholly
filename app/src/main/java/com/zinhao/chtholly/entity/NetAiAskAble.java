@@ -67,7 +67,6 @@ public class NetAiAskAble extends NekoAskAble implements Callback{
      *
      */
     public void doToolCallReply(JSONObject content,String callId){
-//todo
     }
 
     /**

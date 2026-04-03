@@ -5,11 +5,19 @@ import com.squareup.moshi.JsonAdapter
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.adapter
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
+import com.zinhao.chtholly.BotApp
+import com.zinhao.chtholly.network.gemini.CodeGenerate
+import com.zinhao.chtholly.network.gemini.FunctionCall
 import com.zinhao.chtholly.network.gemini.GeminiResponse
+import com.zinhao.chtholly.network.gemini.GEMINI_TOOLS
+import com.zinhao.chtholly.network.gemini.PrintInfo
 import com.zinhao.chtholly.session.GeminiSession.Companion.instance
+import com.zinhao.chtholly.utils.FileLogger
+import com.zinhao.chtholly.utils.LocalFileCache
 import okhttp3.Call
 import okhttp3.Response
 import org.json.JSONException
+import java.io.File
 import java.io.IOException
 import java.util.*
 
@@ -24,7 +32,7 @@ class GeminiAIAskAble : NetAiAskAble {
 
     override fun throwToChild(): Boolean {
         Log.i("Command", "GeminiAIAskAble throwToChild")
-        return instance!!.startAsk(this)
+        return instance!!.callApi(this)
     }
 
     override fun onFailure(call: Call, e: IOException) {
@@ -39,6 +47,7 @@ class GeminiAIAskAble : NetAiAskAble {
     //* 如果达到请求中指定的最大令牌数，则将length；
     //* 如果由于内容过滤器中的标志而省略内容，则为 content_filter；
     //* 如果模型达到 tool_calls，则为 tool_calls称为工具。
+    // 智能机器人
     @OptIn(ExperimentalStdlibApi::class)
     @Throws(IOException::class)
     override fun onResponse(call: Call, response: Response) {
@@ -49,16 +58,23 @@ class GeminiAIAskAble : NetAiAskAble {
                     val geminiAnswerResult = jsonAdapter.fromJson(body.string())
                     val candidate = geminiAnswerResult?.candidates?.firstOrNull()
                     candidate?.let {
-                        if (candidate.finishReason == "length") {
+                        if (candidate.finishReason.lowercase() == "length") {
                             //自动总结
                             instance?.requestChatSummarize()
-                        } else if (candidate.finishReason == "tool_calls") {
+                        } else if (candidate.finishReason.lowercase() == "tool_calls") {
                         } else if (candidate.finishReason.lowercase() == "stop") {
-                            val content = candidate.content.parts.firstOrNull()?.text
-                            if (content != null && content.trim { it <= ' ' } != "null") {
-                                doTextReply(content)
-                                doTTSReply(content)
-                                instance!!.addAssistantChat(content)
+                            val part = candidate.content.parts.firstOrNull()
+                            part?.let {
+                                it.functionCall?.callToolFunction()
+                                it.text?.let { text->
+                                    doTextReply(text)
+                                    doTTSReply(text)
+                                }
+                                instance!!.addAssistantContent(candidate.content)
+                            }
+                            val contentText = candidate.content.parts.firstOrNull()?.text
+                            if (contentText != null && contentText.trim { it <= ' ' } != "null") {
+
                             }
                         }
                     }
@@ -77,8 +93,31 @@ class GeminiAIAskAble : NetAiAskAble {
         response.close()
     }
 
+    fun FunctionCall.callToolFunction(){
+        if(question.speaker == BotApp.getInstance().adminName){
+            if(name == PrintInfo.name){
+                val methodName = args["name"].toString()
+                val method = Command::class.java.getDeclaredMethod(methodName)
+                method.invoke(this)
+                //我需要帮助文档
+                // 很好，你帮我大忙了
+                // 查看消息上下文
+            }else if(name == CodeGenerate.name){
+                val fileName = args["file_name"].toString()
+                val textContent = args["text_content"].toString()
+                val file = File(LocalFileCache.getInstance().getExternalWorkDir(), fileName)
+                LocalFileCache.getInstance().writeText(file,textContent)
+                FileLogger.i(TAG,"write_to_file: ${file.path}")
+                doTextReply("已写入到: ${file.path}")
+                //帮我写一个快速排序，用java，写入到文件
+            }
+        }else{
+            doTextReply(HARD)
+        }
+    }
+
     companion object{
-        private val moshi: Moshi = Moshi.Builder().add(KotlinJsonAdapterFactory()).build()
+        val moshi: Moshi = Moshi.Builder().add(KotlinJsonAdapterFactory()).build()
         @OptIn(ExperimentalStdlibApi::class)
         private val jsonAdapter: JsonAdapter<GeminiResponse> = moshi.adapter<GeminiResponse>()
     }

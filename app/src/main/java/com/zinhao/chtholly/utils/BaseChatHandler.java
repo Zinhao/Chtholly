@@ -13,6 +13,7 @@ import java.util.List;
 
 public abstract class BaseChatHandler {
     public final String TAG = "FindMessageHandler";
+    public static final String UNKNOWN_PAGE = "unknown page";
     protected abstract boolean isAtName(Message message,String name);
     protected MessageCallback messageCallback;
     public abstract void handle(AccessibilityEvent event);

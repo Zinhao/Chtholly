@@ -10,10 +10,12 @@ import com.zinhao.chtholly.db.AppDatabase;
 import com.zinhao.chtholly.db.MessageDao;
 import com.zinhao.chtholly.entity.AICharacter;
 import com.zinhao.chtholly.entity.Message;
+import com.zinhao.chtholly.session.RemoteChatApiSession;
+import com.zinhao.chtholly.session.GeminiSession;
+import com.zinhao.chtholly.session.OpenAiSession;
 import com.zinhao.chtholly.utils.AsyncHelper;
 import com.zinhao.chtholly.utils.HostConsts;
-import com.zinhao.chtholly.utils.LocalFileCache;
-import kotlinx.coroutines.AbstractCoroutine;
+
 import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
@@ -65,6 +67,15 @@ public class BotApp extends Application {
     }
     public static BotApp getInstance() {
         return instance;
+    }
+    public static Class<?> mode = OpenAiSession.class;
+    public RemoteChatApiSession getSession() {
+        if(mode == OpenAiSession.class){
+            return OpenAiSession.getInstance();
+        }else if(mode == GeminiSession.class){
+            return  GeminiSession.getInstance();
+        }
+        return null;
     }
 
     public static Context context() {
@@ -196,7 +207,7 @@ public class BotApp extends Application {
     }
 
     public void switchAISoul(AICharacter character){
-        BotApp.getInstance().setCurrentCharacter(character);
+        setCurrentCharacter(character);
         SharedPreferences.Editor editor = BotApp.getInstance().getSharedPreferences().edit();
         editor.putString(BotApp.CONFIG_SOUL_DESC,character.getDesc());
         editor.apply();

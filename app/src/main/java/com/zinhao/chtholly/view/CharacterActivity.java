@@ -146,6 +146,7 @@ public class CharacterActivity extends AppCompatActivity implements CharacterAda
             public void onClick(DialogInterface dialog, int which) {
                 BotApp.getInstance().switchAISoul(character);
                 dialog.dismiss();
+                setResult(RESULT_OK);
             }
         });
         builder.create().show();

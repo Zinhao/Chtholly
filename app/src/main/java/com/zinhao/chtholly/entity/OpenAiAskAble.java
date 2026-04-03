@@ -1,8 +1,13 @@
 package com.zinhao.chtholly.entity;
 
 import android.util.Log;
+
+import com.zinhao.chtholly.CallAble;
 import com.zinhao.chtholly.NekoChatService;
+import com.zinhao.chtholly.network.openai.OpenAiMethodTool;
 import com.zinhao.chtholly.session.OpenAiSession;
+import com.zinhao.chtholly.utils.FileLogger;
+
 import okhttp3.Call;
 import okhttp3.Response;
 import okhttp3.ResponseBody;
@@ -13,6 +18,8 @@ import org.json.JSONObject;
 
 import java.io.IOException;
 import java.util.Locale;
+import java.util.Map;
+import java.util.function.Consumer;
 
 public class OpenAiAskAble extends NetAiAskAble{
     private static final String TAG = "OpenAiAskAble";
@@ -31,7 +38,7 @@ public class OpenAiAskAble extends NetAiAskAble{
     protected boolean throwToChild() {
         Log.i("Command","OpenAiAskAble throwToChild");
         try {
-            return  OpenAiSession.getInstance().startAsk(this);
+            return  OpenAiSession.getInstance().callApi(this);
         } catch (JSONException e) {
             throw new RuntimeException(e);
         }
@@ -87,6 +94,38 @@ public class OpenAiAskAble extends NetAiAskAble{
         if(delayReplyCallback !=null)
             delayReplyCallback.onReply(this);
         response.close();
+    }
+
+    @Override
+    public void doToolCall(Choice nekoReply) {
+        super.doToolCall(nekoReply);
+        OpenAiSession.getInstance().addToolCalls(nekoReply.getMessage());
+
+        nekoReply.getMessage().getToolCalls().forEach(new Consumer<Choice.ToolCall>() {
+            @Override
+            public void accept(Choice.ToolCall toolCall) {
+                String methodName = toolCall.getFunction().getName();
+                FileLogger.INSTANCE.i(TAG,"doToolCall:"+ methodName);
+                try {
+                    OpenAiMethodTool aiMethodTool = OpenAiMethodTool.TOTAL_TOOL.get(methodName);
+                    assert aiMethodTool!=null;
+                    CallAble callAble = aiMethodTool.getCallAble();
+                    if(callAble!=null){
+                        Map<String, Object> argsMap = toolCall.getArgsMap();
+                        argsMap.put(OpenAiAskAble.class.getName(), OpenAiAskAble.this);
+                        callAble.call(argsMap,toolCall.getId());
+                    }
+                } catch (JSONException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+        });
+    }
+
+    @Override
+    public void doToolCallReply(JSONObject content, String callId) {
+        super.doToolCallReply(content, callId);
+        OpenAiSession.getInstance().addToolCallResult(content,callId);
     }
 
     private Choice parseResponse(String response) throws JSONException {

@@ -2,12 +2,16 @@ package com.zinhao.chtholly.session
 
 import android.util.Log
 import com.zinhao.chtholly.BotApp
-import com.zinhao.chtholly.network.LoggingInterceptor
 import com.zinhao.chtholly.NekoChatService
 import com.zinhao.chtholly.entity.GeminiAIAskAble
 import com.zinhao.chtholly.entity.Message
 import com.zinhao.chtholly.entity.NetAiAskAble
-import com.zinhao.chtholly.entity.NetAiAskAble.DelayReplyCallback
+import com.zinhao.chtholly.network.LoggingInterceptor
+import com.zinhao.chtholly.network.gemini.Content
+import com.zinhao.chtholly.network.gemini.Part
+import com.zinhao.chtholly.network.gemini.GEMINI_TOOLS
+import com.zinhao.chtholly.network.gemini.Tool
+import com.zinhao.chtholly.session.RemoteChatApiSession.RemoteModel
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -20,26 +24,35 @@ import java.text.SimpleDateFormat
 import java.util.Locale
 import java.util.concurrent.TimeUnit
 
-class GeminiSession private constructor(private var chatUrl: String?) : NekoSession(), ChatSession {
+class GeminiSession private constructor(private var chatApi: String?) : NekoSession(),
+    RemoteChatApiSession {
     private val data: JSONObject = JSONObject()
-    private var chats: JSONArray
+    private var currentModel: RemoteModel = RemoteModel(MODEL_GEMINI_3_FL_PRE)
+    private val modelList: List<RemoteModel> = arrayListOf(
+        RemoteModel(MODEL_GEMINI_3_PRO_PRE),
+        RemoteModel(MODEL_GEMINI_3_FL_PRE)
+    )
+    private var contents: MutableList<Content>  = arrayListOf()
+    private val tools: MutableList<Tool>  = arrayListOf()
     private val okHttpClient: OkHttpClient = OkHttpClient.Builder()
         .callTimeout(100, TimeUnit.SECONDS)
         .writeTimeout(100, TimeUnit.SECONDS)
         .readTimeout(100, TimeUnit.SECONDS)
         .addInterceptor(LoggingInterceptor())
         .build()
-    private val systemInstruction: JSONObject
+    private val systemInstruction: JSONObject = JSONObject()
 
     init {
-        chats = JSONArray()
-        systemInstruction = JSONObject()
+        contents.clear()
+        tools.add(GEMINI_TOOLS)
         try {
             setChara(BotApp.getInstance().aiSoul)
 
             data.put(ROLE_SYSTEM, systemInstruction)
 
-            data.put(CONTENTS, chats)
+            data.put(CONTENTS, contentsToJsonArray())
+            data.put("tools", toolsToJsonArray())
+
 
             val t = JSONObject()
             t.put("thinkingLevel", "low")
@@ -51,8 +64,28 @@ class GeminiSession private constructor(private var chatUrl: String?) : NekoSess
         }
     }
 
-    fun setModel(model: String?) {
+    fun contentsToJsonArray(): JSONArray{
+        val contentArr = JSONArray()
+        for (content in contents){
+            contentArr.put(JSONObject(contentToJson(content)))
+        }
+        return contentArr
+    }
 
+    fun contentToJson(content: Content): String {
+        // 获取针对 Content 类的 Adapter
+        val jsonAdapter = GeminiAIAskAble.moshi.adapter(Content::class.java)
+        // 将对象转换为 JSON 字符串
+        return jsonAdapter.toJson(content)
+    }
+
+    fun toolsToJsonArray(): JSONArray{
+        val toolArr = JSONArray()
+        val jsonAdapter = GeminiAIAskAble.moshi.adapter(Tool::class.java)
+        for (tool in tools){
+            toolArr.put(JSONObject(jsonAdapter.toJson(tool)))
+        }
+        return toolArr
     }
 
     override fun setChara(charaDesc: String) {
@@ -65,7 +98,6 @@ class GeminiSession private constructor(private var chatUrl: String?) : NekoSess
             partsArray.put(st)
 
             systemInstruction.put("parts", partsArray)
-            Log.d(TAG, "setChara: " + chats.get(0))
         } catch (e: JSONException) {
             Log.d(TAG, "setChara: failed.")
         }
@@ -80,61 +112,46 @@ class GeminiSession private constructor(private var chatUrl: String?) : NekoSess
     }
 
     override fun getContextChat(): String {
-        return chats.toString()
+        return data.getJSONArray(CONTENTS).toString()
     }
 
     override fun summarize(): Int {
-        val chatLen = chats.length()
+        val chatLen = contents.size
         requestChatSummarize()
         return chatLen
     }
 
-    fun addAssistantChat(message: String?) {
-        addTextChat(ROLE_MODEL,message)
+    override fun setModelIndex(modelIndex: Int) {
+        if(modelIndex < modelList.size && modelIndex >= 0){
+            currentModel = modelList[modelIndex]
+        }
     }
 
-    fun addToolCallResult(content: JSONObject?, callId: String?) {
-        val function_call_result_message = JSONObject()
-        try {
-            function_call_result_message.put(ROLE, ROLE_TOOL)
-            function_call_result_message.put(CONTENTS, content)
-            function_call_result_message.put(TOOL_CALL_ID, callId)
-        } catch (e: JSONException) {
-            throw RuntimeException(e)
-        }
-        chats.put(function_call_result_message)
+    override fun getCurrentModel(): RemoteModel {
+        return currentModel
     }
 
-    private fun addTextChat(role: String, text: String?) {
-        val newChat = JSONObject()
-        val parts = JSONArray()
-        try {
-            val textObj = JSONObject()
-            textObj.put("text", text)
-            parts.put(textObj)
+    override fun getModelList(): List<RemoteModel> {
+        return modelList
+    }
 
-            newChat.put(ROLE, role)
-            newChat.put(PARTS, parts)
-            Log.d(TAG, String.format(Locale.CHINA, "addChat: %s: %s", role, text))
-        } catch (e: JSONException) {
-            Log.e(TAG, String.format(Locale.CHINA, "addChat: %s: %s", role, text))
-        }
-        chats.put(newChat)
+    fun addAssistantContent(content: Content) {
+        contents.add(content)
     }
 
     @Throws(JSONException::class)
-    override fun startAsk(message: NetAiAskAble): Boolean {
-        addTextChat(ROLE_USER, message.getQuestion().getMessage())
-        data.put(CONTENTS, chats)
+    override fun callApi(message: NetAiAskAble): Boolean {
+        contents.add(Content(listOf(Part(message.question.message,null,"")),ROLE_USER))
+        data.put(CONTENTS, contentsToJsonArray())
         return requestChatCompletions(message)
     }
 
     override fun setChatUrl(chatUrl: String?) {
-        this.chatUrl = chatUrl
+        this.chatApi = chatUrl
     }
 
     override fun getChatUrl(): String? {
-        return chatUrl
+        return chatApi
     }
 
     override fun requestChatSummarize() {
@@ -142,16 +159,14 @@ class GeminiSession private constructor(private var chatUrl: String?) : NekoSess
         val question = Message("SYSTEM", "使用不超过50字总结对话", System.currentTimeMillis())
         val summarizeMessage = GeminiAIAskAble(
             BotApp.getInstance().getPackageName(),
-            question,
-            object : DelayReplyCallback {
-                override fun onReply(message: NetAiAskAble) {
-                    chats = JSONArray()
-                    addAssistantChat(message.getAnswer().getMessage())
-                    NekoChatService.getInstance().addLogcat("requestChatSummarize:" + message.getAnswer().getMessage())
-                    NekoChatService.getInstance().onReply(message)
-
-                }
-            })
+            question
+        ) { message ->
+            contents = arrayListOf()
+            addAssistantContent(Content(arrayListOf(Part(message.answer.message, null,"")), ROLE_MODEL))
+            NekoChatService.getInstance()
+                .addLogcat("requestChatSummarize:" + message.getAnswer().getMessage())
+            NekoChatService.getInstance().onReply(message)
+        }
         summarizeMessage.handle()
     }
 
@@ -159,7 +174,7 @@ class GeminiSession private constructor(private var chatUrl: String?) : NekoSess
         val requestBody: RequestBody = data.toString().toRequestBody("application/json;charset=utf-8".toMediaType())
         Log.d(TAG, "requestAsk: $data")
         val request = Request.Builder().post(requestBody)
-            .url("$chatUrl/models/$MODEL_GEMINI_3_FL_PRE:generateContent")
+            .url("$chatApi/models/${currentModel.str}:generateContent")
             .addHeader("Content-Type", "application/json")
             .addHeader("x-goog-api-key", BotApp.getInstance().apiKey)
             .addHeader("User-Agent", "Android Application <Chtholly>")
@@ -171,17 +186,14 @@ class GeminiSession private constructor(private var chatUrl: String?) : NekoSess
     companion object {
         private const val TAG = "GeminiSession"
 
-        private const val ROLE = "role"
         private const val CONTENTS = "contents"
-        private const val PARTS = "parts"
-        private const val TOOL_CALL_ID = "tool_call_id"
 
         private const val ROLE_SYSTEM = "system_instruction"
         private const val ROLE_MODEL = "model"
         private const val ROLE_USER = "user"
-        private const val ROLE_TOOL = "tool"
 
         const val MODEL_GEMINI_3_FL_PRE: String = "gemini-3.1-flash-lite-preview"
+        const val MODEL_GEMINI_3_PRO_PRE: String = "gemini-3.1-pro-preview"
 
         private val dateFormat = SimpleDateFormat("yyyyMMdd", Locale.CHINA)
         private val dateTimeFormat = SimpleDateFormat("yyyy年MM月dd日 HH:mm:ss", Locale.CHINA)

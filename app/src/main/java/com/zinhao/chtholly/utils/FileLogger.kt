@@ -16,7 +16,7 @@ import java.util.*
 object FileLogger {
 
     private const val LOG_DIR = "logs"
-    private const val LOG_FILE_NAME = "monitor_log.txt"
+    private const val LOG_FILE_NAME = "Chtholly_log.txt"
     private const val MAX_LOG_SIZE_BYTES = 1024 * 1024 // 5MB，超出可轮转
     private const val DATE_FORMAT = "yyyy-MM-dd HH:mm:ss.SSS"
 

@@ -5,18 +5,12 @@ import android.os.Bundle
 import android.provider.Settings
 import android.text.Editable
 import android.text.TextWatcher
-import android.view.Gravity
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.ViewModelProvider
 import com.zinhao.chtholly.BotApp
-import com.zinhao.chtholly.BuildConfig
 import com.zinhao.chtholly.MainViewModel
 import com.zinhao.chtholly.databinding.ActivityMainBinding
-import com.zinhao.chtholly.entity.AICharacter
-import per.goweii.layer.core.anim.AnimStyle
-import per.goweii.layer.core.widget.SwipeLayout
-import per.goweii.layer.dialog.DialogLayer
 
 class MainActivity : AppCompatActivity() {
 
@@ -84,6 +78,11 @@ class MainActivity : AppCompatActivity() {
                 viewModel.consumeToastMessage()
             }
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        viewModel.refreshCurrentChara()
     }
 
     private fun setupUI() {
