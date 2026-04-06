@@ -656,6 +656,10 @@ public abstract class Command{
         return replyReady;
     }
 
+    public void setReplyReady(boolean replyReady) {
+        this.replyReady = replyReady;
+    }
+
     public Message getQuestion() {
         return question;
     }

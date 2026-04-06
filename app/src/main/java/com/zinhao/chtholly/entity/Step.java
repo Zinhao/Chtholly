@@ -117,7 +117,10 @@ public class Step {
 
     @Override
     public @NotNull String toString() {
-        return actionDesc(actionId) + " " +(isGlobalAction()?"🟧":viewId)+ (isFindChildByPosition()?Arrays.toString(findPosition):"_") + ",daley "+daley;
+        if(mode == IndexTargetMode.text){
+            return  actionDesc(actionId) + "find "+(isGlobalAction()?"🟧":targetText)+ " in " +viewId+ ", delay:"+daley;
+        }
+        return actionDesc(actionId) + " " +(isGlobalAction()?"🟧":viewId)+ (isFindChildByPosition()?Arrays.toString(findPosition):" ") + ", delay:"+daley;
     }
 
     private static String actionDesc(int id){

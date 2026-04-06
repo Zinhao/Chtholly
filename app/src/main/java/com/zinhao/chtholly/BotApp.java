@@ -90,18 +90,17 @@ public class BotApp extends Application {
         FileLogger.INSTANCE.init(getInstance());
         sharedPreferences = getSharedPreferences("app_data", MODE_PRIVATE);
         apiKey = sharedPreferences.getString(CONFIG_API_KEY,"");
-        if(apiKey.isEmpty()){
-            mode = NekoSession.class;
-        }else{
-            mode = GeminiSession.class;
-            GeminiSession.getInstance();
-        }
         botName = sharedPreferences.getString(CONFIG_BOT_NAME,"");
         aiSoul = sharedPreferences.getString(CONFIG_SOUL_DESC,"");
         adminName = sharedPreferences.getString(CONFIG_ADMIN_NAME,"");
         chatUrl = sharedPreferences.getString(CONFIG_CHAT_URL,HostConsts.GEMINI_PROXY_API_HOST);
         ttsUrl = sharedPreferences.getString(CONFIG_TTS_URL, HostConsts.LOCAL_HOST);
         isFirstRun = sharedPreferences.getBoolean(CONFIG_IS_FIRST_RUN,true);
+        if(apiKey.isEmpty()){
+            mode = NekoSession.class;
+        }else{
+            mode = GeminiSession.class;
+        }
         currentCharacter = new AICharacter(botName,aiSoul);
         AppDatabase database = Room.databaseBuilder(this, AppDatabase.class, "app_data")
                 .build();

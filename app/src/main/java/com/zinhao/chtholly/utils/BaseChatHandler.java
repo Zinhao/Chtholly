@@ -12,7 +12,7 @@ import com.zinhao.chtholly.entity.Message;
 import java.util.List;
 
 public abstract class BaseChatHandler {
-    public final String TAG = "FindMessageHandler";
+    public final static String TAG = "BaseChatHandler";
     public static final String UNKNOWN_PAGE = "unknown page";
     protected abstract boolean isAtName(Message message,String name);
     protected MessageCallback messageCallback;
@@ -94,6 +94,12 @@ public abstract class BaseChatHandler {
     }
 
     public static @Nullable AccessibilityNodeInfo findIndexInTargetNodeChildren(AccessibilityNodeInfo source, String viewId, int position) {
+        if(viewId == null){
+            return null;
+        }
+        if(viewId.equals(source.getViewIdResourceName())){
+            return source;
+        }
         List<AccessibilityNodeInfo> targets = source.findAccessibilityNodeInfosByViewId(viewId);
         AccessibilityNodeInfo target = null;
         if (!targets.isEmpty()) {
@@ -106,14 +112,16 @@ public abstract class BaseChatHandler {
 
     public static @Nullable AccessibilityNodeInfo findFirstTextInTargetNodeChildren(AccessibilityNodeInfo source, String text,String viewId) {
         List<AccessibilityNodeInfo> targets = source.findAccessibilityNodeInfosByText(text);
+        FileLogger.INSTANCE.i(TAG,"findFirstTextInTargetNodeChildren: "+text + " ,len:"+targets.size());
         AccessibilityNodeInfo target = null;
         if (!targets.isEmpty()) {
             target = targets.get(0);
-            if(target==null){
+            if(target == null){
                 return null;
             }
             if(viewId!=null){
                 if(!viewId.equals(target.getViewIdResourceName())){
+                    FileLogger.INSTANCE.i(TAG,"findFirstTextInTargetNodeChildren: "+viewId + " ,find:"+target.getViewIdResourceName());
                     return null;
                 }
             }

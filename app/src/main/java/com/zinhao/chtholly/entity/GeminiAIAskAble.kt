@@ -136,8 +136,9 @@ class GeminiAIAskAble : NetAiAskAble {
             }else if(name == CodeGenerate.name){
                 val fileName = args["file_name"].toString()
                 val textContent = args["text_content"].toString()
-                val file = File(LocalFileCache.getInstance().getExternalWorkDir(), fileName)
+                val file = File(LocalFileCache.getInstance().getWorkSpaceDir(), fileName)
                 AsyncHelper.doAsyncPart{
+                    NekoChatService.getInstance().shareFile(file)
                     var writeSuccess = false
                     var exception: Exception? = null
                     try {
@@ -157,7 +158,6 @@ class GeminiAIAskAble : NetAiAskAble {
                         )
                     )
                     answerTextBuilder.append( if(writeSuccess) "已写入到: ${file.path}" else "写入失败:${exception?.message}")
-//                    todo
                     initSendFileStepTo(NekoChatService.getInstance().qqChatHandler.chatTitle)
 
                     if (answerTextBuilder.isNotEmpty()){
@@ -165,9 +165,6 @@ class GeminiAIAskAble : NetAiAskAble {
                     }
                     answerFinish()
                     delayReplyCallback?.onReplySuccess(this@GeminiAIAskAble)
-
-                    NekoChatService.getInstance().shareFile(file)
-
                     FileLogger.i(TAG,"write_to_file: ${file.path} result:${writeSuccess}")
                 }
 

@@ -85,7 +85,7 @@ class GeminiSession private constructor(private var chatApi: String?) : NekoSess
                 intoContentMessage.addAll(result.subList(result.size-10, result.size-1))
             }
             for (message in intoContentMessage){
-                val messageContent = "${message.speaker} say:${message.message}"
+                val messageContent = "${message.message}"
                 FileLogger.i(TAG,"load last history: $messageContent")
                 val role: String
                 if(BotApp.getInstance().botName == message.speaker){

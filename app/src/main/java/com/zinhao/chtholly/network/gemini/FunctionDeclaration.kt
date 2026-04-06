@@ -35,19 +35,19 @@ val PrintInfo = FunctionDeclaration(
     )
 )
 val CodeGenerate = FunctionDeclaration(
-    description = "write the code to the file",
+    description = "Write text to the file, Save text to the file",
     name = "write_text_to_file",
     Parameters(
         properties = mapOf(
             Pair(
                 "text_content", Properties(
-                    description = "the text write to file",
+                    description = "the text wait to write to file",
                     type = "string",null
                 )
             ),
             Pair(
                 "file_name", Properties(
-                    description = "the file name, like main.java, app.dart",
+                    description = "the file name, like \"main.java, app.dart\". No abs path! ",
                     type = "string",null
                 )
             )

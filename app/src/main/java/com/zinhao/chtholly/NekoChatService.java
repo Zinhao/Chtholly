@@ -8,7 +8,6 @@ import android.annotation.SuppressLint;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
-import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.ServiceInfo;
@@ -21,6 +20,7 @@ import android.os.Build;
 import android.os.Handler;
 import android.provider.Settings;
 import android.util.Log;
+import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.WindowManager;
@@ -33,9 +33,9 @@ import androidx.media3.common.MediaMetadata;
 import androidx.media3.common.Player;
 import androidx.media3.exoplayer.ExoPlayer;
 
-import com.zinhao.chtholly.customview.AccessibilityBoundView;
-import com.zinhao.chtholly.customview.AccessibilityLogcatView;
-import com.zinhao.chtholly.customview.VibrationGraphView;
+import com.zinhao.chtholly.databinding.FloatBtBinding;
+import com.zinhao.chtholly.databinding.FloatHelperBinding;
+import com.zinhao.chtholly.databinding.FloatLogcatBinding;
 import com.zinhao.chtholly.entity.*;
 import com.zinhao.chtholly.session.GeminiSession;
 import com.zinhao.chtholly.session.OpenAiSession;
@@ -67,23 +67,23 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
     private AccessibilityButtonController accessibilityButtonController;
     private boolean mIsAccessibilityButtonAvailable;
 
+
     private boolean accShow;
     private boolean accIsAlpha;
-    private View accBoundView;
+
+    FloatHelperBinding helperBinding;
     private WindowManager.LayoutParams accViewParams;
 
     private boolean logcatShow;
     private boolean logcatAlpha0;
-    private View logcatView;
-    private AccessibilityLogcatView accessibilityLogcatView;
+
+    FloatLogcatBinding logcatBinding;
     private WindowManager.LayoutParams logcatViewParams;
 
+    FloatBtBinding floatBtBinding;
     private boolean ctrlShow;
-    private View floatControllerView;
     boolean lockScreen = false;
     private WindowManager.LayoutParams ctrlViewParams;
-    private AccessibilityBoundView accessibilityBoundView;
-    private VibrationGraphView vibrationGraphView;
 
     private WindowManager windowManager;
     /***
@@ -161,26 +161,17 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
     public void updateFloatView(AccessibilityEvent event){
         AccessibilityNodeInfo root = getRootInActiveWindow();
         AccessibilityNodeInfo source = event.getSource();
-        if(accBoundView !=null){
-            if(accessibilityBoundView == null){
-                accessibilityBoundView = accBoundView.findViewById(R.id.acbv);
-            }
-            if(source == null && root!=null){
-                accessibilityBoundView.setNodeInfo(root);
-            }else if(source !=null && root == null){
-                accessibilityBoundView.setNodeInfo(source);
-            }else if(source != null){
-                accessibilityBoundView.setNodeInfo(source);
-            }
-            accessibilityBoundView.postInvalidate();
-        }
+        helperBinding.acbv.setNodeInfo(root);
+//        if(source == null && root!=null){
+//
+//        }else if(source !=null && root == null){
+//            helperBinding.acbv.setNodeInfo(source);
+//        }else if(source != null){
+//            helperBinding.acbv.setNodeInfo(source);
+//        }
+        helperBinding.acbv.postInvalidate();
 
-        if(logcatView !=null){
-            if(accessibilityLogcatView == null)
-                accessibilityLogcatView = logcatView.findViewById(R.id.aclv);
-            if(vibrationGraphView== null)
-                vibrationGraphView = logcatView.findViewById(R.id.vgv);
-        }
+        logcatBinding.currentChatTitle.setText(qqChatHandler.getChatTitle());
     }
 
     @Override
@@ -202,8 +193,9 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
 
     @Override
     public void onAccessibilityEvent(AccessibilityEvent event) {
-        if (event == null)
+        if (event == null){
             return;
+        }
         if (event.getPackageName() == null)
             return;
         if (event.getSource() != null && BuildConfig.DEBUG) {
@@ -213,12 +205,8 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
 
         autoMission(event.getPackageName().toString());
 
-//        debugOnAccessibilityEvent(event);
+        debugOnAccessibilityEvent(event);
 
-        String pageName = processNotChatPage(event.getSource());
-        if(!UNKNOWN_PAGE.equals(pageName) && !NULL_ROOT.equals(pageName)){
-            addLogcat( "onAccessibilityEvent: " + pageName);
-        }
         if(QQChatHandler.PACKAGE_NAME.equals(event.getPackageName().toString())){
             qqChatHandler.handle(event);
         }else if(WXChatHandler.WX_PACKAGE_NAME.equals(event.getPackageName().toString())){
@@ -252,7 +240,7 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
             layoutTree.put("event",LayoutTreeUtils.getEventStringBuilder(event));
             layoutTree.put("time",dateTimeFormat.format(System.currentTimeMillis()));
             //com.tencent.mobileqq:id/listView1
-            addLogcat("Generate json layout tree: "+jsonFileName);
+            logcatBinding.currentTree.setText(jsonFileName);
             LocalFileCache.getInstance().saveJSONObject(getApplicationContext(), layoutTree, jsonFileName);
         } catch (JSONException e) {
             throw new RuntimeException(e);
@@ -409,14 +397,19 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
     private void handleQAs(AccessibilityNodeInfo source) {
         if (source == null)
             return;
-        for (Command qa : waitQAs) {
-            if (qa.getAnswer() == null || qa.getAnswer().getMessage() == null || (qa.sendSuccess() && qa.actionSuccess())) {
-                continue;
+        Log.d(TAG,"handleQAs ");
+        if(!waitQAs.isEmpty()){
+            Command qa = waitQAs.get(0);
+            if(!qa.isReplyReady()){
+                return;
             }
-            // todo 也许需要添加一个开关，允许或者拒绝动作的执行
+            if (qa.getAnswer() == null || qa.getAnswer().getMessage() == null || (qa.sendSuccess() && qa.actionSuccess())) {
+                return;
+            }
             if (qa.haveAction()) {
                 if (doAction(source, qa)) {
                     // 一次处理一项
+                    addLogcat("handleQAs doAction" + waitQAs.size());
                     return;
                 }
             } else {
@@ -445,7 +438,7 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
                 if (step.isWaiting()) {
                     return false;
                 }
-                // 延后执行,先放回队列,时间到之后设置daley为0,取出来执行
+                // 延后执行,先放回队列,时间到之后设置delay为0,取出来执行
                 mHandler.postDelayed(() -> {
                     step.setDaley(0);
                     handleQAs(getRootInActiveWindow());
@@ -463,6 +456,12 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
                         }
                     } else {
                         addLogcat("doAction: 寻找视图失败" + step.getViewId());
+                        if(step.isCustomGesture()){
+                            if(step.getViewId() == null){
+                                result = doCustomGesture(source,step);
+                            }
+                        }
+
                         // 为防止卡死在一条指令上面，设置一个30秒超时，超时会自动完成任务。
                         if (System.currentTimeMillis() - qa.getQuestion().getTimeStamp() > 30000) {
                             result = true;
@@ -488,12 +487,19 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
         }
         AccessibilityNodeInfo targetView = findIndexInTargetNodeChildren(source, step.getViewId(),step.getInNodesPosition());
         if(targetView == null){
-            return null;
+            addLogcat("1.没找到:"+step.getViewId());
+            if(step.getIndexMode() == Step.IndexTargetMode.text){
+                targetView = source;
+            }else{
+                return null;
+            }
+
         }
         if(step.getIndexMode() == Step.IndexTargetMode.position){
             for (int i = 0; i < step.getFindPosition().length; i++) {
                 targetView = targetView.getChild(step.getFindPosition()[i]);
                 if (targetView == null) {
+                    addLogcat("2.没找到:"+step.getViewId());
                     return null;
                 }
             }
@@ -511,9 +517,10 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
         }else if(step.getIndexMode() == Step.IndexTargetMode.text){
             targetView = findFirstTextInTargetNodeChildren(targetView, step.getTargetText(),step.getTargetTextViewId());
             for (int i = 0; i < step.getTargetParentTimes(); i++) {
-                if(targetView!=null){
+                if(targetView != null){
                     targetView = targetView.getParent();
                 }else{
+                    addLogcat("3.没找到parent:"+step.getViewId() + " =>"+ i);
                     return null;
                 }
             }
@@ -636,9 +643,11 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
         addLogcat("onServiceConnected: ");
 
         instance = new WeakReference<>(this);
-        logcatView = OverlayUtils.createView(this,R.layout.float_logcat);
-        accBoundView = OverlayUtils.createView(this,R.layout.float_helper);
-        createDragFloatMenu();
+        LayoutInflater layoutInflater = LayoutInflater.from(this);
+        logcatBinding = FloatLogcatBinding.inflate(layoutInflater,null,false);
+        helperBinding = FloatHelperBinding.inflate(layoutInflater,null,false);
+        floatBtBinding = FloatBtBinding.inflate(layoutInflater,null,false);
+        bindClickListener();
 
 
         accessibilityButtonController = getAccessibilityButtonController();
@@ -673,38 +682,32 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
 
     boolean isControllerMinSize = false;
     public void controllerViewToMinSize() {
-        Button b1 = floatControllerView.findViewById(R.id.b1);
-        Button b2 = floatControllerView.findViewById(R.id.b2);
-        Button b3 = floatControllerView.findViewById(R.id.b3);
-        b1.setVisibility(View.GONE);
-        b2.setVisibility(View.GONE);
-        b3.setVisibility(View.GONE);
+        floatBtBinding.b1.setVisibility(View.GONE);
+        floatBtBinding.b2.setVisibility(View.GONE);
+        floatBtBinding.b3.setVisibility(View.GONE);
         isControllerMinSize = true;
     }
 
     public void controllerViewToDefaultSize() {
-        Button b1 = floatControllerView.findViewById(R.id.b1);
-        Button b2 = floatControllerView.findViewById(R.id.b2);
-        Button b3 = floatControllerView.findViewById(R.id.b3);
-        b1.setVisibility(View.VISIBLE);
-        b2.setVisibility(View.VISIBLE);
-        b3.setVisibility(View.VISIBLE);
+        floatBtBinding.b1.setVisibility(View.VISIBLE);
+        floatBtBinding.b2.setVisibility(View.VISIBLE);
+        floatBtBinding.b3.setVisibility(View.VISIBLE);
         isControllerMinSize = false;
     }
 
     public void showAccWindow() {
-        if (!Settings.canDrawOverlays(getApplicationContext()) || accBoundView == null) {
+        if (!Settings.canDrawOverlays(getApplicationContext())) {
             Intent rqIntent = new Intent(getApplicationContext(), FloatWindowActivity.class);
             rqIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             startActivity(rqIntent);
         } else {
             if (!accShow) {
-                windowManager.removeView(floatControllerView);
-                windowManager.addView(accBoundView, accViewParams);
-                if(accessibilityBoundView!=null){
-                    accessibilityBoundView.postInvalidate();
-                }
-                windowManager.addView(floatControllerView, ctrlViewParams);
+                windowManager.removeView(floatBtBinding.getRoot());
+
+                windowManager.addView(helperBinding.getRoot(), accViewParams);
+                helperBinding.acbv.postInvalidate();
+
+                windowManager.addView(floatBtBinding.getRoot(), ctrlViewParams);
 
             }
             accShow = true;
@@ -717,7 +720,7 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
 
     public void setAccIsAlpha(boolean alpha){
         accIsAlpha = alpha;
-        accBoundView.setAlpha(alpha?0:1);
+        helperBinding.acbv.setAlpha(alpha?0:1);
     }
 
     public boolean isAccIsAlpha() {
@@ -734,25 +737,23 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
 
     public void setLogcatAlpha0(boolean logcatAlpha0) {
         this.logcatAlpha0 = logcatAlpha0;
-        accessibilityLogcatView.setAlpha(logcatAlpha0 ?0:1);
-        vibrationGraphView.setAlpha(logcatAlpha0 ?0:1);
+        logcatBinding.aclv.setAlpha(logcatAlpha0 ?0:1);
+        logcatBinding.vgv.setAlpha(logcatAlpha0 ?0:1);
     }
 
     public void showLogcat() {
-        if (!Settings.canDrawOverlays(getApplicationContext()) || accBoundView == null) {
+        if (!Settings.canDrawOverlays(getApplicationContext())) {
             Intent rqIntent = new Intent(getApplicationContext(), FloatWindowActivity.class);
             rqIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             startActivity(rqIntent);
         } else {
             if (!logcatShow) {
-                windowManager.removeView(floatControllerView);
+                windowManager.removeView(floatBtBinding.getRoot());
 
-                windowManager.addView(logcatView, accViewParams);
-                if(logcatView !=null){
-                    logcatView.postInvalidate();
-                }
+                windowManager.addView(logcatBinding.getRoot(), accViewParams);
+                logcatBinding.aclv.postInvalidate();
 
-                windowManager.addView(floatControllerView, ctrlViewParams);
+                windowManager.addView(floatBtBinding.getRoot(), ctrlViewParams);
 
             }
             logcatShow = true;
@@ -760,25 +761,16 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
     }
 
     public void showCtrlWindow() {
-        if (!Settings.canDrawOverlays(getApplicationContext()) || floatControllerView == null) {
+        if (!Settings.canDrawOverlays(getApplicationContext())) {
             Intent rqIntent = new Intent(getApplicationContext(), FloatWindowActivity.class);
             rqIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             startActivity(rqIntent);
         } else {
             if (!ctrlShow) {
-                windowManager.addView(floatControllerView, ctrlViewParams);
+                windowManager.addView(floatBtBinding.getRoot(), ctrlViewParams);
             }
             ctrlShow = true;
         }
-    }
-
-    public void hideCtrlWindow() {
-        if (floatControllerView == null)
-            return;
-        if (ctrlShow) {
-            windowManager.removeView(floatControllerView);
-        }
-        ctrlShow = false;
     }
 
     @Override
@@ -791,9 +783,10 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
     }
 
     public void addLogcat(String l){
-        if(accessibilityLogcatView!=null){
-            accessibilityLogcatView.appendLogcat(l);
+        if(logcatBinding == null){
+            return;
         }
+        logcatBinding.aclv.appendLogcat(l);
         FileLogger.INSTANCE.d(TAG,l);
     }
 
@@ -847,11 +840,8 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
                 timestamps.add(System.currentTimeMillis());
                 dataPoints.add(strength);
             }
-            if(vibrationGraphView!=null){
-                if(logcatShow && !logcatAlpha0){
-                    vibrationGraphView.updateData(strength);
-                }
-            }else{
+            if(logcatShow && !logcatAlpha0){
+                logcatBinding.vgv.updateData(strength);
             }
         }
     };
@@ -942,10 +932,10 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
     }
 
 
-    public void createDragFloatMenu() {
-        View view = OverlayUtils.createView(this,R.layout.float_bt);
-        Button menu1 = view.findViewById(R.id.b1);
-        menu1.setOnClickListener(new View.OnClickListener() {
+    public void bindClickListener() {
+
+        View view =floatBtBinding.getRoot();
+        floatBtBinding.b1.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 if(isAccShow()){
@@ -957,8 +947,7 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
             }
         });
 
-        Button menu2 = view.findViewById(R.id.b2);
-        menu2.setOnClickListener(new View.OnClickListener() {
+        floatBtBinding.b2.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 if(logcatShow){
@@ -970,22 +959,33 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
             }
         });
 
-        Button toMainActivity = view.findViewById(R.id.b3);
-        toMainActivity.setOnClickListener(new View.OnClickListener() {
+        floatBtBinding.b3.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-//                shareText();
-                File f = LocalFileCache.getInstance().getExternalWorkDir();
-                File[] files = f.listFiles();
+                mHandler.postDelayed(new Runnable() {
+                    @Override
+                    public void run() {
+                        File f = LocalFileCache.getInstance().getWorkSpaceDir();
+                        File[] files = f.listFiles();
 
-                if(files!=null && files.length>0){
-                    shareFile(files[0]);
-                }
+                        if(files!=null && files.length>0){
+                            File toSendFile = files[0];
+                            Command c =new NekoAskAble(PACKAGE_NAME,new Message(BotApp.getInstance().getAdminName(),"测试文件分享",System.currentTimeMillis()));
+                            c.initSendFileStepTo(qqChatHandler.getChatTitle());
+                            c.getAnswer().setMessage("发送"+toSendFile.getName());
+                            c.setReplyReady(true);
+                            c.handle();
+                            waitQAs.add(c);
+
+                            shareFile(toSendFile);
+                        }
+                    }
+                },5000);
+
             }
         });
 
-        Button toMin = view.findViewById(R.id.b4);
-        toMin.setOnClickListener(new View.OnClickListener() {
+        floatBtBinding.b4.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 if(isControllerMinSize){
@@ -996,8 +996,7 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
             }
         });
 
-        View cv = view.findViewById(R.id.ctrl);
-        cv.setOnTouchListener(new View.OnTouchListener() {
+        floatBtBinding.ctrl.setOnTouchListener(new View.OnTouchListener() {
             private float downX, downY;
             @SuppressLint("ClickableViewAccessibility")
             @Override
@@ -1014,7 +1013,7 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
                         ctrlViewParams.x += (int) moveX;
                         ctrlViewParams.y += (int) moveY;
                         windowManager.updateViewLayout(
-                                floatControllerView,
+                                floatBtBinding.getRoot(),
                                 ctrlViewParams);
                     }
                     downX = nowX;
@@ -1023,7 +1022,6 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
                 return true;
             }
         });
-        floatControllerView = view;
 
         if (Settings.canDrawOverlays(this)) {
             // 有权限
@@ -1060,6 +1058,9 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
     }
 
     public void shareFile(File file){
+        if(Build.VERSION.SDK_INT < Build.VERSION_CODES.R){
+            return;
+        }
         mHandler.post(new Runnable() {
             @Override
             public void run() {
@@ -1072,7 +1073,6 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
 
                 intent.setType("*/*");
 
-//        Intent shareIntent = Intent.createChooser(intent, "Send File");
                 intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                 try {
                     startActivity(intent);

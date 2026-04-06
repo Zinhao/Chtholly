@@ -1,17 +1,13 @@
 package com.zinhao.chtholly.utils;
 
 import android.content.Context;
-import android.util.Log;
 import com.koushikdutta.async.http.AsyncHttpClient;
 import com.zinhao.chtholly.BotApp;
-import com.zinhao.chtholly.R;
 import org.json.JSONObject;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
-import java.util.ArrayList;
-import java.util.List;
 
 public class LocalFileCache{
     private static final String TAG = "LocalFileCache";
@@ -28,26 +24,29 @@ public class LocalFileCache{
 
     public File getExternalAppRootDir() throws FileNotFoundException {
         File rootDir;
-        rootDir = BotApp.getInstance().getExternalCacheDir();
+        rootDir = BotApp.getInstance().getExternalFilesDir(null);
+        if(rootDir == null){
+            rootDir = BotApp.getInstance().getFilesDir();
+        }
         return rootDir;
     }
 
 
-    public File getExternalWorkDir() {
-        File cacheDir = null;
+    public File getWorkSpaceDir() {
+        File appExternalFilesDir = null;
         try {
-            cacheDir = getExternalAppRootDir();
+            appExternalFilesDir = getExternalAppRootDir();
         } catch (FileNotFoundException e) {
             e.printStackTrace();
             return null;
         }
-        File worksLibDir = new File(cacheDir, "WorkSpace");
-        if (!worksLibDir.exists()) {
-            if (!worksLibDir.mkdirs()) {
+        File workSpace = new File(appExternalFilesDir, "WorkSpace");
+        if (!workSpace.exists()) {
+            if (!workSpace.mkdirs()) {
                 return null;
             }
         }
-        return worksLibDir;
+        return workSpace;
     }
 
     public void writeText(final File save, final String text) {

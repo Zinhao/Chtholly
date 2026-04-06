@@ -12,10 +12,7 @@ import com.zinhao.chtholly.entity.Command;
 import com.zinhao.chtholly.entity.Message;
 import com.zinhao.chtholly.entity.Step;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Locale;
-import java.util.Vector;
+import java.util.*;
 
 public class QQChatHandler extends BaseChatHandler {
     private static final String TAG = "QQChatHandler";
@@ -166,6 +163,9 @@ public class QQChatHandler extends BaseChatHandler {
             Message emptyMessage = new Message(null,null,System.currentTimeMillis());
             for (int j = 0; j < messageItem.getChildCount(); j++) {
                 AccessibilityNodeInfo messageItemChild = messageItem.getChild(j);
+                if(messageItemChild == null){
+                    continue;
+                }
                 if(getChatMessageTimeStampId().equals(messageItemChild.getViewIdResourceName())){
                     //ab6[0] = chat_item_time_stamp[text] = 23:02
                 }
@@ -206,7 +206,7 @@ public class QQChatHandler extends BaseChatHandler {
                     }
                 }
             }
-            FileLogger.INSTANCE.d(TAG,emptyMessage.toString());
+//            FileLogger.INSTANCE.d(TAG,emptyMessage.toString());
             allMessages.add(emptyMessage);
         }
         return allMessages;
@@ -232,7 +232,7 @@ public class QQChatHandler extends BaseChatHandler {
             for (int i = 0; i < Math.min(messageNodes.size(),nickNodes.size()); i++) {
                 AccessibilityNodeInfo n = nickNodes.get(i);
                 AccessibilityNodeInfo m = messageNodes.get(i);
-                Log.i(TAG, String.format(Locale.CHINA,"id2FindGroupLastMessage: nick:%s : %s",n.getText(),m.getText()));
+//                Log.i(TAG, String.format(Locale.CHINA,"id2FindGroupLastMessage: nick:%s : %s",n.getText(),m.getText()));
             }
             int lastIndex = nickNodes.size()-1;
             CharSequence text = messageNodes.get(lastIndex).getText();
@@ -359,7 +359,9 @@ public class QQChatHandler extends BaseChatHandler {
              * 机器人信息和聊天信息
              */
             chatTitle = title.getText().toString();
-            Log.d(TAG, "initChatPage:聊天界面:" + chatTitle);
+            if(NekoChatService.getInstance()!=null){
+                NekoChatService.getInstance().addLogcat("initChatPage:聊天界面:" + chatTitle);
+            }
         }
     }
 
@@ -384,7 +386,7 @@ public class QQChatHandler extends BaseChatHandler {
 
         for (int i = 0; i < messageNodes.size(); i++) {
             AccessibilityNodeInfo m = messageNodes.get(i);
-            Log.d(TAG, String.format(Locale.CHINA,"id2FindLastMessage: : %s",m.getText()));
+//            Log.d(TAG, String.format(Locale.CHINA,"id2FindLastMessage: : %s",m.getText()));
         }
         int lastIndex = messageNodes.size()-1;
         AccessibilityNodeInfo lastNodeInfo = messageNodes.get(lastIndex);
@@ -712,9 +714,16 @@ public class QQChatHandler extends BaseChatHandler {
          *     }
          */
         List<Step> steps = new Vector<>();
-        ///todo Android 9.0 无法在服务中分享。
-        steps.add(new Step(QQChatHandler.PACKAGE_NAME,":id/listView1",AccessibilityNodeInfo.ACTION_CLICK,500, Step.ActionType.normal,1,targetText,":id/text1"));
-        steps.add(new Step(QQChatHandler.PACKAGE_NAME,":id/dialogRightBtn",AccessibilityNodeInfo.ACTION_CLICK,Step.ActionType.normal,500));
+        Step gestureStep = new Step(QQChatHandler.PACKAGE_NAME,null,AccessibilityNodeInfo.ACTION_SCROLL_FORWARD,Step.ActionType.custom,500);
+        gestureStep.setNeedGesture(Command.CLICK);
+        steps.add(gestureStep);
+
+        Step back = new Step(QQChatHandler.PACKAGE_NAME,null,AccessibilityService.GLOBAL_ACTION_BACK, Step.ActionType.global,500);
+        steps.add(back);
+
+        steps.add(new Step(QQChatHandler.PACKAGE_NAME,":id/listView1",AccessibilityNodeInfo.ACTION_CLICK,2000, Step.ActionType.normal,1,targetText,":id/text1"));
+        steps.add(new Step(QQChatHandler.PACKAGE_NAME,":id/dialogRightBtn",AccessibilityNodeInfo.ACTION_CLICK,Step.ActionType.normal,1500));
+
         return steps;
     }
 }

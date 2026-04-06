@@ -23,9 +23,9 @@ public class AccessibilityLogcatView extends View {
     public AccessibilityLogcatView(Context context, @Nullable AttributeSet attrs) {
         super(context, attrs);
         textPaint = new TextPaint();
-        textPaint.setColor(Color.BLUE);
-        textPaint.setTextSize(24);
-        lineHeight = 24;
+        textPaint.setColor(Color.WHITE);
+        textPaint.setTextSize(34);
+        lineHeight = 34;
         logcatList.add("init logcat");
     }
 
@@ -62,7 +62,7 @@ public class AccessibilityLogcatView extends View {
 
     public void appendLogcat(String logcat) {
         String last = logcatList.get(logcatList.size()-1);
-        if(last.startsWith(logcat)){
+        if(last.replace(":>","").equals(logcat)){
             logcatList.set(logcatList.size()-1,last + ":>");
         }else {
             logcatList.add(logcat);
