@@ -10,6 +10,7 @@ import com.zinhao.chtholly.BotApp
 import com.zinhao.chtholly.entity.AICharacter
 import com.zinhao.chtholly.utils.HostConsts
 import androidx.core.content.edit
+import com.zinhao.chtholly.view.adapter.SetupPagerAdapter
 
 class SetupViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -30,21 +31,24 @@ class SetupViewModel(application: Application) : AndroidViewModel(application) {
     val ttsVoiceId: LiveData<String> = _ttsVoiceId
 
     // 步骤3: 角色配置
-    private val _adminName = MutableLiveData<String>("狗秀金什麽")
+    private val _adminName = MutableLiveData<String>("")
     val adminName: LiveData<String> = _adminName
 
-    private val _botName = MutableLiveData<String>("红豆")
+    private val _botName = MutableLiveData<String>("")
     val botName: LiveData<String> = _botName
 
     private val _botDescription = MutableLiveData<String>("")
     val botDescription: LiveData<String> = _botDescription
+
+    private val _botSoulList = MutableLiveData<List<AICharacter>>()
+    val botSoulList: LiveData<List<AICharacter>> = _botSoulList
 
     // ==================== 向导状态 ====================
 
     private val _currentStep = MutableLiveData<Int>(0)
     val currentStep: LiveData<Int> = _currentStep
 
-    private val _totalSteps = MutableLiveData<Int>(4)
+    private val _totalSteps = MutableLiveData<Int>(SetupPagerAdapter.TOTAL_PAGE_COUNT)
     val totalSteps: LiveData<Int> = _totalSteps
 
     private val _canGoNext = MutableLiveData<Boolean>(false)
@@ -60,6 +64,18 @@ class SetupViewModel(application: Application) : AndroidViewModel(application) {
     private val handler = Handler(Looper.getMainLooper())
     private var validationRunnable: Runnable? = null
 
+
+    fun loadConfig(){
+        _baseUrl.value = BotApp.getInstance().chatUrl
+        _apiKey.value = BotApp.getInstance().apiKey
+        _adminName.value = BotApp.getInstance().adminName
+        _botName.value = BotApp.getInstance().botName
+        _ttsServerUrl.value = BotApp.getInstance().ttsUrl
+        _botDescription.value = BotApp.getInstance().aiSoul
+        BotApp.getInstance().loadAICharacter {
+            _botSoulList.postValue(it)
+        }
+    }
     // ==================== 数据更新方法 ====================
 
     fun updateBaseUrl(url: String) {
@@ -105,10 +121,13 @@ class SetupViewModel(application: Application) : AndroidViewModel(application) {
 
     fun goToNextStep() {
         if(_currentStep.value == 1){
-            BotApp.getInstance().insert(AICharacter(_botName.value,_botDescription.value))
+            val chara = AICharacter(_botName.value,_botDescription.value)
+            BotApp.getInstance().insert(chara,{
+                _botDescription.postValue(chara.desc)
+            })
         }
         val next = (_currentStep.value ?: 0) + 1
-        if (next < (_totalSteps.value ?: 4)) {
+        if (next < (_totalSteps.value ?: SetupPagerAdapter.TOTAL_PAGE_COUNT)) {
             _currentStep.value = next
             validateCurrentStep()
         } else {
@@ -150,10 +169,8 @@ class SetupViewModel(application: Application) : AndroidViewModel(application) {
 
     private fun validateServerStep(): Boolean {
         val url = _baseUrl.value ?: ""
-        val key = _apiKey.value ?: ""
         return url.isNotEmpty() &&
-                (url.startsWith("http://") || url.startsWith("https://")) &&
-                key.isNotEmpty()
+                (url.startsWith("http://") || url.startsWith("https://"))
     }
 
     private fun validateTtsStep(): Boolean {
@@ -174,7 +191,7 @@ class SetupViewModel(application: Application) : AndroidViewModel(application) {
         BotApp.getInstance().apply {
             apiKey = _apiKey.value ?: ""
             botName = _botName.value ?: "红豆"
-            adminName = _adminName.value ?: "狗秀金什麽"
+            adminName = _adminName.value ?: "Master"
             aiSoul = _botDescription.value
             ttsUrl = _ttsServerUrl.value
             chatUrl = _baseUrl.value
@@ -207,10 +224,11 @@ class SetupViewModel(application: Application) : AndroidViewModel(application) {
                 _baseUrl.value = HostConsts.OPENAI_API_HOST
             }
             is ServerPreset.Gemini -> {
-                _baseUrl.value = HostConsts.GEMINI_PROXY_API_HOST
+                _baseUrl.value = HostConsts.GEMINI_API_HOST
             }
             is ServerPreset.Custom -> {
                 // 保持当前值或清空
+                _baseUrl.value = HostConsts.GEMINI_PROXY_API_HOST
             }
         }
         scheduleValidation()

@@ -90,15 +90,32 @@ public abstract class BaseChatHandler {
     }
 
     public static @Nullable AccessibilityNodeInfo findFirstNodeInfo(AccessibilityNodeInfo source, String viewId) {
-        return findIndexNodeInfo(source,viewId,0);
+        return findIndexInTargetNodeChildren(source,viewId,0);
     }
 
-    public static @Nullable AccessibilityNodeInfo findIndexNodeInfo(AccessibilityNodeInfo source, String viewId,int position) {
+    public static @Nullable AccessibilityNodeInfo findIndexInTargetNodeChildren(AccessibilityNodeInfo source, String viewId, int position) {
         List<AccessibilityNodeInfo> targets = source.findAccessibilityNodeInfosByViewId(viewId);
         AccessibilityNodeInfo target = null;
         if (!targets.isEmpty()) {
             if(position<targets.size()){
                 target = targets.get(position);
+            }
+        }
+        return target;
+    }
+
+    public static @Nullable AccessibilityNodeInfo findFirstTextInTargetNodeChildren(AccessibilityNodeInfo source, String text,String viewId) {
+        List<AccessibilityNodeInfo> targets = source.findAccessibilityNodeInfosByText(text);
+        AccessibilityNodeInfo target = null;
+        if (!targets.isEmpty()) {
+            target = targets.get(0);
+            if(target==null){
+                return null;
+            }
+            if(viewId!=null){
+                if(!viewId.equals(target.getViewIdResourceName())){
+                    return null;
+                }
             }
         }
         return target;

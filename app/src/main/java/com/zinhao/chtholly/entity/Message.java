@@ -1,11 +1,11 @@
 package com.zinhao.chtholly.entity;
 
 import android.view.accessibility.AccessibilityNodeInfo;
-import androidx.room.Embedded;
+import androidx.annotation.NonNull;
 import androidx.room.Entity;
 import androidx.room.Ignore;
 import androidx.room.PrimaryKey;
-import kotlin.jvm.Transient;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.Objects;
 
@@ -18,11 +18,24 @@ public class Message {
     public long timeStamp;
     @Ignore
     public AccessibilityNodeInfo nodeInfo;
+    @Ignore
+    public int leve;
+    @Ignore
+    public String tag;
+    @Ignore
+    public boolean other = false;
 
     public Message(String speaker, String message, long timeStamp) {
         this.message = message;
         this.speaker = speaker;
         this.timeStamp = timeStamp;
+    }
+
+    public Message(String speaker, String message, long timeStamp,boolean other) {
+        this.message = message;
+        this.speaker = speaker;
+        this.timeStamp = timeStamp;
+        this.other = other;
     }
 
     public long getId() {
@@ -67,6 +80,12 @@ public class Message {
         return Objects.equals(speaker, message1.speaker);
     }
 
+    @NonNull
+    @Override
+    public @NotNull String toString() {
+        return tag +" [leve"+ leve +"] "+ speaker+": "+ message;
+    }
+
     @Override
     public int hashCode() {
         int result = message != null ? message.hashCode() : 0;
@@ -81,5 +100,25 @@ public class Message {
 
     public AccessibilityNodeInfo getNodeInfo() {
         return nodeInfo;
+    }
+
+    public int getLeve() {
+        return leve;
+    }
+
+    public void setLeve(int leve) {
+        this.leve = leve;
+    }
+
+    public String getTag() {
+        return tag;
+    }
+
+    public void setTag(String tag) {
+        this.tag = tag;
+    }
+
+    public boolean isOther() {
+        return other;
     }
 }

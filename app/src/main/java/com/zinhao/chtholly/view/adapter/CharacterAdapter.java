@@ -45,7 +45,22 @@ public class CharacterAdapter extends RecyclerView.Adapter<RecyclerView.ViewHold
                     itemClickListener.onItemClick(aiCharacter);
                 }
             });
+            viewHolder.itemView.setOnLongClickListener(new View.OnLongClickListener() {
+                @Override
+                public boolean onLongClick(View v) {
+                    itemClickListener.onLongClick(aiCharacter);
+                    return true;
+                }
+            });
+
         }
+    }
+
+    public void removeItem(AICharacter aiCharacter){
+        int index = data.indexOf(aiCharacter);
+        notifyItemRemoved(index);
+        data.remove(aiCharacter);
+        notifyItemRangeChanged(index,data.size()-index);
     }
 
     @Override
@@ -65,5 +80,6 @@ public class CharacterAdapter extends RecyclerView.Adapter<RecyclerView.ViewHold
 
     public interface ItemClickListener {
         void onItemClick(AICharacter character);
+        void onLongClick(AICharacter character);
     }
 }

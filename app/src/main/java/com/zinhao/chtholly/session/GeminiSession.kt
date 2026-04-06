@@ -3,6 +3,7 @@ package com.zinhao.chtholly.session
 import android.util.Log
 import com.zinhao.chtholly.BotApp
 import com.zinhao.chtholly.NekoChatService
+import com.zinhao.chtholly.db.MessageDao
 import com.zinhao.chtholly.entity.GeminiAIAskAble
 import com.zinhao.chtholly.entity.Message
 import com.zinhao.chtholly.entity.NetAiAskAble
@@ -12,6 +13,7 @@ import com.zinhao.chtholly.network.gemini.Part
 import com.zinhao.chtholly.network.gemini.GEMINI_TOOLS
 import com.zinhao.chtholly.network.gemini.Tool
 import com.zinhao.chtholly.session.RemoteChatApiSession.RemoteModel
+import com.zinhao.chtholly.utils.FileLogger
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -53,7 +55,6 @@ class GeminiSession private constructor(private var chatApi: String?) : NekoSess
             data.put(CONTENTS, contentsToJsonArray())
             data.put("tools", toolsToJsonArray())
 
-
             val t = JSONObject()
             t.put("thinkingLevel", "low")
             val generationConfigObj = JSONObject()
@@ -62,6 +63,7 @@ class GeminiSession private constructor(private var chatApi: String?) : NekoSess
         } catch (e: JSONException) {
             throw RuntimeException(e)
         }
+        loadLast10()
     }
 
     fun contentsToJsonArray(): JSONArray{
@@ -70,6 +72,31 @@ class GeminiSession private constructor(private var chatApi: String?) : NekoSess
             contentArr.put(JSONObject(contentToJson(content)))
         }
         return contentArr
+    }
+
+    private fun loadLast10(){
+        contents.clear()
+        BotApp.getInstance().loadMessage(MessageDao.MessageGetAllListener { result ->
+            if(result.isEmpty()){return@MessageGetAllListener}
+            val intoContentMessage = arrayListOf<Message>()
+            if(result.size <= 10){
+                intoContentMessage.addAll(result)
+            }else{
+                intoContentMessage.addAll(result.subList(result.size-10, result.size-1))
+            }
+            for (message in intoContentMessage){
+                val messageContent = "${message.speaker} say:${message.message}"
+                FileLogger.i(TAG,"load last history: $messageContent")
+                val role: String
+                if(BotApp.getInstance().botName == message.speaker){
+                    role = ROLE_MODEL
+                }else{
+                    role = ROLE_USER
+                }
+                val content = Content(listOf(Part(messageContent,null,null,null)),role)
+                contents.add(content)
+            }
+        })
     }
 
     fun contentToJson(content: Content): String {
@@ -115,6 +142,12 @@ class GeminiSession private constructor(private var chatApi: String?) : NekoSess
         return data.getJSONArray(CONTENTS).toString()
     }
 
+    override fun clearContext():Int {
+        val len = contents.size
+        contents.clear()
+        return len
+    }
+
     override fun summarize(): Int {
         val chatLen = contents.size
         requestChatSummarize()
@@ -135,13 +168,15 @@ class GeminiSession private constructor(private var chatApi: String?) : NekoSess
         return modelList
     }
 
-    fun addAssistantContent(content: Content) {
+    fun addContent(content: Content) {
         contents.add(content)
     }
 
     @Throws(JSONException::class)
     override fun callApi(message: NetAiAskAble): Boolean {
-        contents.add(Content(listOf(Part(message.question.message,null,"")),ROLE_USER))
+        val newContent = Content(listOf(Part(message.questionWithSpeaker(),null,null,null)),ROLE_USER)
+        contents.add(newContent)
+        FileLogger.i(TAG, "callApi: ${newContent.parts.firstOrNull()?.text}")
         data.put(CONTENTS, contentsToJsonArray())
         return requestChatCompletions(message)
     }
@@ -162,17 +197,16 @@ class GeminiSession private constructor(private var chatApi: String?) : NekoSess
             question
         ) { message ->
             contents = arrayListOf()
-            addAssistantContent(Content(arrayListOf(Part(message.answer.message, null,"")), ROLE_MODEL))
+            addContent(Content(arrayListOf(Part(message.answer.message, null,null,"")), ROLE_MODEL))
             NekoChatService.getInstance()
                 .addLogcat("requestChatSummarize:" + message.getAnswer().getMessage())
-            NekoChatService.getInstance().onReply(message)
+            NekoChatService.getInstance().onReplySuccess(message)
         }
         summarizeMessage.handle()
     }
 
     override fun requestChatCompletions(message: NetAiAskAble): Boolean {
         val requestBody: RequestBody = data.toString().toRequestBody("application/json;charset=utf-8".toMediaType())
-        Log.d(TAG, "requestAsk: $data")
         val request = Request.Builder().post(requestBody)
             .url("$chatApi/models/${currentModel.str}:generateContent")
             .addHeader("Content-Type", "application/json")
@@ -190,7 +224,7 @@ class GeminiSession private constructor(private var chatApi: String?) : NekoSess
 
         private const val ROLE_SYSTEM = "system_instruction"
         private const val ROLE_MODEL = "model"
-        private const val ROLE_USER = "user"
+        const val ROLE_USER = "user"
 
         const val MODEL_GEMINI_3_FL_PRE: String = "gemini-3.1-flash-lite-preview"
         const val MODEL_GEMINI_3_PRO_PRE: String = "gemini-3.1-pro-preview"

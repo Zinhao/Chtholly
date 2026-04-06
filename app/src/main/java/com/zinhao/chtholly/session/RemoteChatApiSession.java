@@ -18,6 +18,7 @@ public interface RemoteChatApiSession {
     void setChara(String desc);
 
     String getContextChat();
+    int clearContext();
     int summarize();
 
     void setModelIndex(int modelIndex);

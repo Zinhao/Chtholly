@@ -148,6 +148,13 @@ public class OpenAiSession extends NekoSession implements RemoteChatApiSession {
         return chats.toString();
     }
 
+    @Override
+    public int clearContext() {
+        int len = chats.length();
+        chats = new JSONArray();
+        return len;
+    }
+
     public int summarize(){
         int len = 0;
         for (int i = 0; i < chats.length(); i++) {
@@ -246,7 +253,7 @@ public class OpenAiSession extends NekoSession implements RemoteChatApiSession {
         Message question = new Message("system","使用不超过50字总结对话",System.currentTimeMillis());
         NetAiAskAble summarizeMessage = new OpenAiAskAble(BotApp.getInstance().getPackageName(), question, new NetAiAskAble.DelayReplyCallback() {
             @Override
-            public void onReply(NetAiAskAble message) {
+            public void onReplySuccess(NetAiAskAble message) {
                 chats = new JSONArray();
                 chats.put(firstSystemChat);
                 NekoChatService.getInstance().addLogcat("requestChatSummarize:"+message.getAnswer().getMessage());
@@ -262,7 +269,7 @@ public class OpenAiSession extends NekoSession implements RemoteChatApiSession {
         Log.d(TAG, "requestAsk: "+data);
         Request request = new Request.Builder().post(requestBody).url(chatUrl)
                 .addHeader("Content-Type","application/json")
-                .addHeader("Authorization","Bearer " + BotApp.getInstance().apiKey)
+                .addHeader("Authorization","Bearer " + BotApp.getInstance().getApiKey())
                 .addHeader("User-Agent","Android Application <Chttolly>")
                 .build();
         okHttpClient.newCall(request).enqueue(message);

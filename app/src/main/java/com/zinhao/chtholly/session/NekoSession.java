@@ -172,7 +172,7 @@ public class NekoSession{
             return true;
         }
 
-        if(BotApp.mode == NekoSession.class){
+        if(BotApp.getInstance().getMode() == NekoSession.class){
             miaomiaojiao(nekoAskAble);
             return true;
         }

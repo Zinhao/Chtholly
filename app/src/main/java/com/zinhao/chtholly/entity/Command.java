@@ -48,7 +48,7 @@ public abstract class Command{
     private boolean send = false;
 
     private boolean outTime = false;
-    protected boolean replay = false;
+    protected boolean replyReady = false;
 
     private String[] args;
 
@@ -101,7 +101,7 @@ public abstract class Command{
     protected abstract boolean throwToChild();
 
     protected boolean handleAsk() {
-        Log.i(TAG,"Command handleAsk:"+ getQuestion().speaker +": "+getQuestion().getMessage());
+        Log.i(TAG,"Command handleAsk:["+ getQuestion().speaker +"]=>"+getQuestion().getMessage());
         if(getQuestion().getMessage().startsWith("/") && isAdminMessage()){
             Log.i(TAG,"Command invoke");
             try {
@@ -113,7 +113,7 @@ public abstract class Command{
                 }
                 Method method = Command.class.getDeclaredMethod(MethodName.replace('/',' ').trim());
                 method.invoke(this);
-                replay = true;
+                replyReady = true;
                 return true;
             } catch (NoSuchMethodException | InvocationTargetException | IllegalAccessException e) {
                 Log.e(getClass().getSimpleName(), "Command invoke err: " + getClass().getSimpleName(), e);
@@ -269,7 +269,7 @@ public abstract class Command{
         steps = new Vector<>();
         String[] ids = getQuestion().getMessage().split(" ");
         for (int i = 1; i < ids.length; i++) {
-            steps.add(new Step(packageName,":id"+ids[i], AccessibilityNodeInfo.ACTION_CLICK,false,500));
+            steps.add(new Step(packageName,":id"+ids[i], AccessibilityNodeInfo.ACTION_CLICK, Step.ActionType.normal,500));
         }
         getAnswer().setMessage(NekoAskAble.OK);
         return true;
@@ -283,30 +283,39 @@ public abstract class Command{
     }
     @HelpDoc(desc = "消息上下文")
     protected boolean printContext() {
-        RemoteChatApiSession remoteChatApiSession = BotApp.getInstance().getSession();
-        String his = remoteChatApiSession.getContextChat();
-        getAnswer().setMessage(his);
+        NekoSession nekoSession = BotApp.getInstance().getSession();
+        if(nekoSession instanceof RemoteChatApiSession){
+            String his = ((RemoteChatApiSession) nekoSession).getContextChat();
+            getAnswer().setMessage(his);
+        }else{
+            getAnswer().setMessage(NekoAskAble.HARD);
+        }
         return true;
     }
 
     @HelpDoc(desc = "切换模型")
     private boolean setModel() {
-        RemoteChatApiSession remoteChatApiSession = BotApp.getInstance().getSession();
-        if(args!=null && args.length>0){
-            remoteChatApiSession.setModelIndex(Integer.parseInt(args[0]));
-            getAnswer().setMessage(NekoAskAble.OK + " => "+  remoteChatApiSession.getCurrentModel().getStr());
-        }else{
-            List<RemoteChatApiSession.RemoteModel> models=remoteChatApiSession.getModelList();
-            StringBuilder stringBuilder = new StringBuilder();
-            stringBuilder.append("当前可用模型:\n");
-            for (int i = 0;i<models.size();i++){
-                RemoteChatApiSession.RemoteModel model = models.get(i);
-                if(model.getStr().equals(remoteChatApiSession.getCurrentModel().getStr())){
-                    stringBuilder.append("=> ");
+        NekoSession nekoSession = BotApp.getInstance().getSession();
+        if(nekoSession instanceof RemoteChatApiSession){
+            RemoteChatApiSession  remoteChatApiSession = (RemoteChatApiSession) nekoSession;
+            if(args!=null && args.length>0){
+                remoteChatApiSession.setModelIndex(Integer.parseInt(args[0]));
+                getAnswer().setMessage(NekoAskAble.OK + " => "+  remoteChatApiSession.getCurrentModel().getStr());
+            }else{
+                List<RemoteChatApiSession.RemoteModel> models=remoteChatApiSession.getModelList();
+                StringBuilder stringBuilder = new StringBuilder();
+                stringBuilder.append("当前可用模型:\n");
+                for (int i = 0;i<models.size();i++){
+                    RemoteChatApiSession.RemoteModel model = models.get(i);
+                    if(model.getStr().equals(remoteChatApiSession.getCurrentModel().getStr())){
+                        stringBuilder.append("=> ");
+                    }
+                    stringBuilder.append(i).append(". ").append(model.getStr()).append("\n");
                 }
-                stringBuilder.append(i).append(". ").append(model.getStr()).append("\n");
+                getAnswer().setMessage(stringBuilder.toString());
             }
-            getAnswer().setMessage(stringBuilder.toString());
+        }else{
+            getAnswer().setMessage("请先切换模式为 Gemini 或 Openai。");
         }
         return true;
     }
@@ -319,22 +328,27 @@ public abstract class Command{
     }
     @HelpDoc(desc = "总结对话")
     protected boolean summarize() {
-        RemoteChatApiSession remoteChatApiSession = BotApp.getInstance().getSession();
-        int len = remoteChatApiSession.summarize();
-        getAnswer().setMessage(String.format(Locale.CHINA,"%s 将为主人总结%d条对话。",BotApp.getInstance().getBotName(),len));
+        NekoSession nekoSession = BotApp.getInstance().getSession();
+        if(nekoSession instanceof  RemoteChatApiSession){
+            RemoteChatApiSession remoteChatApiSession = (RemoteChatApiSession) nekoSession;
+            int len = remoteChatApiSession.summarize();
+            getAnswer().setMessage(String.format(Locale.CHINA,"%s 将为主人总结%d条对话。",BotApp.getInstance().getBotName(),len));
+        }else{
+            getAnswer().setMessage(NekoAskAble.DONT_SUPPORT);
+        }
         return true;
     }
     @HelpDoc(desc = "[1 str arg]切换模式")
     private boolean switchMode() {
         if(geminiIgnoreCase.matcher(question.getMessage()).find()){
             getAnswer().setMessage(NekoAskAble.OK +" => gemini ai");
-            BotApp.mode = GeminiSession.class;
+            BotApp.getInstance().setMode(GeminiSession.class);
         } else if(openaiIgnoreCase.matcher(question.getMessage()).find()){
             getAnswer().setMessage(NekoAskAble.OK+" => open ai");
-            BotApp.mode = OpenAiSession.class;
+            BotApp.getInstance().setMode(OpenAiSession.class);
         }else{
             getAnswer().setMessage(NekoAskAble.KOU_WAI +"=> neko");
-            BotApp.mode = NekoSession.class;
+            BotApp.getInstance().setMode(NekoSession.class);
         }
         return true;
     }
@@ -415,6 +429,28 @@ public abstract class Command{
                 getAnswer().setMessage(stringBuilder.toString() + NekoAskAble.OK);
             }
         });
+        return true;
+    }
+    @HelpDoc(desc = "清除上下文")
+    private boolean clearContext(){
+        NekoSession nekoSession = BotApp.getInstance().getSession();
+        if(nekoSession instanceof RemoteChatApiSession){
+            RemoteChatApiSession remoteChatApiSession = (RemoteChatApiSession) nekoSession;
+            int clearLen = remoteChatApiSession.clearContext();
+            getAnswer().setMessage(NekoAskAble.OK +"清除了"+String.valueOf(clearLen)+"条对话！");
+        }else{
+            getAnswer().setMessage(NekoAskAble.DONT_SUPPORT);
+        }
+        return true;
+    }
+
+    public boolean initSendFileStepTo(String targetChatTitle){
+        if(QQChatHandler.PACKAGE_NAME.equals(packageName)){
+            steps = QQChatHandler.shareFileChooseTarget(targetChatTitle);
+            getAnswer().setMessage(NekoAskAble.OK);
+        }else{
+            getAnswer().setMessage(NekoAskAble.DONT_SUPPORT);
+        }
         return true;
     }
 
@@ -559,12 +595,12 @@ public abstract class Command{
     private static StringBuilder getRunInfo(){
         StringBuilder stringBuilder = new StringBuilder();
         stringBuilder.append("Ver:").append(BuildConfig.VERSION_NAME).append("\n");
-        stringBuilder.append("Mode:").append(BotApp.mode.getSimpleName()).append("\n");
+        stringBuilder.append("Mode:").append(BotApp.getInstance().getMode().getSimpleName()).append("\n");
         stringBuilder.append("BaseUrl:").append(BotApp.getInstance().getChatUrl()).append("\n");
         stringBuilder.append("AdminName:").append(BotApp.getInstance().getAdminName()).append("\n");
         stringBuilder.append("SoulName:").append(BotApp.getInstance().getCurrentCharacter().getName()).append("\n");
-        String apiKey = BotApp.getInstance().apiKey;
-        String apiKeySub = apiKey.substring(apiKey.length()-5);
+        String apiKey = BotApp.getInstance().getApiKey();
+        String apiKeySub = apiKey.substring(Math.max(apiKey.length()-5,0));
         stringBuilder.append("ApiKey:").append("sk-***********").append(apiKeySub).append("\n");
         if(NekoChatService.getInstance()!=null){
             stringBuilder.append("auto:").append(NekoChatService.getInstance().autoAsk).append("\n");
@@ -616,8 +652,8 @@ public abstract class Command{
         }
     }
 
-    public boolean isReplay() {
-        return replay;
+    public boolean isReplyReady() {
+        return replyReady;
     }
 
     public Message getQuestion() {
@@ -626,9 +662,16 @@ public abstract class Command{
 
     public Message getAnswer() {
         if(answer == null){
-            answer = new Message("System",null,System.currentTimeMillis());
+            answer = new Message(null,null,System.currentTimeMillis());
         }
         return answer;
+    }
+
+    public String questionWithSpeaker(){
+        if(getQuestion().getSpeaker() == null || getQuestion().getSpeaker().isEmpty()){
+            return getQuestion().getMessage();
+        }
+        return getQuestion().getSpeaker() + " say:" + getQuestion().getMessage();
     }
 
     public boolean isWrite() {

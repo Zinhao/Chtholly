@@ -8,6 +8,7 @@ import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
 import android.os.AsyncTask;
 import android.os.Build;
+import android.util.Log;
 import android.util.SparseArray;
 import android.view.View;
 import android.widget.AdapterView;
@@ -37,6 +38,7 @@ public class ScanNetActivity extends AppCompatActivity implements MainAsyncRespo
     List<RemoteServer> servers = new ArrayList<>();
     private int startPort = 0;
     private int endPort = 0;
+    private static final String TAG = "ScanNetActivity";
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -146,17 +148,17 @@ public class ScanNetActivity extends AppCompatActivity implements MainAsyncRespo
 
     @Override
     public void processFinish(int i) {
-
+        Log.i(TAG,"processFinish"+i);
     }
 
     @Override
     public void processFinish(boolean b) {
-
+        Log.i(TAG,"processFinish"+b);
     }
 
     @Override
     public void processFinish(Exception e) {
-
+        Log.i(TAG,"processFinish"+e.getMessage());
     }
 
     @Override

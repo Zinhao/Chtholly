@@ -156,7 +156,7 @@ public class RBChatHandler extends BaseChatHandler{
                     btSend.refresh();
                     boolean result = BaseChatHandler.clickButton(btSend, command);
                     if (!result) {
-                        NekoChatService.getInstance().addLogcat("doSomething: id[" + btSend.getViewIdResourceName() + ']'+"点击发送按钮失败");
+                        NekoChatService.getInstance().addLogcat("writeAndSend: id[" + btSend.getViewIdResourceName() + ']'+"点击发送按钮失败");
                     }
                     return result;
                 }

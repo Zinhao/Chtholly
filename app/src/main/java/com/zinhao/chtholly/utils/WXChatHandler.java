@@ -29,7 +29,7 @@ public class WXChatHandler extends BaseChatHandler {
 
     public void initChatPage(AccessibilityNodeInfo nodeInfo) {
         if (nodeInfo == null) {
-            Log.e(TAG, "initChatPage:nodeInfo null!");
+            FileLogger.INSTANCE.i(TAG, "initChatPage:nodeInfo null!");
             return;
         }
         //输入文本框id
@@ -55,7 +55,7 @@ public class WXChatHandler extends BaseChatHandler {
         }
         if (title != null) {
             String chatTitle = title.getText().toString();
-            Log.d(TAG, "initChatPage:聊天界面:" + chatTitle);
+            FileLogger.INSTANCE.i(TAG, "initChatPage:聊天界面:" + chatTitle);
         }
     }
 
@@ -64,7 +64,7 @@ public class WXChatHandler extends BaseChatHandler {
         if (etInput != null) {
             etInput.refresh();
             etInput.performAction(AccessibilityNodeInfo.ACTION_FOCUS);
-            Log.d(TAG, "writeAndSend: 焦点"+etInput.isFocused());
+            FileLogger.INSTANCE.i(TAG, "writeAndSend: 焦点"+etInput.isFocused());
             if (writeMessage(etInput, qa)) {
                 NekoChatService.getInstance().addLogcat("write: id[" + etInput.getViewIdResourceName() + ']' + qa.getAnswer().getMessage());
             }
@@ -141,7 +141,7 @@ public class WXChatHandler extends BaseChatHandler {
         if (!messageList.isEmpty()) {
             Message last = messageList.get(messageList.size() - 1);
             if (last.message.equals(hitMessage.message) && System.currentTimeMillis() - last.getTimeStamp() < 10000) {
-                Log.d(TAG, "findLastMessage: in close time, same message:"+last.message);
+                FileLogger.INSTANCE.i(TAG, "findLastMessage: in close time, same message:"+last.message);
                 //in close time, same message
                 return;
             }

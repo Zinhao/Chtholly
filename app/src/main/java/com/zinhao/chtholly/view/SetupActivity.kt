@@ -1,7 +1,10 @@
 package com.zinhao.chtholly.view
 
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import android.view.View
+import android.view.inputmethod.InputMethodManager
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.ViewModelProvider
 import androidx.viewpager2.widget.ViewPager2
@@ -28,6 +31,8 @@ class SetupActivity : AppCompatActivity() {
         setupViewPager()
         setupObservers()
         setupButtons()
+
+        viewModel.loadConfig()
     }
 
     private fun setupViewPager() {
@@ -81,28 +86,31 @@ class SetupActivity : AppCompatActivity() {
     private fun setupButtons() {
         binding.btnNext.setOnClickListener {
             viewModel.goToNextStep()
+            it?.hideKeyboard()
         }
 
         binding.btnPrevious.setOnClickListener {
             viewModel.goToPreviousStep()
+            it?.hideKeyboard()
         }
 
         binding.btnSkip.setOnClickListener {
             // 可选：跳过向导使用默认配置
             finishSetupWithDefaults()
+            it?.hideKeyboard()
         }
     }
 
     private fun updateStepIndicator(currentStep: Int) {
-        val stepTexts = listOf("服务器", "语音", "角色", "完成")
+        val stepTexts = listOf("服务器", "触发词/性格","管理员信息", "TTS", "完成")
         binding.stepIndicator.text = "${currentStep + 1}/${stepTexts.size} ${stepTexts[currentStep]}"
 
         // 更新按钮文字
         binding.btnPrevious.isEnabled = currentStep > 0
-        binding.btnNext.text = if (currentStep == 3) "进入应用" else "下一步"
+        binding.btnNext.text = if (currentStep == SetupPagerAdapter.TOTAL_PAGE_COUNT-1) "进入应用" else "下一步"
 
         // 进度条
-        binding.progressBar.progress = ((currentStep + 1) * 100 / 4)
+        binding.progressBar.progress = ((currentStep + 1) * 100 / SetupPagerAdapter.TOTAL_PAGE_COUNT)
     }
 
     private fun startMainActivity() {
@@ -113,22 +121,19 @@ class SetupActivity : AppCompatActivity() {
     private fun finishSetupWithDefaults() {
         // 使用默认配置完成设置
         if(viewModel.currentStep.value == 0){
-            viewModel.apply {
-                updateBaseUrl(HostConsts.GEMINI_PROXY_API_HOST)
-                updateApiKey("sk-default")
-            }
+
         }else if(viewModel.currentStep.value == 1){
-            viewModel.apply {
-                updateTtsServerUrl(HostConsts.LOCAL_HOST)
-            }
+
         }else if(viewModel.currentStep.value == 2){
-            viewModel.apply {
-                updateAdminName("主人")
-                updateBotName("助手")
-                updateBotDescription(getString(R.string.chara_default))
-            }
+
         }
         viewModel.goToNextStep()
+    }
+
+    // 定义扩展函数
+    fun View.hideKeyboard() {
+        val imm = context.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+        imm.hideSoftInputFromWindow(windowToken, 0)
     }
 
     override fun onBackPressed() {

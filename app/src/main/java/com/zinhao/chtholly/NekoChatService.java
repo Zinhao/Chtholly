@@ -8,12 +8,16 @@ import android.annotation.SuppressLint;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
+import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.ServiceInfo;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
+import android.net.Uri;
+import android.os.Build;
 import android.os.Handler;
 import android.provider.Settings;
 import android.util.Log;
@@ -23,6 +27,7 @@ import android.view.WindowManager;
 import android.view.accessibility.AccessibilityEvent;
 import android.view.accessibility.AccessibilityNodeInfo;
 import android.widget.Button;
+import androidx.core.content.FileProvider;
 import androidx.media3.common.MediaItem;
 import androidx.media3.common.MediaMetadata;
 import androidx.media3.common.Player;
@@ -37,16 +42,16 @@ import com.zinhao.chtholly.session.OpenAiSession;
 import com.zinhao.chtholly.utils.*;
 import com.zinhao.chtholly.view.FloatWindowActivity;
 
-import com.zinhao.chtholly.view.MainActivity;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.io.File;
 import java.lang.ref.WeakReference;
 import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 import java.util.*;
 
-import static com.zinhao.chtholly.BotApp.mode;
+import static com.zinhao.chtholly.BotApp.context;
 import static com.zinhao.chtholly.utils.QQChatHandler.*;
 
 public class NekoChatService extends AccessibilityService implements NetAiAskAble.DelayReplyCallback, MessageCallback, SensorEventListener {
@@ -118,6 +123,8 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
     @Override
     public void onCreate() {
         super.onCreate();
+        Log.d(TAG,"onCreate");
+        FileLogger.INSTANCE.init(context());
         serviceCreateTime= System.currentTimeMillis();
         instance = new WeakReference<>(this);
         mHandler = new Handler(getMainLooper());
@@ -134,8 +141,13 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
         speakStartVoice();
 
         createNotificationChannel();
-        startForeground(1, getNotification());
-
+        Log.d(TAG,"createNotificationChannel success");
+        if(Build.VERSION.SDK_INT < Build.VERSION_CODES.R){
+            Log.d(TAG,"startForeground:"+Build.VERSION.SDK_INT);
+            startForeground(1, getNotification());
+        }else{
+            startForeground(1, getNotification(), ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE);
+        }
         sensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
         if (sensorManager != null) {
             Sensor accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
@@ -194,22 +206,20 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
             return;
         if (event.getPackageName() == null)
             return;
-
-        autoMission(event.getPackageName().toString());
-
-        updateFloatView(event);
-
-        debugOnAccessibilityEvent(event);
-
         if (event.getSource() != null && BuildConfig.DEBUG) {
             saveTreeToJsonFile(event);
         }
+        updateFloatView(event);
+
+        autoMission(event.getPackageName().toString());
+
+//        debugOnAccessibilityEvent(event);
+
         String pageName = processNotChatPage(event.getSource());
         if(!UNKNOWN_PAGE.equals(pageName) && !NULL_ROOT.equals(pageName)){
             addLogcat( "onAccessibilityEvent: " + pageName);
         }
         if(QQChatHandler.PACKAGE_NAME.equals(event.getPackageName().toString())){
-
             qqChatHandler.handle(event);
         }else if(WXChatHandler.WX_PACKAGE_NAME.equals(event.getPackageName().toString())){
             wxChatHandler.handle(event);
@@ -223,11 +233,39 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
         handleQAs(root);
         removeSuccessMessage();
     }
+    private void saveTreeToJsonFile(AccessibilityEvent event){
+        if(event == null){
+            return;
+        }
+        if(event.getSource() == null){
+            return;
+        }
+        try {
+            if("com.android.systemui:id/clock".equals(event.getSource().getViewIdResourceName())){
+                return;
+            }
+            if("com.android.systemui".contentEquals(event.getPackageName())){
+                return;
+            }
+            String jsonFileName = treeFileName(event);
+            JSONObject layoutTree = LayoutTreeUtils.treeAndPrintLayout(event.getSource(), 0,true);
+            layoutTree.put("event",LayoutTreeUtils.getEventStringBuilder(event));
+            layoutTree.put("time",dateTimeFormat.format(System.currentTimeMillis()));
+            //com.tencent.mobileqq:id/listView1
+            addLogcat("Generate json layout tree: "+jsonFileName);
+            LocalFileCache.getInstance().saveJSONObject(getApplicationContext(), layoutTree, jsonFileName);
+        } catch (JSONException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
     private void debugOnAccessibilityEvent(AccessibilityEvent event){
         if (BuildConfig.DEBUG) {
             AccessibilityNodeInfo root = getRootInActiveWindow();
             StringBuilder stringBuilder = LayoutTreeUtils.getEventStringBuilder(event);
-            addLogcat("getEventStringBuilder: "+stringBuilder);
+            if(!event.getPackageName().equals("com.android.systemui")){
+                addLogcat("getEventStringBuilder: "+stringBuilder);
+            }
             //EventType: TYPE_WINDOW_CONTENT_CHANGED; EventTime: 338363649;
             // PackageName: com.android.systemui; MovementGranularity: 0; Action: 0;
             // ContentChangeTypes: [CONTENT_CHANGE_TYPE_CONTENT_DESCRIPTION];
@@ -335,8 +373,8 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
             todayNoon = true;
             // todo
             List<Step> steps = new ArrayList<>();
-            steps.add(new Step(getPackageName(), ":id/qn4", AccessibilityNodeInfo.ACTION_CLICK, false));
-            steps.add(new Step(getPackageName(), ":id/nfz", AccessibilityNodeInfo.ACTION_CLICK, false, 500));
+            steps.add(new Step(getPackageName(), ":id/qn4", AccessibilityNodeInfo.ACTION_CLICK, Step.ActionType.normal));
+            steps.add(new Step(getPackageName(), ":id/nfz", AccessibilityNodeInfo.ACTION_CLICK, Step.ActionType.normal, 500));
 //            waitQAs.add(command);
         }
         if (nowHourCount > 13 && nowHourCount <= 19 && !todayAfter) {
@@ -391,7 +429,7 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
                 }
             }
             if (qa.sendSuccess()) {
-                addLogcat("doSomething: send success:" + qa.getAnswer().getMessage());
+                addLogcat("handleQAs: send success:" + qa.getAnswer().getMessage());
             }
         }
     }
@@ -416,32 +454,12 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
                 if (step.isGlobalAction()) {
                     result = performGlobalAction(step.getActionId());
                 } else {
-                    AccessibilityNodeInfo targetView = findIndexNodeInfo(source, step.getViewId(),step.getInNodesPosition());
-                    if (step.isFindChildByPosition() && targetView != null) {
-                        for (int i = 0; i < step.getFindPosition().length; i++) {
-                            targetView = targetView.getChild(step.getFindPosition()[i]);
-                            if (targetView == null) {
-                                break;
-                            }
-                        }
-                    }
+                    AccessibilityNodeInfo targetView = findTargetView(source,step);
                     if (targetView != null) {
-                        if (step.getActionId() == AccessibilityNodeInfo.ACTION_SCROLL_FORWARD) {
-                            result = doGesture(targetView, step);
-                        } else {
-                            String needHasId = step.getNeedHasId();
-                            if(needHasId!=null){
-                                // 需要检查是否是包含目标
-                                if(!targetView.findAccessibilityNodeInfosByViewId(needHasId).isEmpty()){
-                                    result = targetView.performAction(step.getActionId());
-                                }else{
-                                    addLogcat("is not has view id ["+needHasId +"] in "+targetView.getViewIdResourceName());
-                                }
-                            }else{
-                                // 不需要检查是否是目标
-                                result = targetView.performAction(step.getActionId());
-                            }
-
+                        if(step.isCustomGesture()){
+                            result = doCustomGesture(targetView, step);
+                        }else{
+                            result = targetView.performAction(step.getActionId());
                         }
                     } else {
                         addLogcat("doAction: 寻找视图失败" + step.getViewId());
@@ -462,6 +480,48 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
             return true;
         }
         return false;
+    }
+
+    private AccessibilityNodeInfo findTargetView(AccessibilityNodeInfo source,Step step){
+        if(step.isGlobalAction()){
+            return null;
+        }
+        AccessibilityNodeInfo targetView = findIndexInTargetNodeChildren(source, step.getViewId(),step.getInNodesPosition());
+        if(targetView == null){
+            return null;
+        }
+        if(step.getIndexMode() == Step.IndexTargetMode.position){
+            for (int i = 0; i < step.getFindPosition().length; i++) {
+                targetView = targetView.getChild(step.getFindPosition()[i]);
+                if (targetView == null) {
+                    return null;
+                }
+            }
+            String needHasId = step.getNeedHasId();
+            if(needHasId!=null){
+                // 需要检查是否是包含目标
+                if(!targetView.findAccessibilityNodeInfosByViewId(needHasId).isEmpty()){
+                    return targetView;
+                }else{
+                    addLogcat("is not has view id ["+needHasId +"] in "+targetView.getViewIdResourceName());
+                    return null;
+                }
+            }
+            return targetView;
+        }else if(step.getIndexMode() == Step.IndexTargetMode.text){
+            targetView = findFirstTextInTargetNodeChildren(targetView, step.getTargetText(),step.getTargetTextViewId());
+            for (int i = 0; i < step.getTargetParentTimes(); i++) {
+                if(targetView!=null){
+                    targetView = targetView.getParent();
+                }else{
+                    return null;
+                }
+            }
+            return  targetView;
+        }else {
+            return  targetView;
+        }
+
     }
 
     public void playTTSVoiceFromNetWork(String speakMessage) {
@@ -516,7 +576,7 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
         });
     }
 
-    public boolean doGesture(AccessibilityNodeInfo targetView, Step step) {
+    public boolean doCustomGesture(AccessibilityNodeInfo targetView, Step step) {
         GestureDescription gb = step.getNeedGesture().onGesture(targetView);
         return dispatchGesture(gb, new GestureResultCallback() {
             @Override
@@ -545,7 +605,7 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
     }
 
     @Override
-    public void onReply(NetAiAskAble message) {
+    public void onReplySuccess(NetAiAskAble message) {
         mHandler.post(() -> {
             handleQAs(getRootInActiveWindow());
             removeSuccessMessage();
@@ -724,6 +784,7 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
     @Override
     public void onDestroy() {
         Log.e(TAG, "onDestroy: ");
+        FileLogger.INSTANCE.close();
         super.onDestroy();
         speakLeaveVoice();
         sensorManager.unregisterListener(this);
@@ -739,9 +800,9 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
     @Override
     public void onFind(Message message) {
         Command mainMessage;
-        if (mode == OpenAiSession.class) {
+        if (BotApp.getInstance().getMode() == OpenAiSession.class) {
             mainMessage =  new OpenAiAskAble(getRootInActiveWindow().getPackageName().toString(), message, this);
-        } else if(mode == GeminiSession.class){
+        } else if(BotApp.getInstance().getMode() == GeminiSession.class){
             mainMessage =  new GeminiAIAskAble(getRootInActiveWindow().getPackageName().toString(), message, this);
         } else {
             mainMessage = new NekoAskAble(getRootInActiveWindow().getPackageName().toString(), message);
@@ -854,8 +915,8 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
 
     private void createNotificationChannel() {
         NotificationChannel serviceChannel = new NotificationChannel(
-                "VibrationDetectionServiceChannel",
-                "Vibration Detection Service",
+                getPackageName()+".NekoChatService",
+                "Chtholly Running Notification",
                 NotificationManager.IMPORTANCE_DEFAULT
         );
         NotificationManager manager = getSystemService(NotificationManager.class);
@@ -865,9 +926,9 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
     }
 
     private Notification getNotification() {
-        return new Notification.Builder(this, "VibrationDetectionServiceChannel")
-                .setContentTitle("Vibration Detection Service")
-                .setContentText("Monitoring for vibrations...")
+        return new Notification.Builder(this, getPackageName()+".NekoChatService")
+                .setContentTitle("NekoChatService")
+                .setContentText("Service is running:"+BotApp.getInstance().getMode().getSimpleName())
                 .setSmallIcon(R.drawable.ic_launcher_foreground) // 替换为你的图标
                 .build();
     }
@@ -913,10 +974,13 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
         toMainActivity.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                //FLAG_ACTIVITY_NEW_TASK
-                Intent newTaskIntent =new Intent(v.getContext(), MainActivity.class);
-                newTaskIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                startActivity(newTaskIntent);
+//                shareText();
+                File f = LocalFileCache.getInstance().getExternalWorkDir();
+                File[] files = f.listFiles();
+
+                if(files!=null && files.length>0){
+                    shareFile(files[0]);
+                }
             }
         });
 
@@ -967,42 +1031,55 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
         }
     }
 
-    private void saveTreeToJsonFile(AccessibilityEvent event){
-        if(event == null){
-            return;
-        }
-        if(event.getSource() == null){
-            return;
-        }
-        try {
-            if("com.android.systemui:id/clock".equals(event.getSource().getViewIdResourceName())){
-
-            }else{
-                String jsonFileName = treeFileName(event);
-                JSONObject layoutTree = LayoutTreeUtils.treeAndPrintLayout(event.getSource(), 0,true);
-                //com.tencent.mobileqq:id/listView1
-                addLogcat("current_page_fileName: "+jsonFileName);
-                LocalFileCache.getInstance().saveJSONObject(getApplicationContext(), layoutTree, jsonFileName);
-            }
-        } catch (JSONException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
     private static String treeFileName(AccessibilityEvent event){
-        if(event == null){
-            return "tree_null_"+ dateTimeFormat1.format(System.currentTimeMillis());
-        }
+        assert event != null;
+        assert event.getSource() != null;
         String idString = event.getSource().getViewIdResourceName();
         String fileName;
+        CharSequence packageName = event.getPackageName();
         if (idString == null) {
-            fileName = "_null";
+            if(packageName!=null){
+                fileName = event.getPackageName().toString();
+            }else{
+                fileName = "_null";
+            }
         } else {
-            fileName = event.getSource().getViewIdResourceName().replace(event.getPackageName() + ":id/", "_")
-                    .replace("/", "_")
-                    .replace(":", "_");
+            fileName = idString;
         }
+        return FilenameFilter.sanitizeWithReplacement("tree_" + fileName + ".json",'_');
+    }
 
-        return "tree" + fileName + ".json";
+    private void shareText(){
+        Intent sendIntent = new Intent();
+        sendIntent.setAction(Intent.ACTION_SEND);
+        sendIntent.putExtra(Intent.EXTRA_TEXT, "This is my text to send.");
+        sendIntent.setType("text/plain");
+        Intent shareIntent = Intent.createChooser(sendIntent, null);
+        shareIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        startActivity(shareIntent);
+    }
+
+    public void shareFile(File file){
+        mHandler.post(new Runnable() {
+            @Override
+            public void run() {
+                Uri uri = FileProvider.getUriForFile(NekoChatService.this, getPackageName()+".fileprovider", file);
+                Intent intent = new Intent(Intent.ACTION_SEND);
+                intent.setPackage(qqChatHandler.getPackageName());  // 指定目标应用包名
+                intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                intent.addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
+                intent.putExtra(Intent.EXTRA_STREAM, uri);
+
+                intent.setType("*/*");
+
+//        Intent shareIntent = Intent.createChooser(intent, "Send File");
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                try {
+                    startActivity(intent);
+                }catch (Exception e){
+                    FileLogger.INSTANCE.e(TAG, Objects.requireNonNull(e.getLocalizedMessage()),e);
+                }
+            }
+        });
     }
 }

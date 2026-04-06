@@ -2,7 +2,6 @@ package com.zinhao.chtholly.entity;
 
 import android.util.Log;
 import com.zinhao.chtholly.BotApp;
-import com.zinhao.chtholly.NekoChatService;
 import com.zinhao.chtholly.session.NekoSession;
 
 public class NekoAskAble extends Command {
@@ -29,7 +28,12 @@ public class NekoAskAble extends Command {
     @Override
     protected boolean throwToChild() {
         Log.i("Command","NekoAskAble throwToChild");
-        return NekoSession.getInstance().startAsk(this);
+        boolean result = NekoSession.getInstance().startAsk(this);
+        Log.i("Command","NekoAskAble say:"+getAnswer().getMessage());
+        if(result){
+            replyReady = true;
+        }
+        return result;
     }
 
     @Override

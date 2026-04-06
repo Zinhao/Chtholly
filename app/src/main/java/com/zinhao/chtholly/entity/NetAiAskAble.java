@@ -2,23 +2,14 @@ package com.zinhao.chtholly.entity;
 
 import android.util.Log;
 import com.zinhao.chtholly.BotApp;
-import com.zinhao.chtholly.CallAble;
 import com.zinhao.chtholly.NekoChatService;
-import com.zinhao.chtholly.session.NekoSession;
-import com.zinhao.chtholly.session.OpenAiSession;
 import okhttp3.Call;
 import okhttp3.Callback;
 import okhttp3.Response;
-import okhttp3.ResponseBody;
 import org.jetbrains.annotations.NotNull;
-import org.json.JSONArray;
-import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.IOException;
-import java.util.Locale;
-import java.util.Map;
-import java.util.function.Consumer;
 import java.util.regex.Pattern;
 
 public class NetAiAskAble extends NekoAskAble implements Callback{
@@ -49,7 +40,6 @@ public class NetAiAskAble extends NekoAskAble implements Callback{
         Log.i("Command","NetAiAskAble handleAsk");
         return super.handleAsk();
     }
-
 
     public void doTextReply(String content){
         getAnswer().setMessage(content);
@@ -92,6 +82,6 @@ public class NetAiAskAble extends NekoAskAble implements Callback{
     }
 
     public interface DelayReplyCallback {
-        void onReply(NetAiAskAble message);
+        void onReplySuccess(NetAiAskAble message);
     }
 }

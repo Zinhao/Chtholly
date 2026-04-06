@@ -21,7 +21,7 @@
             android:id="@+id/b3"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Exit" />
+            android:text="Test" />
     <Button
             android:id="@+id/b4"
             android:layout_width="match_parent"

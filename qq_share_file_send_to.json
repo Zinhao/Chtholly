@@ -1,0 +1,235 @@
+{
+  "class": "android.widget.FrameLayout",
+  "click": false,
+  "longClick": false,
+  "children": [
+    {
+      "id": "com.tencent.mobileqq:id\/ivTitleBtnRightText",
+      "class": "android.widget.TextView",
+      "click": true,
+      "longClick": false,
+      "text": "多选"
+    },
+    {
+      "id": "com.tencent.mobileqq:id\/ivTitleBtnLeftButton",
+      "class": "android.widget.TextView",
+      "click": true,
+      "longClick": false,
+      "text": "关闭"
+    },
+    {
+      "id": "com.tencent.mobileqq:id\/ivTitleName",
+      "class": "android.widget.TextView",
+      "click": false,
+      "longClick": false,
+      "text": "发送给"
+    },
+    {
+      "id": "com.tencent.mobileqq:id\/imi",
+      "class": "android.widget.RelativeLayout",
+      "click": false,
+      "longClick": false,
+      "children": [
+        {
+          "id": "com.tencent.mobileqq:id\/ijk",
+          "class": "android.widget.RelativeLayout",
+          "click": false,
+          "longClick": false,
+          "children": [
+            {
+              "id": "com.tencent.mobileqq:id\/ik5",
+              "class": "android.widget.EditText",
+              "click": true,
+              "longClick": true,
+              "text": "搜索"
+            }
+          ]
+        },
+        {
+          "id": "com.tencent.mobileqq:id\/iig",
+          "class": "android.widget.HorizontalScrollView",
+          "click": false,
+          "longClick": false,
+          "children": [
+            {
+              "id": "com.tencent.mobileqq:id\/imn",
+              "class": "android.widget.GridView",
+              "click": false,
+              "longClick": false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "com.tencent.mobileqq:id\/listView1",
+      "class": "android.widget.AbsListView",
+      "click": true,
+      "longClick": false,
+      "desc": " ",
+      "children": [
+        {
+          "id": "com.tencent.mobileqq:id\/iji",
+          "class": "android.widget.RelativeLayout",
+          "click": false,
+          "longClick": false,
+          "desc": "搜索聊天或者联系人",
+          "children": [
+            {
+              "id": "com.tencent.mobileqq:id\/et_search_keyword",
+              "class": "android.widget.EditText",
+              "click": true,
+              "longClick": true,
+              "desc": "搜索"
+            },
+            {
+              "id": "com.tencent.mobileqq:id\/kag",
+              "class": "android.widget.TextView",
+              "click": false,
+              "longClick": false,
+              "text": "搜索"
+            }
+          ]
+        },
+        {
+          "class": "android.widget.HorizontalScrollView",
+          "click": false,
+          "longClick": false,
+          "children": [
+            {
+              "id": "com.tencent.mobileqq:id\/cjg",
+              "class": "android.widget.RelativeLayout",
+              "click": true,
+              "longClick": false,
+              "children": [
+                {
+                  "id": "com.tencent.mobileqq:id\/aij",
+                  "class": "android.widget.TextView",
+                  "click": false,
+                  "longClick": false,
+                  "text": "创建新的群聊"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "class": "android.widget.LinearLayout",
+          "click": false,
+          "longClick": false,
+          "children": [
+            {
+              "id": "com.tencent.mobileqq:id\/k7c",
+              "class": "android.widget.TextView",
+              "click": false,
+              "longClick": false,
+              "text": "最近"
+            }
+          ]
+        },
+        {
+          "class": "android.widget.RelativeLayout",
+          "click": true,
+          "longClick": false,
+          "children": [
+            {
+              "id": "com.tencent.mobileqq:id\/axa",
+              "class": "android.widget.CheckBox",
+              "click": false,
+              "longClick": false
+            },
+            {
+              "id": "com.tencent.mobileqq:id\/text1",
+              "class": "android.widget.TextView",
+              "click": false,
+              "longClick": false,
+              "text": "我的电脑"
+            }
+          ]
+        },
+        {
+          "class": "android.widget.RelativeLayout",
+          "click": true,
+          "longClick": false,
+          "children": [
+            {
+              "id": "com.tencent.mobileqq:id\/axa",
+              "class": "android.widget.CheckBox",
+              "click": false,
+              "longClick": false
+            },
+            {
+              "id": "com.tencent.mobileqq:id\/text1",
+              "class": "android.widget.TextView",
+              "click": false,
+              "longClick": false,
+              "text": "碳基token生成器"
+            }
+          ]
+        },
+        {
+          "class": "android.widget.RelativeLayout",
+          "click": true,
+          "longClick": false,
+          "children": [
+            {
+              "id": "com.tencent.mobileqq:id\/axa",
+              "class": "android.widget.CheckBox",
+              "click": false,
+              "longClick": false
+            },
+            {
+              "id": "com.tencent.mobileqq:id\/text1",
+              "class": "android.widget.TextView",
+              "click": false,
+              "longClick": false,
+              "text": "二次元入口"
+            }
+          ]
+        },
+        {
+          "class": "android.widget.RelativeLayout",
+          "click": true,
+          "longClick": false,
+          "children": [
+            {
+              "id": "com.tencent.mobileqq:id\/axa",
+              "class": "android.widget.CheckBox",
+              "click": false,
+              "longClick": false
+            },
+            {
+              "id": "com.tencent.mobileqq:id\/text1",
+              "class": "android.widget.TextView",
+              "click": false,
+              "longClick": false,
+              "text": "chat_1"
+            }
+          ]
+        },
+        {
+          "class": "android.widget.RelativeLayout",
+          "click": true,
+          "longClick": false,
+          "children": [
+            {
+              "id": "com.tencent.mobileqq:id\/axa",
+              "class": "android.widget.CheckBox",
+              "click": false,
+              "longClick": false
+            },
+            {
+              "id": "com.tencent.mobileqq:id\/text1",
+              "class": "android.widget.TextView",
+              "click": false,
+              "longClick": false,
+              "text": "景皓"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "event": "EventType: TYPE_WINDOW_CONTENT_CHANGED; EventTime: 81325232; PackageName: com.tencent.mobileqq; MovementGranularity: 0; Action: 0; ContentChangeTypes: [CONTENT_CHANGE_TYPE_SUBTREE]; WindowChangeTypes: [] [ ClassName: android.widget.FrameLayout; Text: []; ContentDescription: null; ItemCount: -1; CurrentItemIndex: -1; Enabled: true; Password: false; Checked: false; FullScreen: false; Scrollable: false; BeforeText: null; FromIndex: -1; ToIndex: -1; ScrollX: 0; ScrollY: 0; MaxScrollX: 0; MaxScrollY: 0; ScrollDeltaX: -1; ScrollDeltaY: -1; AddedCount: -1; RemovedCount: -1; ParcelableData: null ]; recordCount: 0",
+  "time": "2026\/04\/05 23:58:48"
+}

@@ -22,7 +22,6 @@ public class LoggingInterceptor implements Interceptor {
 
         // 打印请求信息
         FileLogger.INSTANCE.i(TAG,"Sending request to URL: " + request.url());
-        FileLogger.INSTANCE.i(TAG,"Sending request to URL: " + request.url());
         FileLogger.INSTANCE.i(TAG,"Request method: " + request.method());
         if (request.body() != null) {
             FileLogger.INSTANCE.i(TAG,"Request body: " + request.body());
@@ -37,7 +36,6 @@ public class LoggingInterceptor implements Interceptor {
         String responseBodyString = responseBody.string(); // 读取响应体
 
         // 打印响应信息
-        FileLogger.INSTANCE.i(TAG,"Received response from URL: " + response.request().url());
         FileLogger.INSTANCE.i(TAG,"Received response from URL: " + response.request().url());
         FileLogger.INSTANCE.i(TAG,"Response code: " + response.code());
         FileLogger.INSTANCE.i(TAG,"Response body: " + responseBodyString);

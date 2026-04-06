@@ -10,10 +10,12 @@ import com.zinhao.chtholly.db.AppDatabase;
 import com.zinhao.chtholly.db.MessageDao;
 import com.zinhao.chtholly.entity.AICharacter;
 import com.zinhao.chtholly.entity.Message;
+import com.zinhao.chtholly.session.NekoSession;
 import com.zinhao.chtholly.session.RemoteChatApiSession;
 import com.zinhao.chtholly.session.GeminiSession;
 import com.zinhao.chtholly.session.OpenAiSession;
 import com.zinhao.chtholly.utils.AsyncHelper;
+import com.zinhao.chtholly.utils.FileLogger;
 import com.zinhao.chtholly.utils.HostConsts;
 
 import org.jetbrains.annotations.NotNull;
@@ -34,7 +36,7 @@ public class BotApp extends Application {
 
 
     private boolean isFirstRun;
-    public String apiKey;
+    private String apiKey;
     private String botName;
     private String adminName;
     private String aiSoul;
@@ -68,14 +70,14 @@ public class BotApp extends Application {
     public static BotApp getInstance() {
         return instance;
     }
-    public static Class<?> mode = OpenAiSession.class;
-    public RemoteChatApiSession getSession() {
+    private Class<?> mode = NekoSession.class;
+    public NekoSession getSession() {
         if(mode == OpenAiSession.class){
             return OpenAiSession.getInstance();
         }else if(mode == GeminiSession.class){
             return  GeminiSession.getInstance();
         }
-        return null;
+        return NekoSession.getInstance();
     }
 
     public static Context context() {
@@ -85,8 +87,15 @@ public class BotApp extends Application {
     public void onCreate() {
         super.onCreate();
         instance = this;
+        FileLogger.INSTANCE.init(getInstance());
         sharedPreferences = getSharedPreferences("app_data", MODE_PRIVATE);
         apiKey = sharedPreferences.getString(CONFIG_API_KEY,"");
+        if(apiKey.isEmpty()){
+            mode = NekoSession.class;
+        }else{
+            mode = GeminiSession.class;
+            GeminiSession.getInstance();
+        }
         botName = sharedPreferences.getString(CONFIG_BOT_NAME,"");
         aiSoul = sharedPreferences.getString(CONFIG_SOUL_DESC,"");
         adminName = sharedPreferences.getString(CONFIG_ADMIN_NAME,"");
@@ -106,6 +115,15 @@ public class BotApp extends Application {
 
     public void setApiKey(String apiKey) {
         this.apiKey = apiKey;
+        if(apiKey.isEmpty()){
+            mode = NekoSession.class;
+        }else{
+            mode = GeminiSession.class;
+        }
+    }
+
+    public String getApiKey() {
+        return apiKey;
     }
 
     public void setBotName(String botName) {
@@ -114,6 +132,14 @@ public class BotApp extends Application {
 
     public String getBotName() {
         return botName;
+    }
+
+    public Class<?> getMode() {
+        return mode;
+    }
+
+    public void setMode(Class<?> mode) {
+        this.mode = mode;
     }
 
     public String getAdminName() {
@@ -185,6 +211,15 @@ public class BotApp extends Application {
             }
         });
     }
+
+    public void delete(AICharacter aiCharacter){
+        AsyncHelper.INSTANCE.doAsyncPart(new Runnable() {
+            @Override
+            public void run() {
+                aiCharacterDao.delete(aiCharacter);
+            }
+        });
+    }
     public void insert(AICharacter character,Runnable callback){
         AsyncHelper.INSTANCE.doAsyncPart(new Runnable() {
             @Override
@@ -208,6 +243,10 @@ public class BotApp extends Application {
 
     public void switchAISoul(AICharacter character){
         setCurrentCharacter(character);
+        NekoSession nekoSession = getSession();
+        if(nekoSession instanceof RemoteChatApiSession){
+            ((RemoteChatApiSession) nekoSession).setChara(character.getDesc());
+        }
         SharedPreferences.Editor editor = BotApp.getInstance().getSharedPreferences().edit();
         editor.putString(BotApp.CONFIG_SOUL_DESC,character.getDesc());
         editor.apply();

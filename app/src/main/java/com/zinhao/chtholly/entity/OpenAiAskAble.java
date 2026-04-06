@@ -48,7 +48,7 @@ public class OpenAiAskAble extends NetAiAskAble{
     public void onFailure(@NotNull Call call, @NotNull IOException e) {
         getAnswer().setMessage(String.format(Locale.CHINA,"\uD83D\uDE44发生错误了:%s %s",e.getMessage(),e.getCause()));
         if(delayReplyCallback !=null)
-            delayReplyCallback.onReply(this);
+            delayReplyCallback.onReplySuccess(this);
     }
 
 
@@ -87,12 +87,13 @@ public class OpenAiAskAble extends NetAiAskAble{
                 }
             }
         }else{
-            getAnswer().setSpeaker("ServerErr");
-            getAnswer().setMessage(response.message());
+            getAnswer().setSpeaker("ServerErr [" + response.code()+"]");
+            getAnswer().setMessage(String.valueOf(response.code()));
+            replyReady = true;
+            if(delayReplyCallback !=null)
+                delayReplyCallback.onReplySuccess(this);
         }
-        replay = true;
-        if(delayReplyCallback !=null)
-            delayReplyCallback.onReply(this);
+
         response.close();
     }
 

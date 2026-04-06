@@ -17,7 +17,7 @@
         <ImageView
             android:layout_width="80dp"
             android:layout_height="80dp"
-            android:src="@drawable/audio_chat_svgrepo_com"
+            android:src="@drawable/success_tick_svgrepo_com"
             android:layout_marginBottom="16dp"/>
 
         <!-- 标题 -->
@@ -58,7 +58,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="• 系统默认：使用 Android 系统 TTS\n• Edge TTS：微软在线语音，需网络连接\n• GPT-SoVITS：本地 AI 语音克隆\n• 留空则使用系统默认 TTS"
+                    android:text="此项目仅供学习与个人使用，请勿用于商业用途"
                     android:textSize="12sp"
                     android:lineSpacingMultiplier="1.2"/>
             </LinearLayout>

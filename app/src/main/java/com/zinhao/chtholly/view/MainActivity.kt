@@ -3,8 +3,6 @@ package com.zinhao.chtholly.view
 import android.content.Intent
 import android.os.Bundle
 import android.provider.Settings
-import android.text.Editable
-import android.text.TextWatcher
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.ViewModelProvider
@@ -29,35 +27,29 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
         viewModel.checkAccessibilityStatus(this)
-        viewModel.refreshCurrentChara()
 
         setupObservers()
         setupUI()
+
+        viewModel.refreshCurrentChara()
+        viewModel.updateBotName(BotApp.getInstance().botName)
+        viewModel.updateAdminName(BotApp.getInstance().adminName)
     }
 
     private fun setupObservers() {
         // 观察 API Key
         viewModel.apiKey.observe(this) { key ->
-            val editText = binding.textInputLayout.editText
-            if (editText?.text.toString() != key) {
-                editText?.setText(key)
-            }
+
         }
 
         // 观察 Bot 名称
         viewModel.botName.observe(this) { name ->
-            val editText = binding.textInputLayout2.editText
-            if (editText?.text.toString() != name) {
-                editText?.setText(name)
-            }
+            binding.tvBotName.setText(name ?: "")
         }
 
         // 观察管理员名称
         viewModel.adminName.observe(this) { name ->
-            val editText = binding.textInputLayout3.editText
-            if (editText?.text.toString() != name) {
-                editText?.setText(name)
-            }
+            setTitle("当前管理员: $name")
         }
 
         // 观察无障碍服务状态
@@ -66,10 +58,9 @@ class MainActivity : AppCompatActivity() {
         }
 
         // 观察当前角色
-        viewModel.currentChara.observe(this) { chara ->
-            binding.textView.text = chara
+        viewModel.currentSoul.observe(this) { chara ->
+            binding.tvSoul.text = chara
         }
-
 
         // 观察 Toast 消息
         viewModel.toastMessage.observe(this) { message ->
@@ -83,40 +74,10 @@ class MainActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         viewModel.refreshCurrentChara()
+        viewModel.checkAccessibilityStatus(this)
     }
 
     private fun setupUI() {
-        // API Key 输入监听
-        binding.textInputLayout.editText?.addTextChangedListener(object : TextWatcher {
-            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
-            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
-            override fun afterTextChanged(s: Editable?) {
-                viewModel.updateApiKey(s.toString())
-            }
-        })
-
-        // Bot 名称输入监听
-        binding.textInputLayout2.editText?.addTextChangedListener(object : TextWatcher {
-            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
-            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
-            override fun afterTextChanged(s: Editable?) {
-                viewModel.updateBotName(s.toString())
-            }
-        })
-
-        // 管理员名称输入监听
-        binding.textInputLayout3.editText?.addTextChangedListener(object : TextWatcher {
-            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
-            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
-            override fun afterTextChanged(s: Editable?) {
-                viewModel.updateAdminName(s.toString())
-            }
-        })
-
-        binding.button6.setOnClickListener {
-            viewModel.saveConfig()
-        }
-
         // 按钮点击事件
         binding.toggleButton.setOnClickListener {
             startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
@@ -126,20 +87,17 @@ class MainActivity : AppCompatActivity() {
             startActivity(Intent(this, ChatActivity::class.java))
         }
 
-        binding.button.setOnClickListener {
-            startActivity(Intent(this, CharacterActivity::class.java))
-        }
-
-        binding.button4.setOnClickListener {
-            startActivity(Intent(this, ServerSettingActivity::class.java))
-        }
-
         binding.button5.setOnClickListener {
             viewModel.showFloatWindow(this)
         }
 
         binding.button7.setOnClickListener {
             startActivity(Intent(this, SetupActivity::class.java))
+            finish()
+        }
+
+        binding.btSoulEdit.setOnClickListener {
+            startActivity(Intent(this, CharacterActivity::class.java))
         }
     }
 }

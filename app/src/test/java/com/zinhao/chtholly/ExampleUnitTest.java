@@ -1,5 +1,6 @@
 package com.zinhao.chtholly;
 
+import com.zinhao.chtholly.utils.FilenameFilter;
 import org.junit.Test;
 
 import static org.junit.Assert.*;
@@ -28,7 +29,39 @@ public class ExampleUnitTest {
 
     }
 
+    // ============ 测试 ============
     @Test
-    public void testReply(){
+    public void testFilenameFilter() {
+        String[] testNames = {
+                "正常文件名.txt",
+                "非法<字符>:测试.txt",
+                "包含/斜杠\\的文件.txt",
+                "   首尾空格  .txt   ",
+                "CON",           // Windows 保留名
+                "COM1.txt",      // Windows 保留名
+                "文件名\u0001含控制字符.txt",
+                "../../etc/passwd",  // 路径遍历尝试
+                "超长文件名" + "x".repeat(200) + ".txt",
+                "",              // 空字符串
+                "   ",           // 纯空格
+                ".",             // 单点
+                "文件名🎉表情.txt"  // Emoji
+        };
+
+        System.out.println("=== 基础过滤 ===");
+        for (String name : testNames) {
+            System.out.printf("%-30s -> %s%n",
+                    "\"" + name.substring(0, Math.min(name.length(), 25)) + "\"",
+                    FilenameFilter.sanitizeBasic(name));
+        }
+
+        System.out.println("\n=== 替换模式 ===");
+        System.out.println(FilenameFilter.sanitizeWithReplacement("a<b>c:d|e*f?g", '_'));
+
+        System.out.println("\n=== 严格模式 ===");
+        System.out.println(FilenameFilter.sanitizeStrict("Hello世界@#$%^&*()文件.txt"));
+
+        System.out.println("\n=== 路径安全 ===");
+        System.out.println(FilenameFilter.sanitizePathSafe("../../../etc/passwd"));
     }
 }

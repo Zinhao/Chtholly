@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<ScrollView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:fillViewport="true">
@@ -15,14 +17,14 @@
         <ImageView
             android:layout_width="80dp"
             android:layout_height="80dp"
-            android:src="@drawable/soul_svgrepo_com"
+            android:src="@drawable/user_svgrepo_com"
             android:layout_marginBottom="16dp"/>
 
         <!-- 标题 -->
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="触发词/性格"
+            android:text="管理员信息"
             android:textSize="24sp"
             android:textStyle="bold"
             android:layout_marginBottom="8dp"/>
@@ -30,22 +32,22 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="选择AI风格"
+            android:text="以“/”开头的的消息为Command"
             android:textSize="14sp"
             android:textColor="?android:attr/textColorSecondary"
             android:layout_marginBottom="24dp"/>
 
         <com.google.android.material.textfield.TextInputLayout
-                android:id="@+id/atNameInputDescLayout"
+                android:id="@+id/adminInputDescLayout"
                 style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:visibility="visible"
-                android:hint="触发词"
+                android:hint="管理员名称"
                 android:layout_marginBottom="5dp">
 
             <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/etAtName"
+                    android:id="@+id/etAdmin"
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
                     android:inputType="textUri"/>
@@ -55,42 +57,10 @@
                 android:id="@+id/tvAtNameDesc"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="与性格无关，第三方App内仅当消息@触发词，会回复"
+                android:text="调用App内部函数"
                 android:textSize="12sp"
                 android:layout_marginBottom="30dp"
                 android:lineSpacingMultiplier="1.2"/>
-
-        <!-- 灵魂预设选择 -->
-        <com.google.android.material.textfield.TextInputLayout
-            android:id="@+id/presetSoulLayout"
-            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:hint="选择 AI 性格"
-            android:layout_marginBottom="16dp">
-
-            <AutoCompleteTextView
-                android:id="@+id/presetSoulDropdown"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:inputType="none"/>
-        </com.google.android.material.textfield.TextInputLayout>
-
-        <com.google.android.material.textfield.TextInputLayout
-            android:id="@+id/soulInputDescLayout"
-            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
-            android:layout_width="match_parent"
-            android:layout_height="200dp"
-            android:visibility="gone"
-            android:hint="性格描述"
-            android:layout_marginBottom="16dp">
-
-            <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/etSoulDesc"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:inputType="textUri"/>
-        </com.google.android.material.textfield.TextInputLayout>
 
         <!-- 提示信息 -->
         <androidx.cardview.widget.CardView
@@ -106,15 +76,14 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="💡 性格描述"
+                    android:text="💡 提示"
                     android:textStyle="bold"
                     android:layout_marginBottom="4dp"/>
 
                 <TextView
-                    android:id="@+id/tvSoulDesc"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="@string/chara_default"
+                    android:text="不保证绝对安全"
                     android:textSize="12sp"
                     android:lineSpacingMultiplier="1.2"/>
             </LinearLayout>

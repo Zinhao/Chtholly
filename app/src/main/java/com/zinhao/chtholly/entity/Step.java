@@ -9,33 +9,79 @@ import java.util.Arrays;
 
 public class Step {
     private String packageName;
+    private IndexTargetMode mode;
+
     private String viewId;
+    private int inNodesPosition = 0;
+
+
+    private final ActionType actionType;
     private int actionId;
-    private boolean globalAction;
+    private NeedGesture needGesture;
+
+
     private long daley;
-    private  boolean waiting = false;
+    private boolean waiting = false;
+
+
+    /**
+     * 丛目标viewId的子项中选择,findPosition [1,0,3] 指选中 viewId[1][0][3]
+     */
+    /// ============================================================ 根据位置搜索
     private boolean findChildByPosition = false;
     private int[] findPosition;
-    private int inNodesPosition = 0;
-    private NeedGesture needGesture;
     private String needHasId;
 
-    public Step(String packageName, String viewId, int actionId, boolean globalAction) {
+    /// ============================================================ 根据文本搜索
+    private String targetText;
+    private String targetTextViewId;
+    /// 先上寻找 父node 次数
+    private int targetParentTimes = 0;
+
+    public boolean isCustomGesture() {
+        return getActionType() == Step.ActionType.custom;
+    }
+
+
+    public enum IndexTargetMode{
+        onlyOne,
+        position,
+        text,
+    }
+
+    public enum ActionType{
+        normal,
+        global,
+        custom
+    }
+
+
+    public Step(String packageName, String viewId, int actionId, ActionType actionType) {
         this.packageName = packageName;
         this.viewId = viewId;
         this.actionId = actionId;
-        this.globalAction = globalAction;
+        this.actionType = actionType;
+        mode = IndexTargetMode.onlyOne;
     }
 
-    public Step(String packageName, String viewId, int actionId, boolean globalAction, long daley) {
-        this(packageName, viewId, actionId, globalAction);
+    public Step(String packageName, String viewId, int actionId, ActionType actionType, long daley) {
+        this(packageName, viewId, actionId, actionType);
         this.daley = daley;
     }
 
-    public Step(String packageName, String viewId, int actionId, boolean globalAction, long daley, boolean findChildByPosition, int[] findPosition) {
-        this(packageName, viewId, actionId, globalAction, daley);
+    public Step(String packageName, String viewId, int actionId, ActionType actionType, long daley, boolean findChildByPosition, int[] findPosition) {
+        this(packageName, viewId, actionId, actionType, daley);
         this.findChildByPosition = findChildByPosition;
         this.findPosition = findPosition;
+        mode = IndexTargetMode.position;
+    }
+
+    public Step(String packageName, String viewId, int actionId, long daley, ActionType actionType, int targetParentTimes,String targetText,String targetTextViewId) {
+        this(packageName, viewId, actionId, actionType, daley,false,new int[]{});
+        this.targetParentTimes = targetParentTimes;
+        this.targetText = targetText;
+        this.targetTextViewId = targetTextViewId;
+        mode = IndexTargetMode.text;
     }
 
     public void setInNodesPosition(int inNodesPosition) {
@@ -58,7 +104,7 @@ public class Step {
     }
 
     public boolean isGlobalAction() {
-        return globalAction;
+        return actionType == ActionType.global;
     }
 
     public long getDaley() {
@@ -130,6 +176,45 @@ public class Step {
 
     public void setNeedHasId(String needHasId) {
         this.needHasId = needHasId;
+    }
+
+    public IndexTargetMode getIndexMode() {
+        return mode;
+    }
+
+    public void setMode(IndexTargetMode mode) {
+        this.mode = mode;
+    }
+
+    public String getTargetText() {
+        return targetText;
+    }
+
+    public void setTargetText(String targetText) {
+        this.targetText = targetText;
+    }
+
+    public String getTargetTextViewId() {
+        if(targetTextViewId!=null && targetTextViewId.startsWith(":")){
+            return packageName+targetTextViewId;
+        }
+        return targetTextViewId;
+    }
+
+    public void setTargetTextViewId(String targetTextViewId) {
+        this.targetTextViewId = targetTextViewId;
+    }
+
+    public int getTargetParentTimes() {
+        return targetParentTimes;
+    }
+
+    public void setTargetParentTimes(int targetParentTimes) {
+        this.targetParentTimes = targetParentTimes;
+    }
+
+    public ActionType getActionType() {
+        return actionType;
     }
 
     public interface NeedGesture{

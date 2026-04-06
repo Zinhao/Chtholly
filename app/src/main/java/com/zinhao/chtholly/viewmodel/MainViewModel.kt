@@ -4,23 +4,12 @@ import android.app.Application
 import android.content.Context
 import android.provider.Settings
 import android.text.TextUtils
-import android.view.LayoutInflater
-import android.view.View
-import android.view.ViewGroup
-import android.widget.ArrayAdapter
-import android.widget.ListView
-import android.widget.TextView
-import androidx.annotation.NonNull
-import androidx.annotation.RestrictTo
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
-import com.zinhao.chtholly.db.MessageDao
 import com.zinhao.chtholly.entity.AICharacter
-import com.zinhao.chtholly.entity.Message
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 
 class MainViewModel(application: Application) : AndroidViewModel(application) {
@@ -44,8 +33,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val accessibilityEnabled: LiveData<Boolean> = _accessibilityEnabled
 
     // 当前会话角色信息
-    private val _currentChara = MutableLiveData<String>()
-    val currentChara: LiveData<String> = _currentChara
+    private val _currentSoul = MutableLiveData<String>()
+    val currentSoul: LiveData<String> = _currentSoul
 
     // Toast 消息
     private val _toastMessage = MutableLiveData<String?>()
@@ -107,7 +96,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
      * 获取当前会话角色信息
      */
     fun refreshCurrentChara() {
-        _currentChara.value = BotApp.getInstance().aiSoul
+        _currentSoul.value = BotApp.getInstance().aiSoul
     }
 
     // ==================== 点击事件处理 ====================
@@ -178,7 +167,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun doFirstRun(context: Context) {
-        BotApp.getInstance().insert(AICharacter("猫娘", context.getString(R.string.neko_chara_1)))
+        BotApp.getInstance().insert(AICharacter("猫娘", context.getString(R.string.neko_chara_short)))
         BotApp.getInstance().insert(AICharacter("VTuber", context.getString(R.string.v_tuber_desc)))
         BotApp.getInstance().isFirstRun = false
         saveConfig()

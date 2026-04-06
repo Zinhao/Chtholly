@@ -11,6 +11,7 @@ import android.os.Bundle;
 import androidx.recyclerview.widget.DividerItemDecoration;
 import androidx.recyclerview.widget.LinearLayoutManager;
 
+import com.zinhao.chtholly.R;
 import com.zinhao.chtholly.db.AICharacterDao;
 import com.zinhao.chtholly.BotApp;
 import com.zinhao.chtholly.view.adapter.CharacterAdapter;
@@ -25,8 +26,9 @@ import java.io.*;
 import java.util.List;
 
 public class CharacterActivity extends AppCompatActivity implements CharacterAdapter.ItemClickListener {
-    ActivityCharacterBinding binding;
-    List<AICharacter> listData;
+    private ActivityCharacterBinding binding;
+    private List<AICharacter> listData;
+    private CharacterAdapter adapter;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -56,7 +58,7 @@ public class CharacterActivity extends AppCompatActivity implements CharacterAda
                     @Override
                     public void run() {
                         listData = result;
-                        CharacterAdapter adapter = new CharacterAdapter(listData);
+                        adapter = new CharacterAdapter(listData);
                         adapter.setItemClickListener(CharacterActivity.this);
                         binding.recyclerView.setAdapter(adapter);
                         binding.recyclerView.addItemDecoration(new DividerItemDecoration(CharacterActivity.this,DividerItemDecoration.VERTICAL));
@@ -146,7 +148,28 @@ public class CharacterActivity extends AppCompatActivity implements CharacterAda
             public void onClick(DialogInterface dialog, int which) {
                 BotApp.getInstance().switchAISoul(character);
                 dialog.dismiss();
-                setResult(RESULT_OK);
+            }
+        });
+        builder.create().show();
+    }
+
+    @Override
+    public void onLongClick(AICharacter character) {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle(character.getName());
+        builder.setMessage("确定删除"+character.getName()+"吗?");
+        builder.setNegativeButton("cancel", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                dialog.dismiss();
+            }
+        });
+        builder.setPositiveButton("ok", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                BotApp.getInstance().delete(character);
+                adapter.removeItem(character);
+                dialog.dismiss();
             }
         });
         builder.create().show();
