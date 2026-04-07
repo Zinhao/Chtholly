@@ -65,7 +65,7 @@ public class WXChatHandler extends BaseChatHandler {
             etInput.refresh();
             etInput.performAction(AccessibilityNodeInfo.ACTION_FOCUS);
             FileLogger.INSTANCE.i(TAG, "writeAndSend: 焦点"+etInput.isFocused());
-            if (writeMessage(etInput, qa)) {
+            if (writeMessage(qa)) {
                 NekoChatService.getInstance().addLogcat("write: id[" + etInput.getViewIdResourceName() + ']' + qa.getAnswer().getMessage());
             }
         }

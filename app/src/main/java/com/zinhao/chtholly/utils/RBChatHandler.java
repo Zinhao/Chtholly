@@ -151,7 +151,7 @@ public class RBChatHandler extends BaseChatHandler{
         Log.e(TAG, "writeAndSend: "+( btSend == null));
         if (etInput != null ) {
             etInput.refresh();
-            if (writeMessage(etInput, command)) {
+            if (writeMessage(command)) {
                 if(btSend!=null){
                     btSend.refresh();
                     boolean result = BaseChatHandler.clickButton(btSend, command);

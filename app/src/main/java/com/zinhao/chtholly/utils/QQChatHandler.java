@@ -1,6 +1,7 @@
 package com.zinhao.chtholly.utils;
 
 import android.accessibilityservice.AccessibilityService;
+import android.content.Context;
 import android.os.Build;
 import android.util.Log;
 import android.view.accessibility.AccessibilityEvent;
@@ -20,22 +21,27 @@ public class QQChatHandler extends BaseChatHandler {
 
     private final List<Message> messageList = new Vector<>();
     private int chatsIndex = 0;
-    private String chatTitle;
+    protected String chatTitle;
+    private final String versionName;
+    private int versionCode = 0;
 
-    public QQChatHandler(MessageCallback messageCallback) {
+    public QQChatHandler(Context context, MessageCallback messageCallback) {
         super(messageCallback);
+        versionName = getAppVersion(context);
+        versionCode = getAppVersionCode(context);
+        FileLogger.INSTANCE.i(TAG,"version:"+ versionName +", code:"+versionCode);
     }
 
     @Override
     public boolean writeAndSend(Command qa) {
-        if (etInput != null && btSend != null) {
-            etInput.refresh();
-            if (writeMessage(etInput, qa)) {
-                btSend.refresh();
-                boolean result = BaseChatHandler.clickButton(btSend, qa);
+        if (etInputNode != null && btSendNode != null) {
+            etInputNode.refresh();
+            if (writeMessage(qa)) {
+                btSendNode.refresh();
+                boolean result = BaseChatHandler.clickButton(btSendNode, qa);
                 if (!result) {
                     if(NekoChatService.getInstance()!=null){
-                        NekoChatService.getInstance().addLogcat("writeAndSend: id[" + btSend.getViewIdResourceName() + ']'+"点击发送按钮失败");
+                        NekoChatService.getInstance().addLogcat("writeAndSend: id[" + btSendNode.getViewIdResourceName() + ']'+"点击发送按钮失败");
                     }
                 }
                 return result;
@@ -110,6 +116,7 @@ public class QQChatHandler extends BaseChatHandler {
         return PACKAGE_NAME;
     }
 
+    @Override
     public boolean isAtName(Message message, String name) {
         if (message == null)
             return false;
@@ -155,9 +162,9 @@ public class QQChatHandler extends BaseChatHandler {
         }
     }
 
-    public List<Message> a6b2FindGroupAllMessage(AccessibilityNodeInfo nodeInfo){
+    private List<Message> a6b2FindGroupAllMessage(AccessibilityNodeInfo nodeInfo){
         List<Message> allMessages = new ArrayList<>();
-        List<AccessibilityNodeInfo> messageItemList = nodeInfo.findAccessibilityNodeInfosByViewId(getChatMessageItemId());
+        List<AccessibilityNodeInfo> messageItemList = nodeInfo.findAccessibilityNodeInfosByViewId(getChatMessageItemRootId());
         for (int i = 0; i < messageItemList.size(); i++) {
             AccessibilityNodeInfo messageItem = messageItemList.get(i);
             Message emptyMessage = new Message(null,null,System.currentTimeMillis());
@@ -320,9 +327,11 @@ public class QQChatHandler extends BaseChatHandler {
         return chatTitle;
     }
 
-    private AccessibilityNodeInfo etInput;
-    private AccessibilityNodeInfo btSend;
+
     public final ChatPageViewIds chatPageViewIds = new ChatPageViewIds();
+    public String getSendButtonId(){
+        return SEND_BTN_IDS[1];
+    }
     private void initChatPage(AccessibilityNodeInfo nodeInfo) {
         if (nodeInfo == null) {
             Log.e(TAG, "initChatPage:nodeInfo null!");
@@ -333,17 +342,17 @@ public class QQChatHandler extends BaseChatHandler {
             return;
         }
         //输入文本框id
-        AccessibilityNodeInfo input = findFirstNodeInfo(nodeInfo, QQChatHandler.getInputId());
-        chatPageViewIds.setInputViewId(QQChatHandler.getInputId());
+        AccessibilityNodeInfo input = findFirstNodeInfo(nodeInfo, getInputId());
+        chatPageViewIds.setInputViewId(getInputId());
 
         // 发送按钮id
         AccessibilityNodeInfo send;
-        send = findFirstNodeInfo(nodeInfo, nodeInfo.getPackageName() +SEND_BTN_IDS[1]);
-        chatPageViewIds.setSendBtnViewId(SEND_BTN_IDS[1]);
+        send = findFirstNodeInfo(nodeInfo, nodeInfo.getPackageName() +getSendButtonId());
+        chatPageViewIds.setSendBtnViewId(getSendButtonId());
 
         // 聊天标题id
-        AccessibilityNodeInfo title = findFirstNodeInfo(nodeInfo, QQChatHandler.getChatTitleId());
-        chatPageViewIds.setTitleViewId(QQChatHandler.getChatTitleId());
+        AccessibilityNodeInfo title = findFirstNodeInfo(nodeInfo, getChatTitleId());
+        chatPageViewIds.setTitleViewId(getChatTitleId());
 
         // 确认 选择第一张图片的选择框id
         chatPageViewIds.setFirstPicCheckBoxViewId(PIC_CHECKBOX_IDS[1]);
@@ -352,8 +361,8 @@ public class QQChatHandler extends BaseChatHandler {
             Log.d(TAG, "initChatPage:非聊天界面");
             return;
         }
-        etInput = input;
-        btSend = send;
+        etInputNode = input;
+        btSendNode = send;
         if (title != null) {
             /***
              * 机器人信息和聊天信息
@@ -367,12 +376,12 @@ public class QQChatHandler extends BaseChatHandler {
 
 
 
-    public AccessibilityNodeInfo getBtSend() {
-        return btSend;
+    public AccessibilityNodeInfo getBtSendNode() {
+        return btSendNode;
     }
 
-    public AccessibilityNodeInfo getEtInput() {
-        return etInput;
+    public AccessibilityNodeInfo getEtInputNode() {
+        return etInputNode;
     }
 
     public ChatPageViewIds getChatPageViewIds() {
@@ -426,7 +435,7 @@ public class QQChatHandler extends BaseChatHandler {
     private static final String UPDATE_DIALOG_PAGE = "com.tencent.mobileqq.update_page";
     private static final String[] UPDATE_DIALOG_PAGE_ID = new String[]{"id/x3e","id/x3h","id/x3c","id/x3i","id/x3d","id/x3j"};
 
-    public static String checkWhatPage(AccessibilityNodeInfo root){
+    public String checkWhatPage(AccessibilityNodeInfo root){
         if(root == null){
             return NULL_ROOT;
         }
@@ -450,13 +459,8 @@ public class QQChatHandler extends BaseChatHandler {
         return UNKNOWN_PAGE;
     }
 
-    //qq version code
-    public static int versionCode = 3898;
 
-    public static String getChatTitleId(){
-        return PACKAGE_NAME + ":id/title";
-    }
-    public static String getChatMessageItemId(){
+    public String getChatMessageItemRootId(){
         // ab6[0] = chat_item_time_stamp[text] = 23:02
 
         // ab6[2] = nbt[0]["desc"]= 成员等级
@@ -467,6 +471,11 @@ public class QQChatHandler extends BaseChatHandler {
         // ab6[4] = chat_item_content_layout[text] = 消息正文
         return PACKAGE_NAME + ":id/a6b";
     }
+
+    public String getChatTitleId(){
+        return PACKAGE_NAME + ":id/title";
+    }
+
     public static String getChatMessageTimeStampId(){return PACKAGE_NAME + ":id/chat_item_time_stamp";}
     public static String getChatMessageSpeakerInfoId(){return PACKAGE_NAME + ":id/nbt";}
     public static String getChatNickId(){
@@ -475,21 +484,18 @@ public class QQChatHandler extends BaseChatHandler {
     public static String getChatTextId(){
         return PACKAGE_NAME + ":id/chat_item_content_layout";
     }
-    public static String getChatListView1Id(){
+    public String getChatListView1Id(){
         return PACKAGE_NAME + ":id/listView1";
     }
 
     public static String getNewUserId(){
         return PACKAGE_NAME + ":id/ae0";
     }
-    public static String getInputId(){
+    public String getInputId(){
         return PACKAGE_NAME + ":id/input";
     }
-    public static String getPicButtonId(){
-        switch (versionCode){
-            case 3898: return PACKAGE_NAME + ":id/gnt";
-        }
-        return null;
+    private String getPicButtonId(){
+        return PACKAGE_NAME + ":id/gnt";
     }
 
     // 图片的选择框
@@ -566,10 +572,10 @@ public class QQChatHandler extends BaseChatHandler {
 
     public List<Step> sendNewestPic() {
         List<Step> steps = new Vector<>();
-        steps.add(new Step(QQChatHandler.PACKAGE_NAME, QQChatHandler.getPicButtonId(), AccessibilityNodeInfo.ACTION_CLICK,Step.ActionType.normal));
+        steps.add(new Step(QQChatHandler.PACKAGE_NAME, getPicButtonId(), AccessibilityNodeInfo.ACTION_CLICK,Step.ActionType.normal));
         steps.add(new Step(QQChatHandler.PACKAGE_NAME, chatPageViewIds.getFirstPicCheckBoxViewId(), AccessibilityNodeInfo.ACTION_CLICK,Step.ActionType.normal,300));
         steps.add(new Step(QQChatHandler.PACKAGE_NAME, chatPageViewIds.getSendBtnViewId(), AccessibilityNodeInfo.ACTION_CLICK,Step.ActionType.normal,300));
-        steps.add(new Step(QQChatHandler.PACKAGE_NAME, QQChatHandler.getPicButtonId(), AccessibilityNodeInfo.ACTION_CLICK,Step.ActionType.normal,300));
+        steps.add(new Step(QQChatHandler.PACKAGE_NAME, getPicButtonId(), AccessibilityNodeInfo.ACTION_CLICK,Step.ActionType.normal,300));
         return steps;
     }
 
@@ -577,10 +583,10 @@ public class QQChatHandler extends BaseChatHandler {
     public List<Step> screenShot() {
         List<Step> steps = new Vector<>();
         steps.add(new Step(null,null, AccessibilityService.GLOBAL_ACTION_TAKE_SCREENSHOT,Step.ActionType.global));
-        steps.add(new Step(QQChatHandler.PACKAGE_NAME, QQChatHandler.getPicButtonId(), AccessibilityNodeInfo.ACTION_CLICK,Step.ActionType.normal,500));
+        steps.add(new Step(QQChatHandler.PACKAGE_NAME, getPicButtonId(), AccessibilityNodeInfo.ACTION_CLICK,Step.ActionType.normal,500));
         steps.add(new Step(QQChatHandler.PACKAGE_NAME, chatPageViewIds.getFirstPicCheckBoxViewId(), AccessibilityNodeInfo.ACTION_CLICK,Step.ActionType.normal,500));
         steps.add(new Step(QQChatHandler.PACKAGE_NAME, chatPageViewIds.getSendBtnViewId(), AccessibilityNodeInfo.ACTION_CLICK,Step.ActionType.normal,500));
-        steps.add(new Step(QQChatHandler.PACKAGE_NAME, QQChatHandler.getPicButtonId(), AccessibilityNodeInfo.ACTION_CLICK,Step.ActionType.normal,500));
+        steps.add(new Step(QQChatHandler.PACKAGE_NAME, getPicButtonId(), AccessibilityNodeInfo.ACTION_CLICK,Step.ActionType.normal,500));
         return steps;
     }
 
@@ -612,10 +618,10 @@ public class QQChatHandler extends BaseChatHandler {
         steps.add(new Step(null, null, AccessibilityService.GLOBAL_ACTION_BACK, Step.ActionType.global));
         steps.add(new Step(null, null, AccessibilityService.GLOBAL_ACTION_TAKE_SCREENSHOT, Step.ActionType.global,1000));
         steps.add(new Step(QQChatHandler.PACKAGE_NAME,":id/recent_chat_list", AccessibilityNodeInfo.ACTION_CLICK,Step.ActionType.normal,500,true,new int[]{position+1}));
-        steps.add(new Step(QQChatHandler.PACKAGE_NAME, QQChatHandler.getPicButtonId(), AccessibilityNodeInfo.ACTION_CLICK,Step.ActionType.normal,500));
+        steps.add(new Step(QQChatHandler.PACKAGE_NAME, getPicButtonId(), AccessibilityNodeInfo.ACTION_CLICK,Step.ActionType.normal,500));
         steps.add(new Step(QQChatHandler.PACKAGE_NAME, chatPageViewIds.getFirstPicCheckBoxViewId(), AccessibilityNodeInfo.ACTION_CLICK,Step.ActionType.normal,500));
         steps.add(new Step(QQChatHandler.PACKAGE_NAME, chatPageViewIds.getSendBtnViewId(), AccessibilityNodeInfo.ACTION_CLICK,Step.ActionType.normal,500));
-        steps.add(new Step(QQChatHandler.PACKAGE_NAME, QQChatHandler.getPicButtonId(), AccessibilityNodeInfo.ACTION_CLICK,Step.ActionType.normal,500));
+        steps.add(new Step(QQChatHandler.PACKAGE_NAME, getPicButtonId(), AccessibilityNodeInfo.ACTION_CLICK,Step.ActionType.normal,500));
         return steps;
     }
 
@@ -626,10 +632,10 @@ public class QQChatHandler extends BaseChatHandler {
         steps.add(new Step(QQChatHandler.PACKAGE_NAME,":id/p2",AccessibilityNodeInfo.ACTION_CLICK,Step.ActionType.normal,500));
         steps.add(new Step(QQChatHandler.PACKAGE_NAME,null,AccessibilityService.GLOBAL_ACTION_TAKE_SCREENSHOT,Step.ActionType.global,2500));
         steps.add(new Step(QQChatHandler.PACKAGE_NAME,null,AccessibilityService.GLOBAL_ACTION_BACK,Step.ActionType.global,500));
-        steps.add(new Step(QQChatHandler.PACKAGE_NAME, QQChatHandler.getPicButtonId(), AccessibilityNodeInfo.ACTION_CLICK,Step.ActionType.normal,500));
+        steps.add(new Step(QQChatHandler.PACKAGE_NAME, getPicButtonId(), AccessibilityNodeInfo.ACTION_CLICK,Step.ActionType.normal,500));
         steps.add(new Step(QQChatHandler.PACKAGE_NAME, chatPageViewIds.getFirstPicCheckBoxViewId(), AccessibilityNodeInfo.ACTION_CLICK,Step.ActionType.normal,400));
         steps.add(new Step(QQChatHandler.PACKAGE_NAME, chatPageViewIds.getSendBtnViewId(), AccessibilityNodeInfo.ACTION_CLICK,Step.ActionType.normal,300));
-        steps.add(new Step(QQChatHandler.PACKAGE_NAME, QQChatHandler.getPicButtonId(), AccessibilityNodeInfo.ACTION_CLICK,Step.ActionType.normal,300));
+        steps.add(new Step(QQChatHandler.PACKAGE_NAME, getPicButtonId(), AccessibilityNodeInfo.ACTION_CLICK,Step.ActionType.normal,300));
         return steps;
     }
 

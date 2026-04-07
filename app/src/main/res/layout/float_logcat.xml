@@ -22,7 +22,5 @@
             android:layout_width="match_parent"
             android:layout_height="300dp"
             android:layout_gravity="bottom"
-            android:background="#FF000000"/>
-    <com.zinhao.chtholly.customview.VibrationGraphView
-        android:id="@+id/vgv" android:layout_width="match_parent" android:layout_height="200dp"/>
+            android:background="#80000000"/>
 </FrameLayout>

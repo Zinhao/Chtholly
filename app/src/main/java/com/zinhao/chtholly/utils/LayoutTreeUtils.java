@@ -36,10 +36,6 @@ public class LayoutTreeUtils {
         root.put("text", nodeInfo.getText());
         if (treeIndex == 0) {
             builder = new StringBuilder();
-            if (BuildConfig.DEBUG && PRINT_TREE) {
-                String pageName = QQChatHandler.checkWhatPage(nodeInfo);
-                Log.d(TAG, "\uD83D\uDE21"+pageName+":===============================================>" + nodeInfo.getPackageName());
-            }
             builder.append("|__");
         } else {
             builder.append("|  ");

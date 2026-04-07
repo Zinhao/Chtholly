@@ -1,5 +1,8 @@
 package com.zinhao.chtholly.utils;
 
+import android.content.Context;
+import android.content.pm.PackageInfo;
+import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.accessibility.AccessibilityEvent;
@@ -16,8 +19,35 @@ public abstract class BaseChatHandler {
     public static final String UNKNOWN_PAGE = "unknown page";
     protected abstract boolean isAtName(Message message,String name);
     protected MessageCallback messageCallback;
+
     public abstract void handle(AccessibilityEvent event);
     public abstract String getPackageName();
+    public abstract boolean writeAndSend(Command command);
+    public abstract String beforeWriteMessage(Command command);
+    protected AccessibilityNodeInfo etInputNode;
+    protected AccessibilityNodeInfo btSendNode;
+
+    // 获取指定包名的版本信息
+    public String getAppVersion(Context context) {
+        try {
+            PackageManager pm = context.getPackageManager();
+            PackageInfo packageInfo = pm.getPackageInfo(getPackageName(), 0);
+            return packageInfo.versionName; // 或 versionCode
+        } catch (PackageManager.NameNotFoundException e) {
+            return null; // 未安装
+        }
+    }
+
+    public int getAppVersionCode(Context context) {
+        try {
+            PackageManager pm = context.getPackageManager();
+            PackageInfo packageInfo = pm.getPackageInfo(getPackageName(), 0);
+            return packageInfo.versionCode; // 或 versionCode
+        } catch (PackageManager.NameNotFoundException e) {
+            return 0; // 未安装
+        }
+    }
+
     public BaseChatHandler(MessageCallback messageCallback) {
         this.messageCallback = messageCallback;
     }
@@ -26,22 +56,22 @@ public abstract class BaseChatHandler {
         this.messageCallback = messageCallback;
     }
 
-    public abstract boolean writeAndSend(Command command);
-    public abstract String beforeWriteMessage(Command command);
-
-    public boolean writeMessage(AccessibilityNodeInfo inputEditText, Command qaMessage) {
+    public boolean writeMessage(Command qaMessage) {
+        if(etInputNode==null){
+            return false;
+        }
         if (!qaMessage.isWrite()) {
-            if(inputEditText.isEditable()){
+            if(etInputNode.isEditable()){
                 Bundle arg = new Bundle();
                 String sendMessage = beforeWriteMessage(qaMessage);
                 Log.i(TAG,"writeMessage:"+sendMessage);
                 arg.putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, sendMessage);
-                boolean result = inputEditText.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, arg);
+                boolean result = etInputNode.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, arg);
                 if(!result){
 //                    Log.e("MyAccessibilityService", "Failed to set text directly.");
                     // 如果直接设置文本失败，可以逐个字符发送输入事件
                     for (char c : sendMessage.toString().toCharArray()) {
-                        sendCharacter(c,inputEditText);
+                        sendCharacter(c,etInputNode);
                     }
                 }
                 qaMessage.setWrite(result);
@@ -63,19 +93,15 @@ public abstract class BaseChatHandler {
             Bundle args = new Bundle();
             args.putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, String.valueOf(c));
             boolean success = nodeInfo.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, args);
-//            if (!success) {
-//                Log.e("MyAccessibilityService", "Failed to send character: " + c);
-//            }
+            if (!success) {
+                Log.e("MyAccessibilityService", "Failed to send character: " + c);
+            }
         }
     }
 
-    public boolean pasteMessage(AccessibilityNodeInfo inputEditText, Command qaMessage){
-        if(inputEditText.isEditable()){
-            boolean result= inputEditText.performAction(AccessibilityNodeInfo.ACTION_PASTE);
-//            Bundle arg = new Bundle();
-//            String sendMessage = beforeWriteMessage(qaMessage);
-//            arg.putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, sendMessage);
-//            boolean result = inputEditText.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, arg);
+    public boolean pasteMessage(Command qaMessage){
+        if(etInputNode.isEditable()){
+            boolean result= etInputNode.performAction(AccessibilityNodeInfo.ACTION_PASTE);
             qaMessage.setWrite(result);
         }else {
             NekoChatService.getInstance().addLogcat("isEditable false");
@@ -83,6 +109,7 @@ public abstract class BaseChatHandler {
         return qaMessage.isWrite();
     }
 
+// ==================================以下是公共静态方法
     public static boolean clickButton(AccessibilityNodeInfo sendButton, Command commandMessage) {
         boolean result = sendButton.performAction(AccessibilityNodeInfo.ACTION_CLICK);
         commandMessage.setSend(result);
@@ -134,6 +161,9 @@ public abstract class BaseChatHandler {
         {
             if(!s.startsWith(":")){
                 s= ":"+s;
+            }
+            if(s.startsWith(nodeInfo.getPackageName().toString())){
+                s = s.replace(nodeInfo.getPackageName().toString(),"");
             }
             List<AccessibilityNodeInfo> nodeInfoList = nodeInfo
                     .findAccessibilityNodeInfosByViewId(nodeInfo.getPackageName() + s);
