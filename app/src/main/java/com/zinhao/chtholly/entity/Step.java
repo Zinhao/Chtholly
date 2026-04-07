@@ -21,7 +21,6 @@ public class Step {
 
 
     private long daley;
-    private boolean waiting = false;
 
 
     /**
@@ -154,20 +153,12 @@ public class Step {
         this.findPosition = findPosition;
     }
 
-    public void setWaiting(boolean waiting) {
-        this.waiting = waiting;
-    }
-
     public void setNeedGesture(NeedGesture needGesture) {
         this.needGesture = needGesture;
     }
 
     public NeedGesture getNeedGesture() {
         return needGesture;
-    }
-
-    public boolean isWaiting() {
-        return waiting;
     }
 
     public String getNeedHasId() {

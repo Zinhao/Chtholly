@@ -2,26 +2,31 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
               android:orientation="vertical"
               android:layout_width="100dp"
-              android:alpha="0.3"
               android:gravity="center"
               android:layout_gravity="center"
               android:layout_height="wrap_content">
 
-    <Button
+    <ToggleButton
             android:id="@+id/b1"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Helper" />
-    <Button
+            android:textOn="关闭辅助"
+            android:textOff="打开辅助"
+            android:checked="false"
+    />
+    <ToggleButton
             android:id="@+id/b2"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:textOn="关闭日志"
+            android:textOff="打开日志"
+            android:checked="false"
             android:text="LOG" />
     <Button
             android:id="@+id/b3"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="share" />
+            android:text="测试" />
     <ImageView
             android:layout_width="match_parent"
             android:background="@drawable/white_circle_shape"

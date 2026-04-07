@@ -16,7 +16,8 @@ public class NekoAskAble extends Command {
     public static final String ASK_NORMAL_TEMP = "主人，$安喵~";
     public static final String TOO_HIGH = "墙太高爬不出去喵，我尽力吧。";
     public static final String KOU_WAI = "还以为永远都见不到你了呢？";
-    public static final String COME_BACK = "瓦达西诺~ 又回来了喵~ ( ˉ͈̀꒳ˉ͈́ )✧";
+    public static final String COME_BACK = "又回来了喵~ ( ˉ͈̀꒳ˉ͈́ )✧";
+    public static final String TIME_TOO_FAST = "(时间过的真快，转眼间12小时过去了，这期间很安静，什么都没发生。)";
     public static String[] textHappy = new String[]{"(⌯︎¤̴̶̷̀ω¤̴̶̷́)✧","❛˓◞˂̵✧","( ˉ͈̀꒳ˉ͈́ )✧"};
     public static String[] textNoWords = new String[]{" ୧⍢⃝୨","←_←","┐(´-｀)┌","(*￣rǒ￣)"};
     public static String[] textSad = new String[]{"˃ ˄ ˂̥̥ "};

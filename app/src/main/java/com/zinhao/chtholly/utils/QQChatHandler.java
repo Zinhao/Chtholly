@@ -20,7 +20,9 @@ public class QQChatHandler extends BaseChatHandler {
     public static final String PACKAGE_NAME = "com.tencent.mobileqq";
 
     private final List<Message> messageList = new Vector<>();
-    private int chatsIndex = 0;
+
+    private String currentPageName;
+    private String targetChatTitle = null;
     protected String chatTitle;
     private final String versionName;
     private int versionCode = 0;
@@ -34,6 +36,9 @@ public class QQChatHandler extends BaseChatHandler {
 
     @Override
     public boolean writeAndSend(Command qa) {
+        if(qa.getAnswer().getMessage() == null || qa.getAnswer().getMessage().isEmpty()){
+            return true;
+        }
         if (etInputNode != null && btSendNode != null) {
             etInputNode.refresh();
             if (writeMessage(qa)) {
@@ -135,7 +140,9 @@ public class QQChatHandler extends BaseChatHandler {
             return;
         if(event.getSource() == null)
             return;
-        if(QQChatHandler.UPDATE_DIALOG_PAGE.equals(checkWhatPage(event.getSource()))){
+        String pageName =checkWhatPage(event.getSource());
+        currentPageName = pageName;
+        if(QQChatHandler.UPDATE_DIALOG_PAGE.equals(pageName)){
             Log.d(TAG, "handle: is update dialog");
             AccessibilityNodeInfo closeBtn = findFirstNodeInfo(event.getSource(),getPackageName()+":id/x3c");
             if(closeBtn!=null){
@@ -146,7 +153,7 @@ public class QQChatHandler extends BaseChatHandler {
         if ((event.getContentChangeTypes() & AccessibilityEvent.CONTENT_CHANGE_TYPE_TEXT) == AccessibilityEvent.CONTENT_CHANGE_TYPE_TEXT) {
             if ((event.getContentChangeTypes() & AccessibilityEvent.CONTENT_CHANGE_TYPE_SUBTREE) == AccessibilityEvent.CONTENT_CHANGE_TYPE_SUBTREE) {
                 // chat 文本消息
-                if (QQChatHandler.CHAT_PAGE.equals(checkWhatPage(event.getSource()))) {
+                if (QQChatHandler.CHAT_PAGE.equals(pageName)) {
                     initChatPage(event.getSource());
                     findLastMessage(event.getSource());
                 }
@@ -154,12 +161,16 @@ public class QQChatHandler extends BaseChatHandler {
         } else {
             if ((event.getContentChangeTypes() & AccessibilityEvent.CONTENT_CHANGE_TYPE_SUBTREE) == AccessibilityEvent.CONTENT_CHANGE_TYPE_SUBTREE) {
 //                拍一拍，欢迎消息，撤回消息
-                if (QQChatHandler.CHAT_PAGE.equals(checkWhatPage(event.getSource()))) {
+                if (QQChatHandler.CHAT_PAGE.equals(pageName)) {
                     initChatPage(event.getSource());
                     findLastMessage(event.getSource());
                 }
             }
         }
+    }
+
+    public String getCurrentPageName() {
+        return currentPageName;
     }
 
     private List<Message> a6b2FindGroupAllMessage(AccessibilityNodeInfo nodeInfo){
@@ -316,11 +327,11 @@ public class QQChatHandler extends BaseChatHandler {
         return null;
     }
 
-    public void setChatsIndex(int chatsIndex) {
-        this.chatsIndex = chatsIndex;
+    public void setTargetChatTitle(String targetChatTitle) {
+        this.targetChatTitle = targetChatTitle;
     }
-    public int getChatsIndex() {
-        return chatsIndex;
+    public String getTargetChatTitle() {
+        return targetChatTitle;
     }
 
     public String getChatTitle() {
@@ -365,11 +376,17 @@ public class QQChatHandler extends BaseChatHandler {
         btSendNode = send;
         if (title != null) {
             /***
-             * 机器人信息和聊天信息
+             * 聊天信息
              */
-            chatTitle = title.getText().toString();
-            if(NekoChatService.getInstance()!=null){
-                NekoChatService.getInstance().addLogcat("initChatPage:聊天界面:" + chatTitle);
+            CharSequence charSequence = title.getText();
+            if(charSequence!=null){
+                chatTitle = charSequence.toString();
+                if(targetChatTitle == null){
+                    targetChatTitle = chatTitle;
+                }
+                if(NekoChatService.getInstance()!=null){
+                    NekoChatService.getInstance().addLogcat("initChatPage:聊天界面:" + chatTitle);
+                }
             }
         }
     }
@@ -609,23 +626,6 @@ public class QQChatHandler extends BaseChatHandler {
     }
 
     @RequiresApi(Build.VERSION_CODES.P)
-    public List<Step> switchChatQuery() {
-        int position = 0;
-        if(NekoChatService.getInstance() != null){
-            position = NekoChatService.getInstance().getChatsIndex();
-        }
-        List<Step> steps = new Vector<>();
-        steps.add(new Step(null, null, AccessibilityService.GLOBAL_ACTION_BACK, Step.ActionType.global));
-        steps.add(new Step(null, null, AccessibilityService.GLOBAL_ACTION_TAKE_SCREENSHOT, Step.ActionType.global,1000));
-        steps.add(new Step(QQChatHandler.PACKAGE_NAME,":id/recent_chat_list", AccessibilityNodeInfo.ACTION_CLICK,Step.ActionType.normal,500,true,new int[]{position+1}));
-        steps.add(new Step(QQChatHandler.PACKAGE_NAME, getPicButtonId(), AccessibilityNodeInfo.ACTION_CLICK,Step.ActionType.normal,500));
-        steps.add(new Step(QQChatHandler.PACKAGE_NAME, chatPageViewIds.getFirstPicCheckBoxViewId(), AccessibilityNodeInfo.ACTION_CLICK,Step.ActionType.normal,500));
-        steps.add(new Step(QQChatHandler.PACKAGE_NAME, chatPageViewIds.getSendBtnViewId(), AccessibilityNodeInfo.ACTION_CLICK,Step.ActionType.normal,500));
-        steps.add(new Step(QQChatHandler.PACKAGE_NAME, getPicButtonId(), AccessibilityNodeInfo.ACTION_CLICK,Step.ActionType.normal,500));
-        return steps;
-    }
-
-    @RequiresApi(Build.VERSION_CODES.P)
     public List<Step> sendGalleryPreview() {
         List<Step> steps = new Vector<>();
         steps.add(new Step(QQChatHandler.PACKAGE_NAME,":id/gnt",AccessibilityNodeInfo.ACTION_CLICK,Step.ActionType.normal));
@@ -663,7 +663,7 @@ public class QQChatHandler extends BaseChatHandler {
         return steps;
     }
 
-    public static List<Step> shareFileChooseTarget(String targetText){
+    public static List<Step> chooseShareTarget(String targetText){
         /***
          * qq_share_file_send_to.json
          * ============================================================================= step 1
@@ -720,13 +720,6 @@ public class QQChatHandler extends BaseChatHandler {
          *     }
          */
         List<Step> steps = new Vector<>();
-        Step gestureStep = new Step(QQChatHandler.PACKAGE_NAME,null,AccessibilityNodeInfo.ACTION_SCROLL_FORWARD,Step.ActionType.custom,500);
-        gestureStep.setNeedGesture(Command.CLICK);
-        steps.add(gestureStep);
-
-        Step back = new Step(QQChatHandler.PACKAGE_NAME,null,AccessibilityService.GLOBAL_ACTION_BACK, Step.ActionType.global,500);
-        steps.add(back);
-
         steps.add(new Step(QQChatHandler.PACKAGE_NAME,":id/listView1",AccessibilityNodeInfo.ACTION_CLICK,2000, Step.ActionType.normal,1,targetText,":id/text1"));
         steps.add(new Step(QQChatHandler.PACKAGE_NAME,":id/dialogRightBtn",AccessibilityNodeInfo.ACTION_CLICK,Step.ActionType.normal,1500));
 

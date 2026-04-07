@@ -57,6 +57,9 @@ public abstract class BaseChatHandler {
     }
 
     public boolean writeMessage(Command qaMessage) {
+        if(qaMessage.getAnswer().getMessage() == null){
+            return true;
+        }
         if(etInputNode==null){
             return false;
         }

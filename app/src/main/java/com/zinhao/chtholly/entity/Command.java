@@ -125,19 +125,6 @@ public abstract class Command{
 
     }
 
-    @HelpDoc(desc = "开启早中晚定时问侯")
-    private boolean openAutoAction() {
-        NekoChatService.getInstance().autoAsk = true;
-        getAnswer().setMessage("已打开问候功能");
-        return true;
-    }
-    @HelpDoc(desc = "关闭早中晚定时问侯")
-    private boolean closeAutoAction() {
-        NekoChatService.getInstance().autoAsk = false;
-        getAnswer().setMessage("已关闭问候功能");
-        return true;
-    }
-
     @HelpDoc(desc = "帮助")
     protected boolean help() {
         getAnswer().setMessage(getHelpStringBuilder().toString());
@@ -168,44 +155,22 @@ public abstract class Command{
         return true;
     }
 
-    @HelpDoc(desc = "[1 int arg]切换对话")
-    private boolean switchChat() {
-        ChatPageViewIds cpvi = NekoChatService.getInstance().currentChatPageIds(getPackageName());
-        if(cpvi == null){
-            Log.e(TAG, "switchChat: ", new RuntimeException("ChatPageViewIds is null"));
-            return false;
-        }
-        if(getQuestion().getMessage().contains(" ")){
-            String[] ids = getQuestion().getMessage().split(" ");
-            int position = 0;
-            if(ids.length == 2){
-                try{
-                    position = Integer.parseInt(ids[1]);
-                }catch (Exception e){
-                    getAnswer().setMessage(NekoAskAble.HARD);
-                    return true;
-                }
-                NekoChatService.getInstance().setChatsIndex(position);
-                if(QQChatHandler.PACKAGE_NAME.equals(packageName)){
-                    steps = NekoChatService.getInstance().getQqChatHandler().switchChatNow(position);
-                }
-                getAnswer().setMessage(NekoAskAble.COME_BACK);
-                return true;
+    @HelpDoc(desc = "[1 string arg]切换对话")
+    private boolean switchToChat() {
+        if(args.length == 1){
+            if(NekoChatService.getInstance()!=null){
+                NekoChatService.getInstance().shareText(NekoAskAble.COME_BACK);
             }
+            if(QQChatHandler.PACKAGE_NAME.equals(packageName)){
+                steps = QQChatHandler.chooseShareTarget(args[0]);
+                NekoChatService.getInstance().getQqChatHandler().setTargetChatTitle(args[0]);
+            }
+            getAnswer().setMessage(null);
+            return true;
         }else {
-            //截图聊天列表并发送截图
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                if(QQChatHandler.PACKAGE_NAME.equals(packageName)){
-                    steps = NekoChatService.getInstance().getQqChatHandler().switchChatQuery();
-                }
-                getAnswer().setMessage("看好需要切换的聊天的位置，使用($command 0)切换至第一个聊天，数字表示聊天的索引。");
-                return true;
-            }else {
-                getAnswer().setMessage(NekoAskAble.HARD);
-                return true;
-            }
+            getAnswer().setMessage(NekoAskAble.HARD);
+            return true;
         }
-        return true;
     }
 
     @HelpDoc(desc = "自动群打卡")
@@ -446,7 +411,7 @@ public abstract class Command{
 
     public boolean initSendFileStepTo(String targetChatTitle){
         if(QQChatHandler.PACKAGE_NAME.equals(packageName)){
-            steps = QQChatHandler.shareFileChooseTarget(targetChatTitle);
+            steps = QQChatHandler.chooseShareTarget(targetChatTitle);
             getAnswer().setMessage(NekoAskAble.OK);
         }else{
             getAnswer().setMessage(NekoAskAble.DONT_SUPPORT);
@@ -603,8 +568,7 @@ public abstract class Command{
         String apiKeySub = apiKey.substring(Math.max(apiKey.length()-5,0));
         stringBuilder.append("ApiKey:").append("sk-***********").append(apiKeySub).append("\n");
         if(NekoChatService.getInstance()!=null){
-            stringBuilder.append("auto:").append(NekoChatService.getInstance().autoAsk).append("\n");
-            stringBuilder.append("chat index:").append(NekoChatService.getInstance().getChatsIndex()).append("\n");
+
         }
 
         return  stringBuilder;
@@ -646,7 +610,7 @@ public abstract class Command{
         setWrite(true);
     }
 
-    public void back(Step step){
+    public void backStepList(Step step){
         if(steps!=null){
             steps.add(0,step);
         }

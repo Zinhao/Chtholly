@@ -24,8 +24,8 @@ public class AccessibilityLogcatView extends View {
         super(context, attrs);
         textPaint = new TextPaint();
         textPaint.setColor(Color.WHITE);
-        textPaint.setTextSize(34);
-        lineHeight = 34;
+        textPaint.setTextSize(20);
+        lineHeight = 20;
         logcatList.add("init logcat");
     }
 
@@ -66,6 +66,9 @@ public class AccessibilityLogcatView extends View {
             logcatList.set(logcatList.size()-1,last + ":>");
         }else {
             logcatList.add(logcat);
+        }
+        if(logcatList.size()>50){
+            logcatList.remove(0);
         }
         postInvalidate();
     }
