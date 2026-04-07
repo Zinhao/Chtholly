@@ -127,7 +127,7 @@ public class AccessibilityBoundView extends View {
         nodeInfo.getBoundsInScreen(bound);
 
         // 修正坐标：减去状态栏高度，将屏幕坐标转为 View 坐标
-//        bound.offset(0, -statusBarHeight);
+        bound.offset(0, -statusBarHeight);
 
         if (nodeInfo.isClickable()) {
             rectPaint.setColor(Color.GREEN);
@@ -140,9 +140,22 @@ public class AccessibilityBoundView extends View {
             drawTextInCenter(canvas, "可输入", bound, textPaint);
         }
 
-        String text = nodeInfo.getViewIdResourceName();
-        if (text != null) {
-            text = text.replace(nodeInfo.getPackageName(), "");
+        CharSequence text = nodeInfo.getText();
+        CharSequence desc = nodeInfo.getContentDescription();
+        String viewIdResourceName = nodeInfo.getViewIdResourceName();
+
+        String mergeStr;
+        if(text!=null && desc!=null){
+            mergeStr = String.format("%s(%s)[%s]",viewIdResourceName,text,desc);
+        }else if(desc!=null){
+            mergeStr = String.format("%s[%s]",viewIdResourceName,desc);
+        }else if(text!=null){
+            mergeStr = String.format("%s(%s)",viewIdResourceName,text);
+        }else{
+            mergeStr = viewIdResourceName;
+        }
+        if(mergeStr!=null){
+            String finalMergeStr = mergeStr.replace(nodeInfo.getPackageName(), "");
 
             float textHeight = textPaint.getTextSize();
             float x = bound.left;
@@ -153,8 +166,9 @@ public class AccessibilityBoundView extends View {
             } else {
                 textPaint.setColor(Color.RED);
             }
-            canvas.drawText(text, x, y, textPaint);
+            canvas.drawText(finalMergeStr, x, y, textPaint);
         }
+
     }
 
     private static void drawTextInCenter(Canvas canvas, String text, Rect bound, Paint textPaint) {
