@@ -19,9 +19,9 @@ public class QQChatHandler extends BaseChatHandler {
     private static final String TAG = "QQChatHandler";
     public static final String PACKAGE_NAME = "com.tencent.mobileqq";
 
-    private final List<Message> messageList = new Vector<>();
+    protected final List<Message> messageList = new Vector<>();
 
-    private String currentPageName;
+    protected String currentPageName;
     private String targetChatTitle = null;
     protected String chatTitle;
     private final String versionName;
@@ -29,9 +29,16 @@ public class QQChatHandler extends BaseChatHandler {
 
     public QQChatHandler(Context context, MessageCallback messageCallback) {
         super(messageCallback);
-        versionName = getAppVersion(context);
-        versionCode = getAppVersionCode(context);
-        FileLogger.INSTANCE.i(TAG,"version:"+ versionName +", code:"+versionCode);
+        versionName = getAppVersion(context,PACKAGE_NAME);
+        versionCode = getAppVersionCode(context,PACKAGE_NAME);
+    }
+
+    public int getVersionCode() {
+        return versionCode;
+    }
+
+    public String getVersionName() {
+        return versionName;
     }
 
     @Override
@@ -153,7 +160,7 @@ public class QQChatHandler extends BaseChatHandler {
         if ((event.getContentChangeTypes() & AccessibilityEvent.CONTENT_CHANGE_TYPE_TEXT) == AccessibilityEvent.CONTENT_CHANGE_TYPE_TEXT) {
             if ((event.getContentChangeTypes() & AccessibilityEvent.CONTENT_CHANGE_TYPE_SUBTREE) == AccessibilityEvent.CONTENT_CHANGE_TYPE_SUBTREE) {
                 // chat 文本消息
-                if (QQChatHandler.CHAT_PAGE.equals(pageName)) {
+                if (QQChatHandler.CHAT_GROUP.equals(pageName)) {
                     initChatPage(event.getSource());
                     findLastMessage(event.getSource());
                 }
@@ -161,7 +168,7 @@ public class QQChatHandler extends BaseChatHandler {
         } else {
             if ((event.getContentChangeTypes() & AccessibilityEvent.CONTENT_CHANGE_TYPE_SUBTREE) == AccessibilityEvent.CONTENT_CHANGE_TYPE_SUBTREE) {
 //                拍一拍，欢迎消息，撤回消息
-                if (QQChatHandler.CHAT_PAGE.equals(pageName)) {
+                if (QQChatHandler.CHAT_GROUP.equals(pageName)) {
                     initChatPage(event.getSource());
                     findLastMessage(event.getSource());
                 }
@@ -431,7 +438,8 @@ public class QQChatHandler extends BaseChatHandler {
     public static final String MESSAGE_PAGE = "com.tencent.mobileqq.message_list";
     private static final String[] MESSAGE_PAGE_ID = new String[]{":id/ba1",":id/wjj",":id/wk0",":id/kbi",":id/eqe"};
 
-    public static final String CHAT_PAGE = "com.tencent.mobileqq.chat";
+    public static final String CHAT_PERSON = "com.tencent.mobileqq.person_chat";
+    public static final String CHAT_GROUP = "com.tencent.mobileqq.group_chat";
     private static final String[] CHAT_PAGE_ID = new String[]{":id/title",":id/input",":id/gnt",":id/fun_btn"};
 
     private static final String DRAWER_PAGE = "com.tencent.mobileqq.chat_list_drawer";
@@ -461,7 +469,7 @@ public class QQChatHandler extends BaseChatHandler {
         }else if(hasAllId(root,DRAWER_PAGE_ID)){
             return DRAWER_PAGE;
         }else if(hasAllId(root,CHAT_PAGE_ID)){
-            return CHAT_PAGE;
+            return CHAT_GROUP;
         }else if(hasAllId(root,MY_FRIENDS_PAGE_ID)){
             return MY_FRIENDS_PAGE;
         }else if(hasAllId(root,NEW_FRIENDS_PAGE_ID)){

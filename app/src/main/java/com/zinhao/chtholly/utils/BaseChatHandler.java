@@ -28,20 +28,20 @@ public abstract class BaseChatHandler {
     protected AccessibilityNodeInfo btSendNode;
 
     // 获取指定包名的版本信息
-    public String getAppVersion(Context context) {
+    public static String getAppVersion(Context context, String packageName) {
         try {
             PackageManager pm = context.getPackageManager();
-            PackageInfo packageInfo = pm.getPackageInfo(getPackageName(), 0);
+            PackageInfo packageInfo = pm.getPackageInfo(packageName, 0);
             return packageInfo.versionName; // 或 versionCode
         } catch (PackageManager.NameNotFoundException e) {
             return null; // 未安装
         }
     }
 
-    public int getAppVersionCode(Context context) {
+    public static int getAppVersionCode(Context context,String packageName) {
         try {
             PackageManager pm = context.getPackageManager();
-            PackageInfo packageInfo = pm.getPackageInfo(getPackageName(), 0);
+            PackageInfo packageInfo = pm.getPackageInfo(packageName, 0);
             return packageInfo.versionCode; // 或 versionCode
         } catch (PackageManager.NameNotFoundException e) {
             return 0; // 未安装
@@ -127,6 +127,9 @@ public abstract class BaseChatHandler {
         if(viewId == null){
             return null;
         }
+        if(source == null){
+            return null;
+        }
         if(viewId.equals(source.getViewIdResourceName())){
             return source;
         }
@@ -162,11 +165,11 @@ public abstract class BaseChatHandler {
     public static boolean hasAllId(AccessibilityNodeInfo nodeInfo,String... ids){
         for (String s : ids)
         {
-            if(!s.startsWith(":")){
-                s= ":"+s;
-            }
             if(s.startsWith(nodeInfo.getPackageName().toString())){
                 s = s.replace(nodeInfo.getPackageName().toString(),"");
+            }
+            if(!s.startsWith(":") ){
+                s = ":"+s;
             }
             List<AccessibilityNodeInfo> nodeInfoList = nodeInfo
                     .findAccessibilityNodeInfosByViewId(nodeInfo.getPackageName() + s);

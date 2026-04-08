@@ -88,7 +88,7 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
         instance = new WeakReference<>(this);
         mHandler = new Handler(getMainLooper());
         ttsAudioPlayer = new ExoPlayer.Builder(this).build();
-        qqChatHandler = new QQChatHandler(this,this);
+        qqChatHandler = QQHandlerCompat.INSTANCE.get(this,this);
         wxChatHandler = new WXChatHandler(this);
         rbChatHandler = new RBChatHandler(this);
         windowManager = getSystemService(WindowManager.class);
@@ -174,7 +174,7 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
         }
 
 //        debugOnAccessibilityEvent(event);
-
+        AccessibilityNodeInfo root = getRootInActiveWindow();
         if (QQChatHandler.PACKAGE_NAME.equals(event.getPackageName().toString())) {
             qqChatHandler.handle(event);
             logcatBinding.currentPage.setText(qqChatHandler.getCurrentPageName());
@@ -185,7 +185,6 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
             rbChatHandler.handle(event);
         }
 
-        AccessibilityNodeInfo root = getRootInActiveWindow();
         helperBinding.acbv.setNodeInfo(root);
         helperBinding.acbv.postInvalidate();
 

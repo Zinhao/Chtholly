@@ -639,6 +639,9 @@ public abstract class Command{
         if(getQuestion().getSpeaker() == null || getQuestion().getSpeaker().isEmpty()){
             return getQuestion().getMessage();
         }
+        if(getQuestion().tag!=null){
+            return getQuestion().getSpeaker() +"("+getQuestion().tag+")" + " say:" + getQuestion().getMessage();
+        }
         return getQuestion().getSpeaker() + " say:" + getQuestion().getMessage();
     }
 
