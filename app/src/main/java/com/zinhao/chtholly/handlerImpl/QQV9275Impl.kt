@@ -164,13 +164,17 @@ class QQV9275Impl(context: Context, messageCallback: MessageCallback) : QQChatHa
                 return
             }
         }
+
+        if("群主" == hitMessage.tag || "管理员" == hitMessage.tag) {
+            hitMessage.isEnableCommand = true
+        }
+
         if (NekoChatService.getInstance() != null) {
             NekoChatService.getInstance().addLogcat(
                 String.format(
                     Locale.US,
-                    "✨findAddNewChatMessage: %s:%s",
-                    hitMessage.speaker,
-                    hitMessage.message
+                    "✨findLastMessage:%s",
+                    hitMessage.toString(),
                 )
             )
         }

@@ -24,6 +24,8 @@ public class Message {
     public String tag;
     @Ignore
     public boolean other = false;
+    @Ignore
+    private boolean enableCommand = false;
 
     public Message(String speaker, String message, long timeStamp) {
         this.message = message;
@@ -83,7 +85,7 @@ public class Message {
     @NonNull
     @Override
     public @NotNull String toString() {
-        return tag +" [leve"+ leve +"] "+ speaker+": "+ message;
+        return tag +" [leve"+ leve +"] "+ speaker+": "+ message +", permission:"+enableCommand;
     }
 
     @Override
@@ -120,5 +122,13 @@ public class Message {
 
     public boolean isOther() {
         return other;
+    }
+
+    public boolean isEnableCommand() {
+        return enableCommand;
+    }
+
+    public void setEnableCommand(boolean enableCommand) {
+        this.enableCommand = enableCommand;
     }
 }

@@ -114,8 +114,12 @@ public class QQChatHandler extends BaseChatHandler {
                 return;
             }
         }
+        if("群主".equals(hitMessage.tag) || "管理员".equals(hitMessage.tag)) {
+            hitMessage.setEnableCommand(true);
+        }
         if(NekoChatService.getInstance()!=null){
-            NekoChatService.getInstance().addLogcat(String.format(Locale.US, "✨findAddNewChatMessage: %s:%s", hitMessage.speaker, hitMessage.message));
+            NekoChatService.getInstance().addLogcat(
+                    String.format(Locale.US, "✨findAddNewChatMessage: %s", hitMessage));
         }
         BotApp.getInstance().insert(hitMessage);
         messageList.add(hitMessage);
@@ -160,7 +164,7 @@ public class QQChatHandler extends BaseChatHandler {
             if ((event.getContentChangeTypes() & AccessibilityEvent.CONTENT_CHANGE_TYPE_SUBTREE) == AccessibilityEvent.CONTENT_CHANGE_TYPE_SUBTREE) {
                 // chat 文本消息
                 if (QQChatHandler.CHAT_GROUP.equals(pageName)) {
-                    initChatPage(event.getSource());
+                    updatePageNeedNode(event.getSource());
                     findLastMessage(event.getSource());
                 }
             }
@@ -168,7 +172,7 @@ public class QQChatHandler extends BaseChatHandler {
             if ((event.getContentChangeTypes() & AccessibilityEvent.CONTENT_CHANGE_TYPE_SUBTREE) == AccessibilityEvent.CONTENT_CHANGE_TYPE_SUBTREE) {
 //                拍一拍，欢迎消息，撤回消息
                 if (QQChatHandler.CHAT_GROUP.equals(pageName)) {
-                    initChatPage(event.getSource());
+                    updatePageNeedNode(event.getSource());
                     findLastMessage(event.getSource());
                 }
             }
@@ -349,7 +353,7 @@ public class QQChatHandler extends BaseChatHandler {
     public String getSendButtonId(){
         return SEND_BTN_IDS[1];
     }
-    private void initChatPage(AccessibilityNodeInfo nodeInfo) {
+    private void updatePageNeedNode(AccessibilityNodeInfo nodeInfo) {
         if (nodeInfo == null) {
             Log.e(TAG, "initChatPage:nodeInfo null!");
             return;
@@ -375,7 +379,7 @@ public class QQChatHandler extends BaseChatHandler {
         chatPageViewIds.setFirstPicCheckBoxViewId(PIC_CHECKBOX_IDS[1]);
 
         if (input == null || send == null) {
-            Log.d(TAG, "initChatPage:非聊天界面");
+            Log.d(TAG, "updatePageNeedNode:is not a chat page");
             return;
         }
         etInputNode = input;
@@ -391,7 +395,7 @@ public class QQChatHandler extends BaseChatHandler {
                     targetChatTitle = chatTitle;
                 }
                 if(NekoChatService.getInstance()!=null){
-                    NekoChatService.getInstance().addLogcat("initChatPage:聊天界面:" + chatTitle);
+                    NekoChatService.getInstance().addLogcat("current chat page:" + chatTitle);
                 }
             }
         }

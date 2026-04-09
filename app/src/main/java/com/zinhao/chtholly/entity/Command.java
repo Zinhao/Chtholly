@@ -101,8 +101,11 @@ public abstract class Command{
     protected abstract boolean throwToChild();
 
     protected boolean handleAsk() {
-        Log.i(TAG,"Command handleAsk:["+ getQuestion().speaker +"]=>"+getQuestion().getMessage());
+        Log.i(TAG,"Command handleAsk:"+getQuestion().toString());
         if(getQuestion().getMessage().startsWith("/") && isAdminMessage()){
+            if(!getQuestion().isEnableCommand()){
+                return false;
+            }
             Log.i(TAG,"Command invoke");
             try {
                 String[] methodAndArgs = parseArgs();
@@ -640,9 +643,9 @@ public abstract class Command{
             return getQuestion().getMessage();
         }
         if(getQuestion().tag!=null){
-            return getQuestion().getSpeaker() +"("+getQuestion().tag+")" + " say:" + getQuestion().getMessage();
+            return getQuestion().getSpeaker() +"("+getQuestion().tag+")" + "say:" + getQuestion().getMessage();
         }
-        return getQuestion().getSpeaker() + " say:" + getQuestion().getMessage();
+        return getQuestion().getSpeaker() + "say:" + getQuestion().getMessage();
     }
 
     public boolean isWrite() {
