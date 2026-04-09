@@ -127,7 +127,7 @@ public class OpenAiSession extends NekoSession implements RemoteChatApiSession {
         }
     }
 
-    public void setChara(String charaDesc){
+    public void setAgentPrompt(String charaDesc){
         try {
             firstSystemChat.put(CONTENT, charaDesc.replace("$name",BotApp.getInstance().getBotName()));
             Log.d(TAG, "setChara: "+chats.get(0));
@@ -136,7 +136,7 @@ public class OpenAiSession extends NekoSession implements RemoteChatApiSession {
         }
     }
 
-    public String getChara() {
+    public String getAgentPrompt() {
         try {
             return firstSystemChat.getString(CONTENT);
         } catch (JSONException e) {
@@ -236,16 +236,6 @@ public class OpenAiSession extends NekoSession implements RemoteChatApiSession {
         addTextChat(ROLE_USER,message.getQuestion().getMessage());
         data.put("messages",chats);
         return requestChatCompletions(message);
-    }
-
-    @Override
-    public void setChatUrl(String chatUrl) {
-        this.chatUrl = chatUrl;
-    }
-
-    @Override
-    public String getChatUrl() {
-        return chatUrl;
     }
 
     public void requestChatSummarize(){

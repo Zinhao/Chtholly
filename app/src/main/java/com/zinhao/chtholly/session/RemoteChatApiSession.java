@@ -11,11 +11,8 @@ public interface RemoteChatApiSession {
 
     boolean callApi(NetAiAskAble message) throws JSONException;
 
-    void setChatUrl(String chatUrl);
-    String getChatUrl();
-
-    String getChara();
-    void setChara(String desc);
+    String getAgentPrompt();
+    void setAgentPrompt(String desc);
 
     String getContextChat();
     int clearContext();

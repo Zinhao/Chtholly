@@ -48,7 +48,7 @@ class GeminiSession private constructor(private var chatApi: String?) : NekoSess
         contents.clear()
         tools.add(GEMINI_TOOLS)
         try {
-            setChara(BotApp.getInstance().aiSoul)
+            setAgentPrompt(BotApp.getInstance().aiSoul)
 
             data.put(ROLE_SYSTEM, systemInstruction)
 
@@ -115,7 +115,7 @@ class GeminiSession private constructor(private var chatApi: String?) : NekoSess
         return toolArr
     }
 
-    override fun setChara(charaDesc: String) {
+    override fun setAgentPrompt(charaDesc: String) {
         val partsArray = JSONArray()
         val st = JSONObject()
         val agentSys = charaDesc.replace("\$name", BotApp.getInstance().getBotName())
@@ -130,7 +130,7 @@ class GeminiSession private constructor(private var chatApi: String?) : NekoSess
         }
     }
 
-    override fun getChara(): String {
+    override fun getAgentPrompt(): String {
         try {
             return systemInstruction.optString(CONTENTS)
         } catch (e: JSONException) {
@@ -179,14 +179,6 @@ class GeminiSession private constructor(private var chatApi: String?) : NekoSess
         FileLogger.i(TAG, "callApi: ${newContent.parts.firstOrNull()?.text}")
         data.put(CONTENTS, contentsToJsonArray())
         return requestChatCompletions(message)
-    }
-
-    override fun setChatUrl(chatUrl: String?) {
-        this.chatApi = chatUrl
-    }
-
-    override fun getChatUrl(): String? {
-        return chatApi
     }
 
     override fun requestChatSummarize() {

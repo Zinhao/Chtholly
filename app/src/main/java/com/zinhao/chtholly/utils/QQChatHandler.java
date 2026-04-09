@@ -75,7 +75,6 @@ public class QQChatHandler extends BaseChatHandler {
             return;
         }
         String botName = BotApp.getInstance().getBotName();
-        // 通过状态view判断是不是
         boolean isPersonal = !nodeInfo.findAccessibilityNodeInfosByViewId(getPackageName() + ":id/title_sub").isEmpty();
         Message hitMessage = null;
         if (isPersonal) {

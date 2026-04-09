@@ -244,7 +244,7 @@ public class BotApp extends Application {
         setCurrentCharacter(character);
         NekoSession nekoSession = getSession();
         if(nekoSession instanceof RemoteChatApiSession){
-            ((RemoteChatApiSession) nekoSession).setChara(character.getDesc());
+            ((RemoteChatApiSession) nekoSession).setAgentPrompt(character.getDesc());
         }
         SharedPreferences.Editor editor = BotApp.getInstance().getSharedPreferences().edit();
         editor.putString(BotApp.CONFIG_SOUL_DESC,character.getDesc());
