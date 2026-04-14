@@ -56,6 +56,22 @@ val CodeGenerate = FunctionDeclaration(
         "object"
     )
 )
+val ListDir = FunctionDeclaration(
+    description = "list all file in the directory",
+    name = "list_directory",
+    Parameters(
+        properties = mapOf(
+            Pair(
+                "dir_path", Properties(
+                    description = "the path of the directory wait to list",
+                    type = "string",null
+                )
+            ),
+        ),
+        listOf("dir_path",),
+        "object"
+    )
+)
 val GEMINI_TOOLS = Tool(
     listOf(
         PrintInfo,CodeGenerate
