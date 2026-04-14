@@ -34,12 +34,16 @@ public class BotApp extends Application {
     public static final String CONFIG_TTS_URL = "tts_url";
     public static final String CONFIG_IS_FIRST_RUN = "is_first_run";
 
+    public static final String CONFIG_WITH_SPEAKER = "with_speaker";
+
 
     private boolean isFirstRun;
     private String apiKey;
     private String botName;
     private String adminName;
     private String aiSoul;
+    // 说话人前缀，用于群聊区分说话人
+    private boolean withSpeaker = true;
 
     private String chatUrl;
     private AICharacter currentCharacter;
@@ -95,6 +99,7 @@ public class BotApp extends Application {
         adminName = sharedPreferences.getString(CONFIG_ADMIN_NAME,"");
         chatUrl = sharedPreferences.getString(CONFIG_CHAT_URL,HostConsts.GEMINI_PROXY_API_HOST);
         ttsUrl = sharedPreferences.getString(CONFIG_TTS_URL, HostConsts.LOCAL_HOST);
+        withSpeaker = sharedPreferences.getBoolean(CONFIG_WITH_SPEAKER, true);
         isFirstRun = sharedPreferences.getBoolean(CONFIG_IS_FIRST_RUN,true);
         if(apiKey.isEmpty()){
             mode = NekoSession.class;
@@ -119,6 +124,15 @@ public class BotApp extends Application {
         }else{
             mode = GeminiSession.class;
         }
+    }
+
+    public void setWithSpeaker(boolean withSpeaker) {
+        this.withSpeaker = withSpeaker;
+        sharedPreferences.edit().putBoolean(CONFIG_WITH_SPEAKER, withSpeaker).apply();
+    }
+
+    public boolean isWithSpeaker() {
+        return withSpeaker;
     }
 
     public String getApiKey() {

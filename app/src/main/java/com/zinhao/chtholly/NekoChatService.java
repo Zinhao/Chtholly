@@ -539,6 +539,7 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
         floatMenuBinding.b1.setVisibility(View.GONE);
         floatMenuBinding.b2.setVisibility(View.GONE);
         floatMenuBinding.b3.setVisibility(View.GONE);
+        floatMenuBinding.saySwitch.setVisibility(View.GONE);
         isControllerMinSize = true;
     }
 
@@ -546,6 +547,7 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
         floatMenuBinding.b1.setVisibility(View.VISIBLE);
         floatMenuBinding.b2.setVisibility(View.VISIBLE);
         floatMenuBinding.b3.setVisibility(View.VISIBLE);
+        floatMenuBinding.saySwitch.setVisibility(View.VISIBLE);
         isControllerMinSize = false;
     }
 
@@ -671,6 +673,14 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
                 } else {
                     controllerViewToMinSize();
                 }
+            }
+        });
+
+        floatMenuBinding.saySwitch.setChecked(BotApp.getInstance().isWithSpeaker());
+        floatMenuBinding.saySwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                BotApp.getInstance().setWithSpeaker(isChecked);
             }
         });
     }

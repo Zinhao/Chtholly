@@ -174,7 +174,8 @@ class GeminiSession private constructor(private var chatApi: String?) : NekoSess
 
     @Throws(JSONException::class)
     override fun callApi(message: NetAiAskAble): Boolean {
-        val newContent = Content(listOf(Part(message.questionWithSpeaker(),null,null,null)),ROLE_USER)
+        val realText = if(BotApp.getInstance().isWithSpeaker){message.questionWithSpeaker()}else {message.question.message}
+        val newContent = Content(listOf(Part(realText,null,null,null)),ROLE_USER)
         contents.add(newContent)
         FileLogger.i(TAG, "callApi: ${newContent.parts.firstOrNull()?.text}")
         data.put(CONTENTS, contentsToJsonArray())
