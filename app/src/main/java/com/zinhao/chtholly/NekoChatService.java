@@ -189,14 +189,14 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
         helperBinding.acbv.postInvalidate();
 
         if (waitQAs.isEmpty()) {
-            if(System.currentTimeMillis() - lastReplyTime > 12 * 60 * 60 * 1000L){
+            if(System.currentTimeMillis() - lastReplyTime > 48 * 60 * 60 * 1000L){
                 backToChatUseShare();
                 mHandler.postDelayed(new Runnable() {
                     @Override
                     public void run() {
                         addToQAList(new Message(null,NekoAskAble.TIME_TOO_FAST,System.currentTimeMillis()));
                     }
-                },10000);
+                },20000);
 
             }
             return;
@@ -206,7 +206,8 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
     }
 
     private void backToChatUseShare(){
-        if(qqChatHandler.getTargetChatTitle()!=null){
+        if(!CHAT_GROUP.equals(qqChatHandler.getCurrentPageName()) &&
+            qqChatHandler.getTargetChatTitle()!=null){
             addToQAList(new Message(BotApp.getInstance().getAdminName(),"/switchToChat "+qqChatHandler.getTargetChatTitle(),System.currentTimeMillis()));
         }
     }
