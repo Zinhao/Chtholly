@@ -2,32 +2,39 @@
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
               android:layout_width="match_parent"
               android:layout_height="match_parent" android:orientation="vertical">
+    <com.zinhao.chtholly.customview.AccessibilityLogcatView
+        android:id="@+id/aclv"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_gravity="bottom"
+        android:layout_margin="20dp"
+        android:background="#80000000"
+        android:textColor="@color/black"
+        />
     <TextView
             android:id="@+id/currentChatTitle"
             android:layout_width="match_parent"
               android:layout_height="wrap_content"
               android:text="@string/app_name"
               android:gravity="center"
+        android:textColor="@color/teal_200"
               android:layout_marginTop="20dp"/>
     <TextView
             android:id="@+id/currentTree"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="@string/app_name"
+            android:text="map_file"
             android:gravity="center"
+        android:textColor="@color/purple_200"
             android:layout_marginTop="40dp"/>
     <TextView
             android:id="@+id/currentPage"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="@string/app_name"
+        android:textColor="@color/white"
+            android:text="page_name"
             android:gravity="center"
             android:layout_marginTop="60dp"/>
 
-    <com.zinhao.chtholly.customview.AccessibilityLogcatView
-            android:id="@+id/aclv"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:layout_gravity="bottom"
-            android:background="#FF000000"/>
+
 </FrameLayout>

@@ -111,6 +111,7 @@ class GeminiAIAskAble : NetAiAskAble {
         if(question.speaker == BotApp.getInstance().adminName){
             if(name == PrintInfo.name){
                 val methodName = args["name"].toString()
+                FileLogger.i(TAG,"call PrintInfo=> ${methodName}")
                 val method = Command::class.java.getDeclaredMethod(methodName)
                 val result = method.invoke(this@GeminiAIAskAble)
                 if (result != null) {

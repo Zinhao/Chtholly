@@ -102,7 +102,7 @@ public abstract class Command{
 
     protected boolean handleAsk() {
         Log.i(TAG,"Command handleAsk:"+getQuestion().toString());
-        if(getQuestion().getMessage().startsWith("/") && isAdminMessage()){
+        if(getQuestion().getMessage().startsWith("/")){
             if(!getQuestion().isEnableCommand()){
                 return false;
             }
@@ -539,7 +539,7 @@ public abstract class Command{
             path.moveTo(p.x,p.y);
             path.lineTo(p.x,p.y);
             gb.addStroke(new GestureDescription.StrokeDescription(path,0,50));
-            gb.addStroke(new GestureDescription.StrokeDescription(path,75,50));
+            gb.addStroke(new GestureDescription.StrokeDescription(path,100,150));
             return  gb.build();
         }
     };
@@ -670,9 +670,5 @@ public abstract class Command{
 
     public boolean haveAction(){
         return steps!=null && !steps.isEmpty();
-    }
-
-    public boolean isAdminMessage(){
-        return question.speaker.equals(BotApp.getInstance().getAdminName());
     }
 }

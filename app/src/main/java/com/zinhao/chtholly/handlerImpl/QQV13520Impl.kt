@@ -12,7 +12,7 @@ import com.zinhao.chtholly.utils.MessageCallback
 import com.zinhao.chtholly.utils.QQChatHandler
 import java.util.Locale
 
-class QQV9275Impl(context: Context, messageCallback: MessageCallback) : QQChatHandler(context, messageCallback) {
+class QQV13520Impl(context: Context, messageCallback: MessageCallback) : QQChatHandler(context, messageCallback) {
 
     var titleNode: AccessibilityNodeInfo? = null
     override fun handle(event: AccessibilityEvent?) {
@@ -121,7 +121,7 @@ class QQV9275Impl(context: Context, messageCallback: MessageCallback) : QQChatHa
                 }
                 messageItemChild.recycle()
             }
-            FileLogger.d(TAG,emptyMessage.toString());
+            FileLogger.d(TAG,emptyMessage.toString())
             allMessages.add(emptyMessage)
         }
         return allMessages
@@ -184,10 +184,6 @@ class QQV9275Impl(context: Context, messageCallback: MessageCallback) : QQChatHa
     }
 
     override fun id2FindGroupLastMessage(nodeInfo: AccessibilityNodeInfo): Message? {
-        val grayBarHitMessage = grayBarMessage(nodeInfo)
-        if (grayBarHitMessage != null) {
-            return grayBarHitMessage
-        }
         val a6bMessageList = root2FindGroupAllMessage(nodeInfo)
         if (!a6bMessageList.isEmpty()) {
             return a6bMessageList.get(a6bMessageList.size - 1)
@@ -211,7 +207,7 @@ class QQV9275Impl(context: Context, messageCallback: MessageCallback) : QQChatHa
     }
 
     override fun getChatTitleId(): String {
-        return "$PACKAGE_NAME:id/21l"
+        return "$PACKAGE_NAME:id/1yo"
     }
 
     override fun getInputId(): String {

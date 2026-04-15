@@ -236,6 +236,7 @@ public class AccessibilityBoundView extends View {
         // 优先显示文本内容
         CharSequence text = node.getText();
         if (!TextUtils.isEmpty(text)) {
+            sb.append("t:");
             sb.append(text.toString().trim());
         }
 
@@ -243,6 +244,7 @@ public class AccessibilityBoundView extends View {
         CharSequence desc = node.getContentDescription();
         if (!TextUtils.isEmpty(desc) && !desc.equals(text)) {
             if (sb.length() > 0) sb.append(" | ");
+            sb.append("d:");
             sb.append(desc.toString().trim());
         }
 

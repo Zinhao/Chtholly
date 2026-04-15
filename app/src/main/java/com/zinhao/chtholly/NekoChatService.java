@@ -83,7 +83,7 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
     @Override
     public void onCreate() {
         super.onCreate();
-        Log.d(TAG, "onCreate");
+        addLogcat("NekoChatService => onCreate");
         FileLogger.INSTANCE.init(context());
         instance = new WeakReference<>(this);
         mHandler = new Handler(getMainLooper());
@@ -173,7 +173,7 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
             saveTreeToJsonFile(event);
         }
 
-//        debugOnAccessibilityEvent(event);
+        debugOnAccessibilityEvent(event);
         AccessibilityNodeInfo root = getRootInActiveWindow();
         if (QQChatHandler.PACKAGE_NAME.equals(event.getPackageName().toString())) {
             qqChatHandler.handle(event);
@@ -319,6 +319,7 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
             layoutTree.put("time", dateTimeFormat.format(System.currentTimeMillis()));
             //com.tencent.mobileqq:id/listView1
             logcatBinding.currentTree.setText(jsonFileName);
+            addLogcat("Generate Tree:"+ jsonFileName);
             LocalFileCache.getInstance().saveJSONObject(getApplicationContext(), layoutTree, jsonFileName);
         } catch (JSONException e) {
             throw new RuntimeException(e);
@@ -329,7 +330,7 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
         if (BuildConfig.DEBUG) {
             AccessibilityNodeInfo root = getRootInActiveWindow();
             StringBuilder stringBuilder = LayoutTreeUtils.getEventStringBuilder(event);
-            addLogcat("debug: " + stringBuilder);
+            Log.d(TAG,"debug: " + stringBuilder);
             //EventType: TYPE_WINDOW_CONTENT_CHANGED; EventTime: 338363649;
             // PackageName: com.android.systemui; MovementGranularity: 0; Action: 0;
             // ContentChangeTypes: [CONTENT_CHANGE_TYPE_CONTENT_DESCRIPTION];
@@ -511,6 +512,24 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
         }, mHandler);
     }
 
+    public boolean doDoubleClick(AccessibilityNodeInfo targetView,Runnable after){
+        GestureDescription gb = Command.DOUBLE_CLICK.onGesture(targetView);
+        return dispatchGesture(gb, new GestureResultCallback() {
+            @Override
+            public void onCompleted(GestureDescription gestureDescription) {
+                super.onCompleted(gestureDescription);
+                Log.w(TAG, "dispatchGesture: onCompleted" + "doDoubleClick");
+                mHandler.postDelayed(after,1000);
+            }
+
+            @Override
+            public void onCancelled(GestureDescription gestureDescription) {
+                super.onCancelled(gestureDescription);
+                Log.w(TAG, "dispatchGesture: onCancelled" + "doDoubleClick");
+            }
+        }, mHandler);
+    }
+
     /**
      * @param seconds after now
      * @param message reply
@@ -575,11 +594,11 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
     }
 
     public void addLogcat(String l) {
+        FileLogger.INSTANCE.d(TAG, l);
         if (logcatBinding == null) {
             return;
         }
         logcatBinding.aclv.appendLogcat(l);
-        FileLogger.INSTANCE.d(TAG, l);
     }
 
     @Override
@@ -651,7 +670,7 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
         floatMenuBinding.b3.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                testShareText();
+               testSharFile();
             }
         });
 

@@ -7,13 +7,15 @@ import android.text.TextPaint;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.view.View;
+import android.widget.TextView;
+
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import java.util.ArrayList;
 import java.util.List;
 
-public class AccessibilityLogcatView extends View {
+public class AccessibilityLogcatView extends androidx.appcompat.widget.AppCompatTextView {
     private final List<String> logcatList = new ArrayList<>();
     private int lineHeight;
     public AccessibilityLogcatView(Context context) {
@@ -24,9 +26,8 @@ public class AccessibilityLogcatView extends View {
         super(context, attrs);
         textPaint = new TextPaint();
         textPaint.setColor(Color.WHITE);
-        textPaint.setTextSize(20);
-        lineHeight = 20;
-        logcatList.add("init logcat");
+        textPaint.setTextSize(32);
+        lineHeight = 34;
     }
 
     @Override
@@ -61,10 +62,14 @@ public class AccessibilityLogcatView extends View {
     }
 
     public void appendLogcat(String logcat) {
-        String last = logcatList.get(logcatList.size()-1);
-        if(last.replace(":>","").equals(logcat)){
-            logcatList.set(logcatList.size()-1,last + ":>");
-        }else {
+        if(!logcatList.isEmpty()){
+            String last = logcatList.get(logcatList.size()-1);
+            if(last.replace(":>","").equals(logcat)){
+                logcatList.set(logcatList.size()-1,last + ":>");
+            } else {
+                logcatList.add(logcat);
+            }
+        } else {
             logcatList.add(logcat);
         }
         if(logcatList.size()>50){
@@ -80,7 +85,7 @@ public class AccessibilityLogcatView extends View {
     @Override
     protected void onDraw(@NonNull Canvas canvas) {
         super.onDraw(canvas);
-        float textY = getBottom();
+        float textY = getHeight() - getPaddingBottom();
         float maxWidth = getWidth()-lineHeight*2;
         try {
             for (int i = logcatList.size()-1; i >=0; i--) {

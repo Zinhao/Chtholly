@@ -234,7 +234,6 @@ public class QQChatHandler extends BaseChatHandler {
                     }
                 }
             }
-//            FileLogger.INSTANCE.d(TAG,emptyMessage.toString());
             allMessages.add(emptyMessage);
         }
         return allMessages;
@@ -252,49 +251,7 @@ public class QQChatHandler extends BaseChatHandler {
         return null;
     }
 
-    public Message doubleListMergeFindLastMessage(AccessibilityNodeInfo nodeInfo){
-        List<AccessibilityNodeInfo> nickNodes = nodeInfo.findAccessibilityNodeInfosByViewId(getChatNickId());
-        List<AccessibilityNodeInfo> messageNodes = nodeInfo.findAccessibilityNodeInfosByViewId(getChatTextId());
-        Message emptyMessage = new Message(null,null,System.currentTimeMillis());
-        if(nickNodes.size() == messageNodes.size() && !nickNodes.isEmpty()){
-            for (int i = 0; i < Math.min(messageNodes.size(),nickNodes.size()); i++) {
-                AccessibilityNodeInfo n = nickNodes.get(i);
-                AccessibilityNodeInfo m = messageNodes.get(i);
-//                Log.i(TAG, String.format(Locale.CHINA,"id2FindGroupLastMessage: nick:%s : %s",n.getText(),m.getText()));
-            }
-            int lastIndex = nickNodes.size()-1;
-            CharSequence text = messageNodes.get(lastIndex).getText();
-            if(text!=null){
-
-                emptyMessage.setSpeaker(nickNodes.get(lastIndex).getText()+"");
-                emptyMessage.setMessage(text.toString());
-                emptyMessage.setNodeInfo(messageNodes.get(lastIndex));
-            }else {
-                return null;
-            }
-        }
-        return emptyMessage;
-    }
-
-    public Message id2FindWeather(AccessibilityNodeInfo nodeInfo){
-        List<AccessibilityNodeInfo> otherMessageNodes = nodeInfo.findAccessibilityNodeInfosByViewId(PACKAGE_NAME +":id/msgbox");
-        if(!otherMessageNodes.isEmpty()){
-            for (int i = 0; i < otherMessageNodes.size(); i++) {
-                AccessibilityNodeInfo o = otherMessageNodes.get(i);
-                //__com.tencent.mobileqq:id/msgbox class:android.widget.TextView, text:[chat_1] 景皓：@丛雨 你在吗 bound:Rect(0, 207 - 1080, 299) click:true longClick:false check:false desc:0
-                CharSequence text = o.getText();
-                NekoChatService.getInstance().addLogcat(String.format(Locale.CHINA,"id2FindGroupLastMessage: other ground:%s",text));
-                if(text!=null){
-                    if(text.toString().startsWith("QQ天气")){
-                        return new Message("",text.toString(),System.currentTimeMillis());
-                    }
-                }
-            }
-        }
-        return null;
-    }
-
-    public Message grayBarMessage(AccessibilityNodeInfo nodeInfo){
+    private Message grayBarMessage(AccessibilityNodeInfo nodeInfo){
         /**
          * {
          *       "class": "android.widget.LinearLayout",
@@ -731,7 +688,12 @@ public class QQChatHandler extends BaseChatHandler {
          *     }
          */
         List<Step> steps = new Vector<>();
-        steps.add(new Step(QQChatHandler.PACKAGE_NAME,":id/listView1",AccessibilityNodeInfo.ACTION_CLICK,2000, Step.ActionType.normal,1,targetText,":id/text1"));
+        steps.add(new Step(QQChatHandler.PACKAGE_NAME,
+                ":id/listView1",AccessibilityNodeInfo.ACTION_CLICK,
+                2000, Step.ActionType.normal,
+                1,
+                targetText,
+                ":id/text1"));
         steps.add(new Step(QQChatHandler.PACKAGE_NAME,":id/dialogRightBtn",AccessibilityNodeInfo.ACTION_CLICK,Step.ActionType.normal,1500));
 
         return steps;

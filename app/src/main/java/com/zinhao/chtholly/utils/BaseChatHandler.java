@@ -87,18 +87,9 @@ public abstract class BaseChatHandler {
 
     private void sendCharacter(char c,AccessibilityNodeInfo nodeInfo) {
         if (nodeInfo != null) {
-            // 发送字符的逻辑可以通过模拟按键实现
-            // 这里我们需要使用 AccessibilityService 模拟输入
-            // 但是 Android 的无障碍 API 本身不支持直接模拟按键
-            // 所以我们可以通过在输入框中添加字符的方式间接实现
-
-            // 这里可以使用 performAction 添加字符
             Bundle args = new Bundle();
             args.putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, String.valueOf(c));
             boolean success = nodeInfo.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, args);
-            if (!success) {
-                Log.e("MyAccessibilityService", "Failed to send character: " + c);
-            }
         }
     }
 
@@ -146,20 +137,21 @@ public abstract class BaseChatHandler {
     public static @Nullable AccessibilityNodeInfo findFirstTextInTargetNodeChildren(AccessibilityNodeInfo source, String text,String viewId) {
         List<AccessibilityNodeInfo> targets = source.findAccessibilityNodeInfosByText(text);
         FileLogger.INSTANCE.i(TAG,"findFirstTextInTargetNodeChildren: "+text + " ,len:"+targets.size());
-        AccessibilityNodeInfo target = null;
-        if (!targets.isEmpty()) {
-            target = targets.get(0);
+        for (AccessibilityNodeInfo target : targets) {
             if(target == null){
-                return null;
+                continue;
             }
             if(viewId!=null){
-                if(!viewId.equals(target.getViewIdResourceName())){
+                if(viewId.equals(target.getViewIdResourceName())){
+                    return target;
+                }else{
                     FileLogger.INSTANCE.i(TAG,"findFirstTextInTargetNodeChildren: "+viewId + " ,find:"+target.getViewIdResourceName());
-                    return null;
                 }
+            }else{
+                return target;
             }
         }
-        return target;
+        return null;
     }
 
     public static boolean hasAllId(AccessibilityNodeInfo nodeInfo,String... ids){
