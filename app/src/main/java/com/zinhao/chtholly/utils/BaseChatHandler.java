@@ -8,7 +8,6 @@ import android.util.Log;
 import android.view.accessibility.AccessibilityEvent;
 import android.view.accessibility.AccessibilityNodeInfo;
 import androidx.annotation.Nullable;
-import com.zinhao.chtholly.NekoChatService;
 import com.zinhao.chtholly.entity.Command;
 import com.zinhao.chtholly.entity.Message;
 
@@ -71,15 +70,15 @@ public abstract class BaseChatHandler {
                 arg.putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, sendMessage);
                 boolean result = etInputNode.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, arg);
                 if(!result){
-//                    Log.e("MyAccessibilityService", "Failed to set text directly.");
+                    // Log.e("MyAccessibilityService", "Failed to set text directly.");
                     // 如果直接设置文本失败，可以逐个字符发送输入事件
-                    for (char c : sendMessage.toString().toCharArray()) {
+                    for (char c : sendMessage.toCharArray()) {
                         sendCharacter(c,etInputNode);
                     }
                 }
                 qaMessage.setWrite(result);
             }else {
-                NekoChatService.getInstance().addLogcat("isEditable false");
+                Log.w(TAG,"etInputNode Editable == false");
             }
         }
         return qaMessage.isWrite();
@@ -89,7 +88,7 @@ public abstract class BaseChatHandler {
         if (nodeInfo != null) {
             Bundle args = new Bundle();
             args.putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, String.valueOf(c));
-            boolean success = nodeInfo.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, args);
+            nodeInfo.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, args);
         }
     }
 
@@ -98,7 +97,7 @@ public abstract class BaseChatHandler {
             boolean result= etInputNode.performAction(AccessibilityNodeInfo.ACTION_PASTE);
             qaMessage.setWrite(result);
         }else {
-            NekoChatService.getInstance().addLogcat("isEditable false");
+            Log.w(TAG,"etInputNode Editable == false");
         }
         return qaMessage.isWrite();
     }

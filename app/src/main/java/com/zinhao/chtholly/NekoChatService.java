@@ -159,7 +159,13 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
             }
         };
         accessibilityButtonController.registerAccessibilityButtonCallback(
-                accessibilityButtonCallback, null);
+                accessibilityButtonCallback, mHandler);
+    }
+
+    @Override
+    public void onSystemActionsChanged() {
+        addLogcat("onSystemActionsChanged...");
+        super.onSystemActionsChanged();
     }
 
     @Override
@@ -189,26 +195,44 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
         helperBinding.acbv.postInvalidate();
 
         if (waitQAs.isEmpty()) {
-            if(System.currentTimeMillis() - lastReplyTime > 48 * 60 * 60 * 1000L){
+            if(System.currentTimeMillis() - lastReplyTime > 60*1000L){
                 backToChatUseShare();
+            }
+            if(System.currentTimeMillis() - lastReplyTime > 48 * 60 * 60 * 1000L){
                 mHandler.postDelayed(new Runnable() {
                     @Override
                     public void run() {
                         addToQAList(new Message(null,NekoAskAble.TIME_TOO_FAST,System.currentTimeMillis()));
                     }
                 },20000);
-
             }
+            logcatBinding.callApiProgress.setVisibility(View.GONE);
             return;
         }
+        logcatBinding.tvWaitQAList.setText(strWaitQAs());
         handleQAs(root);
         removeSuccessMessage();
     }
 
+    private String strWaitQAs(){
+        StringBuilder stringBuilder = new StringBuilder();
+        for (int i = 0; i < waitQAs.size(); i++) {
+            stringBuilder.append(i).append(":").append(waitQAs.get(i).getQuestion().getMessage()).append("\n");
+        }
+        return stringBuilder.toString();
+    }
+
     private void backToChatUseShare(){
-        if(!CHAT_GROUP.equals(qqChatHandler.getCurrentPageName()) &&
-            qqChatHandler.getTargetChatTitle()!=null){
-            addToQAList(new Message(BotApp.getInstance().getAdminName(),"/switchToChat "+qqChatHandler.getTargetChatTitle(),System.currentTimeMillis()));
+        if(!CHAT_GROUP.equals(qqChatHandler.getCurrentPageName()) && qqChatHandler.getTargetChatTitle() != null){
+            Command c = new NekoAskAble(PACKAGE_NAME,
+                    new Message(BotApp.getInstance().getAdminName(),
+                            "返回对话窗口", System.currentTimeMillis()));
+            c.initShareStepTo(qqChatHandler.getChatTitle());
+            c.getAnswer().setMessage(null);
+            c.setReplyReady(true);
+            c.handle();
+            waitQAs.add(c);
+            shareText(NekoAskAble.COME_BACK);
         }
     }
     // 检查队列的消息
@@ -373,18 +397,6 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
                 }
             }
         }
-    }
-
-    private String processNotChatPage(AccessibilityNodeInfo root) {
-        if (root == null) {
-            return NULL_ROOT;
-        }
-        if (QQChatHandler.PACKAGE_NAME.equals(root.getPackageName().toString())) {
-            return qqChatHandler.checkWhatPage(root);
-        } else {
-            return UNKNOWN_PAGE;
-        }
-
     }
 
     private void removeSuccessMessage() {
@@ -603,6 +615,7 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
 
     @Override
     public void onFind(Message message) {
+        logcatBinding.callApiProgress.setVisibility(View.VISIBLE);
         addToQAList(message);
     }
 
@@ -670,7 +683,7 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
         floatMenuBinding.b3.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-               testSharFile();
+               backToChatUseShare();
             }
         });
 
@@ -740,7 +753,6 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
         }catch (Exception e){
             FileLogger.INSTANCE.e(TAG, Objects.requireNonNull(e.getLocalizedMessage()), e);
         }
-
     }
 
     private void testSharFile(){
@@ -754,7 +766,7 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
                 if (files != null && files.length > 0) {
                     File toSendFile = files[0];
                     Command c = new NekoAskAble(PACKAGE_NAME, new Message(BotApp.getInstance().getAdminName(), "测试文件分享", System.currentTimeMillis()));
-                    c.initSendFileStepTo(qqChatHandler.getChatTitle());
+                    c.initShareStepTo(qqChatHandler.getChatTitle());
                     c.getAnswer().setMessage("发送" + toSendFile.getName());
                     c.setReplyReady(true);
                     c.handle();

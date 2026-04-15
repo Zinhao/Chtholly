@@ -159,7 +159,7 @@ class GeminiAIAskAble : NetAiAskAble {
                         )
                     )
                     answerTextBuilder.append( if(writeSuccess) "已写入到: ${file.path}" else "写入失败:${exception?.message}")
-                    initSendFileStepTo(NekoChatService.getInstance().qqChatHandler.chatTitle)
+                    initShareStepTo(NekoChatService.getInstance().qqChatHandler.chatTitle)
 
                     if (answerTextBuilder.isNotEmpty()){
                         doTextReply(answerTextBuilder.toString())

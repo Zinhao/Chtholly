@@ -38,6 +38,9 @@ class QQV13690Impl(context: Context, messageCallback: MessageCallback) : QQChatH
         }
         val titleNode = findFirstNodeInfo(rootActive,chatTitleId)
         titleNode?.let {
+            if(this.targetChatTitle == null){
+                this.targetChatTitle = it.text.toString()
+            }
             this.titleNode?.recycle()
             this.titleNode = it
         }

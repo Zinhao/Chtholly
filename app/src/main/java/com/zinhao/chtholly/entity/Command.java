@@ -412,7 +412,7 @@ public abstract class Command{
         return true;
     }
 
-    public boolean initSendFileStepTo(String targetChatTitle){
+    public boolean initShareStepTo(String targetChatTitle){
         if(QQChatHandler.PACKAGE_NAME.equals(packageName)){
             steps = QQChatHandler.chooseShareTarget(targetChatTitle);
             getAnswer().setMessage(NekoAskAble.OK);
