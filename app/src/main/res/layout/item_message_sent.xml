@@ -22,7 +22,7 @@
         android:layout_height="wrap_content"
         android:orientation="vertical"
         android:maxWidth="280dp"
-        android:background="@drawable/white_circle_shape"
+        android:background="@drawable/bg_message_send"
         android:padding="6dp">
 
 

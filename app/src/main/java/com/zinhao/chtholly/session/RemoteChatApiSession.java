@@ -9,7 +9,7 @@ public interface RemoteChatApiSession {
     boolean requestChatCompletions(NetAiAskAble message);
     void requestChatSummarize();
 
-    boolean callApi(NetAiAskAble message) throws JSONException;
+    boolean callApi(NetAiAskAble message,boolean add) throws JSONException;
 
     String getAgentPrompt();
     void setAgentPrompt(String desc);

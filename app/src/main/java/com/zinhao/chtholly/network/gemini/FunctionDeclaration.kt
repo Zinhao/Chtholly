@@ -34,7 +34,8 @@ val PrintInfo = FunctionDeclaration(
         "object"
     )
 )
-val CodeGenerate = FunctionDeclaration(
+
+val FileWriter = FunctionDeclaration(
     description = "Write text to the file, Save text to the file",
     name = "write_text_to_file",
     Parameters(
@@ -56,14 +57,32 @@ val CodeGenerate = FunctionDeclaration(
         "object"
     )
 )
-val ListDir = FunctionDeclaration(
+
+val FileReader = FunctionDeclaration(
+    description = "Read text from the file",
+    name = "read_text",
+    Parameters(
+        properties = mapOf(
+            Pair(
+                "file_path", Properties(
+                    description = "the file path",
+                    type = "string",null
+                )
+            )
+        ),
+        listOf("file_path"),
+        "object"
+    )
+)
+
+val ListFiles = FunctionDeclaration(
     description = "list all file in the directory",
     name = "list_directory",
     Parameters(
         properties = mapOf(
             Pair(
                 "dir_path", Properties(
-                    description = "the path of the directory wait to list",
+                    description = "the path of the directory wait to list. If need list root,stay empty",
                     type = "string",null
                 )
             ),
@@ -72,11 +91,31 @@ val ListDir = FunctionDeclaration(
         "object"
     )
 )
-val GEMINI_TOOLS = Tool(
-    listOf(
-        PrintInfo,CodeGenerate
+
+val ActionResult = FunctionDeclaration(
+    description = "When you have completed the task or question raised by the user, call this function to end the conversation.",
+    name = "result",
+    Parameters(
+        properties = mapOf(
+            Pair(
+                "summary", Properties(
+                    description = "concise reporting",
+                    type = "string",null
+                )
+            ),
+        ),
+        listOf("summary",),
+        "object"
     )
 )
+
+val GEMINI_TOOLS = Tool(
+    listOf(
+        PrintInfo,FileWriter,FileReader,ListFiles,ActionResult
+    )
+)
+
+data class FileInfo(val name: String, val isFile: Boolean,val size: Long,val time: Long)
 
 data class Tool(
     val functionDeclarations: List<FunctionDeclaration>

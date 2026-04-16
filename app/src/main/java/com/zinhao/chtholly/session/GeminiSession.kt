@@ -63,7 +63,7 @@ class GeminiSession private constructor(private var chatApi: String?) : NekoSess
         } catch (e: JSONException) {
             throw RuntimeException(e)
         }
-        loadLast10()
+//        loadLast10()
     }
 
     fun contentsToJsonArray(): JSONArray{
@@ -173,11 +173,13 @@ class GeminiSession private constructor(private var chatApi: String?) : NekoSess
     }
 
     @Throws(JSONException::class)
-    override fun callApi(message: NetAiAskAble): Boolean {
-        val realText = if(BotApp.getInstance().isWithSpeaker){message.questionWithSpeaker()}else {message.question.message}
-        val newContent = Content(listOf(Part(realText,null,null,null)),ROLE_USER)
-        contents.add(newContent)
-        FileLogger.i(TAG, "callApi: ${newContent.parts.firstOrNull()?.text}")
+    override fun callApi(message: NetAiAskAble,add: Boolean): Boolean {
+        if(add){
+            val realText = if(BotApp.getInstance().isWithSpeaker){message.questionWithSpeaker()}else {message.question.message}
+            val newContent = Content(listOf(Part(realText,null,null,null)),ROLE_USER)
+            contents.add(newContent)
+            FileLogger.i(TAG, "callApi: ${newContent.parts.firstOrNull()?.text}")
+        }
         data.put(CONTENTS, contentsToJsonArray())
         return requestChatCompletions(message)
     }

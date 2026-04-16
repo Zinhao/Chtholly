@@ -38,7 +38,7 @@ public class OpenAiAskAble extends NetAiAskAble{
     protected boolean throwToChild() {
         Log.i("Command","OpenAiAskAble throwToChild");
         try {
-            return  OpenAiSession.getInstance().callApi(this);
+            return  OpenAiSession.getInstance().callApi(this,true);
         } catch (JSONException e) {
             throw new RuntimeException(e);
         }

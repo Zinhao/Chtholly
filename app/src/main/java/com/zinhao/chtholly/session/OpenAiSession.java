@@ -232,8 +232,10 @@ public class OpenAiSession extends NekoSession implements RemoteChatApiSession {
         return instance;
     }
 
-    public boolean callApi(NetAiAskAble message) throws JSONException {
-        addTextChat(ROLE_USER,message.getQuestion().getMessage());
+    public boolean callApi(NetAiAskAble message,boolean add) throws JSONException {
+        if(add){
+            addTextChat(ROLE_USER,message.getQuestion().getMessage());
+        }
         data.put("messages",chats);
         return requestChatCompletions(message);
     }

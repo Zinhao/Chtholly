@@ -80,10 +80,13 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
     private WXChatHandler wxChatHandler;
     private RBChatHandler rbChatHandler;
 
+    private Timer mainTimer;
+
     @Override
     public void onCreate() {
         super.onCreate();
         addLogcat("NekoChatService => onCreate");
+        mainTimer = new Timer("qa_list_handler");
         FileLogger.INSTANCE.init(context());
         instance = new WeakReference<>(this);
         mHandler = new Handler(getMainLooper());
@@ -104,7 +107,38 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
         } else {
             startForeground(1, getNotification());
         }
+        mainTimer.schedule(mainTimeTask, 0, 100);
     }
+
+    private static final long MINUTE_MILL = 60*1000;
+    private static final long HOUR_MILL = 60*MINUTE_MILL;
+    private static final long BORING_ASK_TIME = 48 * HOUR_MILL;
+    private final TimerTask mainTimeTask = new TimerTask() {
+        @Override
+        public void run() {
+            if (waitQAs.isEmpty()) {
+                if(System.currentTimeMillis() - lastReplyTime > BORING_ASK_TIME){
+                    lastReplyTime = System.currentTimeMillis();
+                    mHandler.post(()-> {
+                        backToChatUseShare();
+                        addToQAList(new Message(null,NekoAskAble.TIME_TOO_FAST,System.currentTimeMillis()));
+                    });
+                }
+            } else {
+                mHandler.post(() -> {
+                    if(waitQAs.isEmpty()){
+                        return;
+                    }
+                    AccessibilityNodeInfo root = getRootInActiveWindow();
+                    if(root != null){
+                        handleQAs(root);
+                        removeSuccessMessage();
+                        root.recycle();
+                    }
+                });
+            }
+        }
+    };
 
     @Override
     public void onInterrupt() {
@@ -134,7 +168,7 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
             helperBinding.getRoot().setVisibility(View.GONE);
         }
         bindClickListener();
-
+        controllerViewToMinSize();
 
         accessibilityButtonController = getAccessibilityButtonController();
         mIsAccessibilityButtonAvailable = accessibilityButtonController.isAccessibilityButtonAvailable();
@@ -175,13 +209,19 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
         }
         if (event.getPackageName() == null)
             return;
+
         if (event.getSource() != null && BuildConfig.DEBUG) {
+            if (!event.getText().isEmpty() || event.getContentDescription() != null) {
+                String sourcePackageName = event.getSource().getPackageName().toString();
+                String logcat = "package:" + event.getPackageName()
+                        + ", class:" + event.getClassName()
+                        + ", text: " + event.getText()
+                        + ", desc: " + event.getContentDescription()
+                        + ",source:" + sourcePackageName;
+                addLogcat(logcat);
+            }
             saveTreeToJsonFile(event);
         }
-
-        debugOnAccessibilityEvent(event);
-        AccessibilityNodeInfo root = getRootInActiveWindow();
-
 
         if (QQChatHandler.PACKAGE_NAME.equals(event.getPackageName().toString())) {
             qqChatHandler.handle(event);
@@ -192,32 +232,31 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
         } else if (RBChatHandler.PACKAGE_NAME.equals(event.getPackageName().toString())) {
             rbChatHandler.handle(event);
         }
-
-        helperBinding.acbv.setNodeInfo(root);
-        helperBinding.acbv.postInvalidate();
-        if (waitQAs.isEmpty()) {
-            if(System.currentTimeMillis() - lastReplyTime > 48 * 60 * 60 * 1000L){
-                addToQAList(new Message(null,NekoAskAble.TIME_TOO_FAST,System.currentTimeMillis()));
-            }
-            logcatBinding.callApiProgress.setVisibility(View.GONE);
-            return;
+        if(helperBinding.acbv.getVisibility() == View.VISIBLE){
+            AccessibilityNodeInfo root = getRootInActiveWindow();
+            helperBinding.acbv.setNodeInfo(root);
+            helperBinding.acbv.postInvalidate();
         }
-
-        handleQAs(root);
-        removeSuccessMessage();
-        logcatBinding.tvWaitQAList.setText(strWaitQAs());
+        if (waitQAs.isEmpty()) {
+            logcatBinding.callApiProgress.setVisibility(View.GONE);
+            logcatBinding.tvWaitQAList.setVisibility(View.GONE);
+        }else{
+            logcatBinding.tvWaitQAList.setVisibility(View.VISIBLE);
+            logcatBinding.tvWaitQAList.setText(strWaitQAs());
+        }
     }
 
     private String strWaitQAs(){
         StringBuilder stringBuilder = new StringBuilder();
         for (int i = 0; i < waitQAs.size(); i++) {
-            stringBuilder.append(i).append(":").append(waitQAs.get(i).getQuestion().getMessage()).append("\n");
+            stringBuilder.append('[').append(i).append("] ").append(waitQAs.get(i).getQuestion().getMessage()).append("\n");
         }
         return stringBuilder.toString();
     }
 
     private void backToChatUseShare(){
-        if(!CHAT_GROUP.equals(qqChatHandler.getCurrentPageName()) && qqChatHandler.getTargetChatTitle() != null){
+        if(!CHAT_GROUP.equals(qqChatHandler.getCurrentPageName())
+                && qqChatHandler.getTargetChatTitle() != null){
             Command c = new NekoAskAble(PACKAGE_NAME,
                     new Message(BotApp.getInstance().getAdminName(),
                             "返回对话窗口", System.currentTimeMillis()));
@@ -341,55 +380,6 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
             LocalFileCache.getInstance().saveJSONObject(getApplicationContext(), layoutTree, jsonFileName);
         } catch (JSONException e) {
             throw new RuntimeException(e);
-        }
-    }
-
-    private void debugOnAccessibilityEvent(AccessibilityEvent event) {
-        if (BuildConfig.DEBUG) {
-            AccessibilityNodeInfo root = getRootInActiveWindow();
-            StringBuilder stringBuilder = LayoutTreeUtils.getEventStringBuilder(event);
-            Log.d(TAG,"debug: " + stringBuilder);
-            //EventType: TYPE_WINDOW_CONTENT_CHANGED; EventTime: 338363649;
-            // PackageName: com.android.systemui; MovementGranularity: 0; Action: 0;
-            // ContentChangeTypes: [CONTENT_CHANGE_TYPE_CONTENT_DESCRIPTION];
-            // WindowChangeTypes: [] [ ClassName: android.widget.ImageView; Text: []; ContentDescription: QQ通知：二次元入口 (2条新消息);
-            // ItemCount: -1; CurrentItemIndex: -1; Ena
-            // 锁屏也能接收
-            // : package:com.tencent.mobileqq, text: [[有人@我]景皓(二次元入口):@丛雨 最近有点低迷，我想你说点鼓励的话语], desc: null
-
-            // 锁屏被通知唤醒
-            //getEventStringBuilder: EventType: TYPE_NOTIFICATION_STATE_CHANGED; EventTime: 4599479; PackageName: com.tencent.mobileqq; MovementGranularity: 0; Action: 0; ContentChangeTypes: []; WindowChangeTypes: [] [ ClassName: android.app.Notification; Text: [[有人@我]景皓(二次元入口):@丛雨 /help]; ContentDescription: null; ItemCount: -1; CurrentItemIndex: -1; Enabled: false; Password: false; Checked: false; FullScreen: false; Scrollable: false; BeforeText: null; FromIndex: -1; ToIndex: -1; ScrollX: -1; ScrollY: -1; MaxScrollX: -1; MaxScrollY: -1; AddedCount: -1; RemovedCount: -1; ParcelableData: Notification(channel=CHANNEL_ID_SHOW_BADGE pri=1 contentView=null vibrate=[] sound=null tick defaults=0x0 flags=0x11 color=0x00000000 vis=PRIVATE) ]; recordCount: 0
-            //2024-11-27 23:30:55.317 23102-23102 NekoChatService  com.zinhao.chtholly  I  package:com.tencent.mobileqq, class:android.app.Notification, text: [[有人@我]景皓(二次元入口):@丛雨 /help], desc: null,source:null
-            //2024-11-27 23:30:55.333 23102-23102 NekoChatService  com.zinhao.chtholly  I  getEventStringBuilder: EventType: TYPE_WINDOW_CONTENT_CHANGED; EventTime: 4599500; PackageName: com.android.systemui; MovementGranularity: 0; Action: 0; ContentChangeTypes: [CONTENT_CHANGE_TYPE_SUBTREE, CONTENT_CHANGE_TYPE_TEXT]; WindowChangeTypes: [] [ ClassName: android.widget.FrameLayout; Text: []; ContentDescription: null; ItemCount: -1; CurrentItemIndex: -1; Enabled: true; Password: false; Checked: false; FullScreen: false; Scrollable: false; BeforeText: null; FromIndex: -1; ToIndex: -1; ScrollX: -1; ScrollY: -1; MaxScrollX: -1; MaxScrollY: -1; AddedCount: -1; RemovedCount: -1; ParcelableData: null ]; recordCount: 0
-            //2024-11-27 23:30:55.511 23102-23102 NekoChatService  com.zinhao.chtholly  I  getEventStringBuilder: EventType: TYPE_WINDOW_CONTENT_CHANGED; EventTime: 4599662; PackageName: com.android.systemui; MovementGranularity: 0; Action: 0; ContentChangeTypes: [CONTENT_CHANGE_TYPE_SUBTREE, CONTENT_CHANGE_TYPE_TEXT]; WindowChangeTypes: [] [ ClassName: android.widget.FrameLayout; Text: []; ContentDescription: null; ItemCount: -1; CurrentItemIndex: -1; Enabled: true; Password: false; Checked: false; FullScreen: false; Scrollable: false; BeforeText: null; FromIndex: -1; ToIndex: -1; ScrollX: -1; ScrollY: -1; MaxScrollX: -1; MaxScrollY: -1; AddedCount: -1; RemovedCount: -1; ParcelableData: null ]; recordCount: 0
-            //2024-11-27 23:30:55.534 23102-23102 NekoChatService  com.zinhao.chtholly  I  getEventStringBuilder: EventType: TYPE_WINDOW_STATE_CHANGED; EventTime: 4599719; PackageName: com.mfashiongallery.emag; MovementGranularity: 0; Action: 0; ContentChangeTypes: []; WindowChangeTypes: [] [ ClassName: android.widget.FrameLayout; Text: [11月27日, 周三  ]; ContentDescription: null; ItemCount: -1; CurrentItemIndex: -1; Enabled: true; Password: false; Checked: false; FullScreen: false; Scrollable: false; BeforeText: null; FromIndex: -1; ToIndex: -1; ScrollX: -1; ScrollY: -1; MaxScrollX: -1; MaxScrollY: -1; AddedCount: -1; RemovedCount: -1; ParcelableData: null ]; recordCount: 0
-            //2024-11-27 23:30:55.535 23102-23102 NekoChatService  com.zinhao.chtholly  I  package:com.mfashiongallery.emag, class:android.widget.FrameLayout, text: [11月27日, 周三  ], desc: null,source:null
-            if (!event.getText().isEmpty() || event.getContentDescription() != null) {
-                String sourcePackageName = null;
-                if (event.getSource() != null) {
-                    sourcePackageName = event.getSource().getPackageName().toString();
-                }
-                String logcat = "package:" + event.getPackageName() + ", class:" + event.getClassName() + ", text: " + event.getText() + ", desc: " + event.getContentDescription() + ",source:" + sourcePackageName;
-                addLogcat(logcat);
-                // 锁屏 动作package:com.android.systemui, class:android.widget.FrameLayout, text: [锁定屏幕。], desc: null,source:com.android.systemui
-                if (event.getPackageName().equals("com.android.systemui") && event.getText().toString().equals("[锁定屏幕。]")) {
-                    addLogcat("onAccessibilityEvent: lock screen!");
-                    lockScreen = true;
-                } else {
-                    if (lockScreen) {
-                        //try unlock screen;
-                        if (root != null) {
-                            addLogcat("try unlock scree");
-                            performGlobalAction(GLOBAL_ACTION_HOME);
-//                            Step unlock = new Step("com.android.systemui",":id/keyguard_indication_text",AccessibilityNodeInfo.ACTION_SCROLL_FORWARD,false,1200);
-//                            unlock.setNeedGesture(Command.SWIPE_DOWN_FAST);
-//
-//                            doGesture(root,unlock);
-                        }
-                        return;
-                    }
-                }
-            }
         }
     }
 
@@ -561,18 +551,12 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
     boolean isControllerMinSize = false;
 
     public void controllerViewToMinSize() {
-        floatMenuBinding.b1.setVisibility(View.GONE);
-        floatMenuBinding.b2.setVisibility(View.GONE);
-        floatMenuBinding.b3.setVisibility(View.GONE);
-        floatMenuBinding.saySwitch.setVisibility(View.GONE);
+        floatMenuBinding.ctrlTab.setVisibility(View.GONE);
         isControllerMinSize = true;
     }
 
     public void controllerViewToDefaultSize() {
-        floatMenuBinding.b1.setVisibility(View.VISIBLE);
-        floatMenuBinding.b2.setVisibility(View.VISIBLE);
-        floatMenuBinding.b3.setVisibility(View.VISIBLE);
-        floatMenuBinding.saySwitch.setVisibility(View.VISIBLE);
+        floatMenuBinding.ctrlTab.setVisibility(View.VISIBLE);
         isControllerMinSize = false;
     }
 
@@ -589,14 +573,6 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
             }
             floatInit = true;
         }
-    }
-
-    @Override
-    public void onDestroy() {
-        Log.e(TAG, "onDestroy: ");
-        FileLogger.INSTANCE.close();
-        super.onDestroy();
-        speakLeaveVoice();
     }
 
     public void addLogcat(String l) {
@@ -659,8 +635,10 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
 
     @SuppressLint("ClickableViewAccessibility")
     public void bindClickListener() {
-        floatMenuBinding.b1.setChecked(false);
-        floatMenuBinding.b2.setChecked(false);
+        floatMenuBinding.b1.setChecked(helperBinding.getRoot().getVisibility()==View.VISIBLE);
+        floatMenuBinding.b2.setChecked(logcatBinding.aclv.getVisibility()==View.VISIBLE);
+        floatMenuBinding.saySwitch.setChecked(BotApp.getInstance().isWithSpeaker());
+
         floatMenuBinding.b1.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
@@ -673,7 +651,6 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
                 logcatBinding.aclv.setVisibility(isChecked?View.VISIBLE:View.GONE);
             }
         });
-
         floatMenuBinding.b3.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -702,7 +679,7 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
             }
         });
 
-        floatMenuBinding.saySwitch.setChecked(BotApp.getInstance().isWithSpeaker());
+
         floatMenuBinding.saySwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
@@ -810,5 +787,16 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
             return instance.get();
         }
         return null;
+    }
+
+    @Override
+    public void onDestroy() {
+        Log.e(TAG, "onDestroy: ");
+        FileLogger.INSTANCE.close();
+        if(mainTimer!=null){
+            mainTimer.cancel();
+        }
+        super.onDestroy();
+        speakLeaveVoice();
     }
 }

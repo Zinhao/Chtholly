@@ -1,6 +1,5 @@
 package com.zinhao.chtholly.view
 
-import android.R
 import android.content.Context
 import android.os.Bundle
 import android.util.Log
@@ -10,13 +9,10 @@ import android.view.MenuItem
 import android.view.View
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
-import android.widget.ArrayAdapter
 import android.widget.TextView
 import android.widget.TextView.OnEditorActionListener
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.widget.addTextChangedListener
 import androidx.lifecycle.ViewModelProvider
-import androidx.lifecycle.viewModelScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.zinhao.chtholly.BotApp
 import com.zinhao.chtholly.databinding.ActivityChatBinding
@@ -89,7 +85,7 @@ class ChatActivity : AppCompatActivity() {
             val pairs = it ?: return@observe
             val adapter = PairAdapter(this, pairs)
             binding.etInput.setAdapter(adapter)
-            binding.etInput.setDropDownBackgroundResource(com.zinhao.chtholly.R.drawable.white_circle_shape)
+            binding.etInput.setDropDownBackgroundResource(com.zinhao.chtholly.R.drawable.circle_shape_white)
             binding.etInput.setOnItemClickListener { parent, _, position, _ ->
                 val selected = parent.getItemAtPosition(position) as Pair<*, *>
                 binding.etInput.setText("/${selected.first.toString()}")

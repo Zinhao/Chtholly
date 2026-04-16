@@ -13,11 +13,11 @@
         android:textColor="@color/black" />
 
     <LinearLayout
-        android:layout_width="match_parent"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_gravity="center_horizontal"
-        android:gravity="center_horizontal"
-        android:layout_margin="30dp"
+        android:layout_gravity="left|center"
+        android:padding="10dp"
+        android:background="@drawable/circle_shape_black_alpha80"
         android:orientation="vertical">
         <TextView
             android:id="@+id/currentChatTitle"
@@ -25,38 +25,36 @@
             android:layout_height="wrap_content"
             android:text="@string/app_name"
             android:textColor="@color/teal_200"
-            android:background="#80000000"
             />
+        <TextView
+                android:id="@+id/currentPage"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@color/white"
+                android:text="page_name"
+
+        />
         <TextView
             android:id="@+id/currentTree"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="map_file"
-            android:background="#80000000"
             android:textColor="@color/purple_200"
             />
-        <TextView
-            android:id="@+id/currentPage"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:textColor="@color/white"
-            android:text="page_name"
-            android:background="#80000000"
-            />
+
         <TextView
             android:id="@+id/tvWaitQAList"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:textColor="@color/main_color"
-            android:text="waitQA"
-            android:background="#80000000"
+            android:textColor="@color/white"
+            android:text="[0] /help \n [1] 听我说"
             />
         <ProgressBar
             android:id="@+id/callApiProgress"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="page_name"
-            android:background="#80000000"
+
            />
     </LinearLayout>
 

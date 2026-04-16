@@ -95,9 +95,10 @@ public class AccessibilityBoundView extends View {
     }
 
     public void setNodeInfo(AccessibilityNodeInfo nodeInfo) {
-
+        if(this.nodeInfo!=null){
+            this.nodeInfo.recycle();
+        }
         this.nodeInfo = nodeInfo;
-        invalidate();
     }
 
     /**
