@@ -52,7 +52,11 @@ public class AppChatAdapter extends ListAdapter<Message, AppChatAdapter.MessageV
     @Override
     public int getItemViewType(int position) {
         Message message = getItem(position);
-        return message.speaker.equals(currentUser) ? VIEW_TYPE_SENT : VIEW_TYPE_RECEIVED;
+        if(message.speaker!=null){
+            return message.speaker.equals(currentUser) ? VIEW_TYPE_SENT : VIEW_TYPE_RECEIVED;
+        }else {
+            return  VIEW_TYPE_SENT;
+        }
     }
 
     static class MessageViewHolder extends RecyclerView.ViewHolder {

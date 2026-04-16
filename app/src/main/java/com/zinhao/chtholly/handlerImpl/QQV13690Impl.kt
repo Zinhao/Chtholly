@@ -20,7 +20,6 @@ class QQV13690Impl(context: Context, messageCallback: MessageCallback) : QQChatH
     var lastItemCount = 0
     var titleNode: AccessibilityNodeInfo? = null
 
-
     var doubleClickWaitFillMessage: Message? = null
     override fun handle(event: AccessibilityEvent?) {
         if (event == null) return
@@ -116,7 +115,6 @@ class QQV13690Impl(context: Context, messageCallback: MessageCallback) : QQChatH
                 }
                 BotApp.getInstance().insert(doubleClickWaitFillMessage)
                 messageList.add(doubleClickWaitFillMessage)
-
                 messageCallback.onFind(doubleClickWaitFillMessage)
             }
         }
@@ -177,6 +175,7 @@ class QQV13690Impl(context: Context, messageCallback: MessageCallback) : QQChatH
         grayBar?.let {
             BotApp.getInstance().insert(it)
             messageList.add(it)
+            Log.d(TAG,"grayBar find")
             messageCallback.onFind(it)
         }
     }

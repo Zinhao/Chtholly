@@ -181,6 +181,8 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
 
         debugOnAccessibilityEvent(event);
         AccessibilityNodeInfo root = getRootInActiveWindow();
+
+
         if (QQChatHandler.PACKAGE_NAME.equals(event.getPackageName().toString())) {
             qqChatHandler.handle(event);
             logcatBinding.currentPage.setText(qqChatHandler.getCurrentPageName());
@@ -193,25 +195,17 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
 
         helperBinding.acbv.setNodeInfo(root);
         helperBinding.acbv.postInvalidate();
-
         if (waitQAs.isEmpty()) {
-            if(System.currentTimeMillis() - lastReplyTime > 60*1000L){
-                backToChatUseShare();
-            }
             if(System.currentTimeMillis() - lastReplyTime > 48 * 60 * 60 * 1000L){
-                mHandler.postDelayed(new Runnable() {
-                    @Override
-                    public void run() {
-                        addToQAList(new Message(null,NekoAskAble.TIME_TOO_FAST,System.currentTimeMillis()));
-                    }
-                },20000);
+                addToQAList(new Message(null,NekoAskAble.TIME_TOO_FAST,System.currentTimeMillis()));
             }
             logcatBinding.callApiProgress.setVisibility(View.GONE);
             return;
         }
-        logcatBinding.tvWaitQAList.setText(strWaitQAs());
+
         handleQAs(root);
         removeSuccessMessage();
+        logcatBinding.tvWaitQAList.setText(strWaitQAs());
     }
 
     private String strWaitQAs(){
@@ -746,7 +740,6 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
         sendIntent.putExtra(Intent.EXTRA_TEXT, text);
         sendIntent.setType("text/plain");
 
-//        Intent shareIntent = Intent.createChooser(sendIntent, null);
         sendIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         try {
             startActivity(sendIntent);
