@@ -260,12 +260,11 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
             Command c = new NekoAskAble(PACKAGE_NAME,
                     new Message(BotApp.getInstance().getAdminName(),
                             "返回对话窗口", System.currentTimeMillis()));
-            c.initShareStepTo(qqChatHandler.getChatTitle());
+            c.initShareStepTo(qqChatHandler.getChatTitle(),FUNC_SHARE_TEXT,NekoAskAble.COME_BACK);
             c.getAnswer().setMessage(null);
             c.setReplyReady(true);
             c.handle();
             waitQAs.add(c);
-            shareText(NekoAskAble.COME_BACK);
         }
     }
     // 检查队列的消息
@@ -321,36 +320,51 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
                 handleQAs(getRootInActiveWindow());
             }, step.getDaley());
         } else {
-            if (step.isGlobalAction()) {
-                result = performGlobalAction(step.getActionId());
-            } else {
-                AccessibilityNodeInfo targetView = findTargetView(source, step);
-                if (targetView != null) {
-                    if (step.isCustomGesture()) {
-                        result = doCustomGesture(targetView, step);
-                    } else {
-                        result = targetView.performAction(step.getActionId());
-                    }
-                } else {
-                    addLogcat("doAction: 寻找视图失败" + step.getViewId());
-                    if (step.isCustomGesture()) {
-                        if (step.getViewId() == null) {
-                            result = doCustomGesture(source, step);
-                        }
-                    }
-                    // 为防止卡死在一条指令上面，设置一个30秒超时，超时会自动完成任务。
-                    if (System.currentTimeMillis() - qa.getQuestion().getTimeStamp() > 30000) {
-                        result = true;
-                        qa.finishStepAction();
-                        addLogcat("doAction: 寻找视图超时！结束任务。");
-                    }
-
-                }
+            result = doStep(source,step);
+            if (System.currentTimeMillis() - qa.getQuestion().getTimeStamp() > 30000) {
+                result = true;
+                qa.finishStepAction();
+                addLogcat("doAction: 寻找视图超时！结束任务。");
             }
         }
         addLogcat(String.format(Locale.US, "doAction: %s result:%s ", step , result));
         if (!result) {
             qa.backStepList(step);
+        }
+        return result;
+    }
+
+    public boolean doStep(AccessibilityNodeInfo source,Step step){
+        boolean result = false;
+        if(step.getActionType() == Step.ActionType.function){
+            result = true;
+            if(step.getFunctionName()!=null && step.getFunctionArg()!=null){
+                if(step.getFunctionName().equals(FUNC_SHARE_FILE)){
+                    shareFile(new File(step.getFunctionArg()));
+                }else if(step.getFunctionName().equals(FUNC_SHARE_TEXT)){
+                    shareText(step.getFunctionArg());
+                }
+            }
+        } else if (step.isGlobalAction()) {
+            result = performGlobalAction(step.getActionId());
+        } else {
+            AccessibilityNodeInfo targetView = findTargetView(source, step);
+            if (targetView != null) {
+                if (step.isCustomGesture()) {
+                    result = doCustomGesture(targetView, step);
+                } else {
+                    result = targetView.performAction(step.getActionId());
+                }
+            } else {
+                addLogcat("doAction: 寻找视图失败" + step.getViewId());
+                if (step.isCustomGesture()) {
+                    if (step.getViewId() == null) {
+                        result = doCustomGesture(source, step);
+                    }
+                }
+                // 为防止卡死在一条指令上面，设置一个30秒超时，超时会自动完成任务。
+
+            }
         }
         return result;
     }
@@ -654,7 +668,7 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
         floatMenuBinding.b3.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-               backToChatUseShare();
+//               backToChatUseShare();
             }
         });
 
@@ -710,6 +724,7 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
         shareText(NekoAskAble.TIME_TOO_FAST);
     }
 
+    public static final String FUNC_SHARE_TEXT = "share_text";
     public void shareText(String text) {
         Intent sendIntent = new Intent();
         sendIntent.setPackage(qqChatHandler.getPackageName());  // 指定目标应用包名
@@ -736,18 +751,16 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
                 if (files != null && files.length > 0) {
                     File toSendFile = files[0];
                     Command c = new NekoAskAble(PACKAGE_NAME, new Message(BotApp.getInstance().getAdminName(), "测试文件分享", System.currentTimeMillis()));
-                    c.initShareStepTo(qqChatHandler.getChatTitle());
+                    c.initShareStepTo(qqChatHandler.getChatTitle(),FUNC_SHARE_FILE,toSendFile.getPath());
                     c.getAnswer().setMessage("发送" + toSendFile.getName());
                     c.setReplyReady(true);
                     c.handle();
                     waitQAs.add(c);
-
-                    shareFile(toSendFile);
                 }
             }
         }, 5000);
     }
-
+    public static final String FUNC_SHARE_FILE = "share_file";
     public void shareFile(File file) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
             return;

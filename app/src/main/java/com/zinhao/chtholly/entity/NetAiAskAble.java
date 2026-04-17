@@ -41,7 +41,7 @@ public class NetAiAskAble extends NekoAskAble implements Callback{
         return super.handleAsk();
     }
 
-    public void doTextReply(String content){
+    public void saveToDatabase(String content){
         getAnswer().setMessage(content);
         getAnswer().setSpeaker(BotApp.getInstance().getBotName());
         BotApp.getInstance().insert(getAnswer());

@@ -5,7 +5,6 @@ import com.zinhao.chtholly.CallAble;
 import com.zinhao.chtholly.NekoChatService;
 import com.zinhao.chtholly.entity.Command;
 import com.zinhao.chtholly.entity.NekoAskAble;
-import com.zinhao.chtholly.entity.NetAiAskAble;
 import com.zinhao.chtholly.entity.OpenAiAskAble;
 import com.zinhao.chtholly.utils.FileLogger;
 
@@ -46,7 +45,7 @@ public class OpenAiMethodTool {
             if(argMap.containsKey(OpenAiAskAble.class.getName())) {
                 OpenAiAskAble message = (OpenAiAskAble) argMap.get(OpenAiAskAble.class.getName());
                 if(message!=null){
-                    message.doTextReply(NekoAskAble.OK);
+                    message.saveToDatabase(NekoAskAble.OK);
                     message.doTTSReply(NekoAskAble.OK);
                     JSONObject content = new JSONObject();
                     try {
@@ -86,7 +85,7 @@ public class OpenAiMethodTool {
                         Log.d(TAG, "call: ",e);
                     }
                     message.doTTSReply(hotMessage);
-                    message.doTextReply(hotMessage + '\n' + Command.getHelpStringBuilder());
+                    message.saveToDatabase(hotMessage + '\n' + Command.getHelpStringBuilder());
                     return true;
                 }
             }

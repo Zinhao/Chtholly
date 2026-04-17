@@ -161,11 +161,8 @@ public abstract class Command{
     @HelpDoc(desc = "[1 string arg]切换对话")
     private boolean switchToChat() {
         if(args.length == 1){
-            if(NekoChatService.getInstance()!=null){
-                NekoChatService.getInstance().shareText(NekoAskAble.COME_BACK);
-            }
             if(QQChatHandler.PACKAGE_NAME.equals(packageName)){
-                steps = QQChatHandler.chooseShareTarget(args[0]);
+                steps = QQChatHandler.chooseShareTarget(args[0],NekoChatService.FUNC_SHARE_TEXT,NekoAskAble.COME_BACK);
                 NekoChatService.getInstance().getQqChatHandler().setTargetChatTitle(args[0]);
             }
             getAnswer().setMessage(null);
@@ -412,9 +409,9 @@ public abstract class Command{
         return true;
     }
 
-    public boolean initShareStepTo(String targetChatTitle){
+    public boolean initShareStepTo(String targetChatTitle,String functionName,String functionArg){
         if(QQChatHandler.PACKAGE_NAME.equals(packageName)){
-            steps = QQChatHandler.chooseShareTarget(targetChatTitle);
+            steps = QQChatHandler.chooseShareTarget(targetChatTitle,functionName,functionArg);
             getAnswer().setMessage(NekoAskAble.OK);
         }else{
             getAnswer().setMessage(NekoAskAble.DONT_SUPPORT);

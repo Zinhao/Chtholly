@@ -5,7 +5,7 @@ data class UsageMetadata(
     val candidatesTokensDetails: List<CandidatesTokensDetail>,
     val promptTokenCount: Int,
     val promptTokensDetails: List<PromptTokensDetail>,
-    val thoughtsTokenCount: Int,
+    val thoughtsTokenCount: Int?,
     val totalTokenCount: Int,
-    val trafficType: String
+    val trafficType: String,
 )

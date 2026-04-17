@@ -36,6 +36,9 @@ public class BotApp extends Application {
 
     public static final String CONFIG_WITH_SPEAKER = "with_speaker";
 
+    public static final String CONFIG_FEISHU_APP_ID = "feishu_app_id";
+    public static final String CONFIG_FEISHU_APP_SECRET = "feishu_app_secret";
+
 
     private boolean isFirstRun;
     private String apiKey;
@@ -48,6 +51,9 @@ public class BotApp extends Application {
     private String chatUrl;
     private AICharacter currentCharacter;
     private String ttsUrl;
+
+    private String feishuAppId;
+    private String feishuAppSecret;
 
     private static BotApp instance;
     private SharedPreferences sharedPreferences;
@@ -101,6 +107,10 @@ public class BotApp extends Application {
         ttsUrl = sharedPreferences.getString(CONFIG_TTS_URL, HostConsts.LOCAL_HOST);
         withSpeaker = sharedPreferences.getBoolean(CONFIG_WITH_SPEAKER, true);
         isFirstRun = sharedPreferences.getBoolean(CONFIG_IS_FIRST_RUN,true);
+        //飞书配置
+        feishuAppId = sharedPreferences.getString(CONFIG_FEISHU_APP_ID,"");
+        feishuAppSecret = sharedPreferences.getString(CONFIG_FEISHU_APP_SECRET,"");
+
         if(apiKey.isEmpty()){
             mode = NekoSession.class;
         }else{

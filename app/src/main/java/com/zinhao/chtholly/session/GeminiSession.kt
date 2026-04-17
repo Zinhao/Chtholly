@@ -10,8 +10,9 @@ import com.zinhao.chtholly.entity.NetAiAskAble
 import com.zinhao.chtholly.network.LoggingInterceptor
 import com.zinhao.chtholly.network.gemini.Content
 import com.zinhao.chtholly.network.gemini.Part
-import com.zinhao.chtholly.network.gemini.GEMINI_TOOLS
-import com.zinhao.chtholly.network.gemini.Tool
+import com.zinhao.chtholly.network.GEMINI_TOOLS
+import com.zinhao.chtholly.network.Tool
+import com.zinhao.chtholly.network.gemini.FunctionResponse
 import com.zinhao.chtholly.session.RemoteChatApiSession.RemoteModel
 import com.zinhao.chtholly.utils.FileLogger
 import okhttp3.MediaType.Companion.toMediaType
@@ -108,9 +109,9 @@ class GeminiSession private constructor(private var chatApi: String?) : NekoSess
 
     fun toolsToJsonArray(): JSONArray{
         val toolArr = JSONArray()
-        val jsonAdapter = GeminiAIAskAble.moshi.adapter(Tool::class.java)
+        val toolsAdapter = GeminiAIAskAble.moshi.adapter(Tool::class.java)
         for (tool in tools){
-            toolArr.put(JSONObject(jsonAdapter.toJson(tool)))
+            toolArr.put(JSONObject(toolsAdapter.toJson(tool)))
         }
         return toolArr
     }
@@ -179,6 +180,8 @@ class GeminiSession private constructor(private var chatApi: String?) : NekoSess
             val newContent = Content(listOf(Part(realText,null,null,null)),ROLE_USER)
             contents.add(newContent)
             FileLogger.i(TAG, "callApi: ${newContent.parts.firstOrNull()?.text}")
+        }else if(contents.isNotEmpty()){
+            FileLogger.i(TAG, "callApi: ${contents.last().parts.firstOrNull()?.functionResponse.toString()}")
         }
         data.put(CONTENTS, contentsToJsonArray())
         return requestChatCompletions(message)
@@ -210,6 +213,34 @@ class GeminiSession private constructor(private var chatApi: String?) : NekoSess
             .build()
         okHttpClient.newCall(request).enqueue(message)
         return true
+    }
+
+    fun addToolResponse(name:String, key: String, result: Any, thoughtSignature: String?) {
+        addContent(
+            Content(
+                listOf(
+                    Part(
+                        null, null, FunctionResponse(
+                            name, mapOf(Pair(key, result))
+                        ), thoughtSignature
+                    )
+                ), ROLE_USER
+            )
+        )
+    }
+
+    fun addToolErr(name:String, e: Exception, thoughtSignature: String?) {
+        addContent(
+            Content(
+                listOf(
+                    Part(
+                        null, null, FunctionResponse(
+                            name, mapOf(Pair("err", e.message.toString()))
+                        ), thoughtSignature
+                    )
+                ), ROLE_USER
+            )
+        )
     }
 
     companion object {

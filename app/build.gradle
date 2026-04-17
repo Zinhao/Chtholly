@@ -120,6 +120,8 @@ dependencies {
     implementation "com.squareup.moshi:moshi-kotlin:1.15.0"
 
 //    implementation("com.google.genai:google-genai:1.45.0")
+    //飞书
+    implementation("com.larksuite.oapi:oapi-sdk:2.5.3")
 }
 
 class RoomSchemaArgProvider implements CommandLineArgumentProvider {

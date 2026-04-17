@@ -22,7 +22,6 @@ public class Step {
 
     private long daley;
 
-
     /**
      * 丛目标viewId的子项中选择,findPosition [1,0,3] 指选中 viewId[1][0][3]
      */
@@ -36,6 +35,10 @@ public class Step {
     private String targetTextViewId;
     /// 先上寻找 父node 次数
     private int targetParentTimes = 0;
+
+    /// ============================================================ 调用函数拉起页面
+    private String functionName;
+    private String functionArg;
 
     public boolean isCustomGesture() {
         return getActionType() == Step.ActionType.custom;
@@ -51,7 +54,14 @@ public class Step {
     public enum ActionType{
         normal,
         global,
-        custom
+        custom,
+        function
+    }
+
+    public Step(String functionName,String functionArg){
+        this(null,null,0,ActionType.function);
+        this.functionName = functionName;
+        this.functionArg = functionArg;
     }
 
 
@@ -209,6 +219,14 @@ public class Step {
 
     public ActionType getActionType() {
         return actionType;
+    }
+
+    public String getFunctionArg() {
+        return functionArg;
+    }
+
+    public String getFunctionName() {
+        return functionName;
     }
 
     public interface NeedGesture{

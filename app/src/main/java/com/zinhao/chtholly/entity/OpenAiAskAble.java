@@ -72,7 +72,7 @@ public class OpenAiAskAble extends NetAiAskAble{
                             }else if(nekoReply.getFinishReason().equals("stop")){
                                 String content = nekoReply.getMessage().getContent();
                                 if(content != null && !content.trim().equals("null")){
-                                    doTextReply(content);
+                                    saveToDatabase(content);
                                     doTTSReply(content);
                                     OpenAiSession.getInstance().addAssistantChat(content);
                                 }

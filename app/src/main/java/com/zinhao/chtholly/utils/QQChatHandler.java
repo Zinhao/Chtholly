@@ -631,63 +631,11 @@ public class QQChatHandler extends BaseChatHandler {
         return steps;
     }
 
-    public static List<Step> chooseShareTarget(String targetText){
-        /***
-         * qq_share_file_send_to.json
-         * ============================================================================= step 1
-         * {
-         *           "class": "android.widget.RelativeLayout",
-         *           "click": true,
-         *           "longClick": false,
-         *           "children": [
-         *             {
-         *               "id": "com.tencent.mobileqq:id\/axa",
-         *               "class": "android.widget.CheckBox",
-         *               "click": false,
-         *               "longClick": false
-         *             },
-         *             {
-         *               "id": "com.tencent.mobileqq:id\/text1",
-         *               "class": "android.widget.TextView",
-         *               "click": false,
-         *               "longClick": false,
-         *               "text": "碳基token生成器"
-         *             }
-         *           ]
-         *         },
-         * ============================================================================ step 2
-         *         {
-         *       "id": "com.tencent.mobileqq:id\/input",
-         *       "class": "android.widget.EditText",
-         *       "click": true,
-         *       "longClick": true,
-         *       "text": "输入留言"
-         *     },
-         *     {
-         *       "id": "com.tencent.mobileqq:id\/emo_btn",
-         *       "class": "android.widget.ImageButton",
-         *       "click": true,
-         *       "longClick": false,
-         *       "desc": "选择表情面板"
-         *     },
-         *     {
-         *       "id": "com.tencent.mobileqq:id\/dialogLeftBtn",
-         *       "class": "android.widget.TextView",
-         *       "click": true,
-         *       "longClick": false,
-         *       "desc": "取消按钮",
-         *       "text": "取消"
-         *     },
-         *     {
-         *       "id": "com.tencent.mobileqq:id\/dialogRightBtn",
-         *       "class": "android.widget.TextView",
-         *       "click": true,
-         *       "longClick": false,
-         *       "desc": "发送按钮",
-         *       "text": "发送"
-         *     }
-         */
+    public static List<Step> chooseShareTarget(String targetText,String functionName,String functionArg){
         List<Step> steps = new Vector<>();
+        if(functionName!=null){
+            steps.add(new Step(functionName,functionArg));
+        }
         steps.add(new Step(QQChatHandler.PACKAGE_NAME,
                 ":id/listView1",AccessibilityNodeInfo.ACTION_CLICK,
                 2000, Step.ActionType.normal,
