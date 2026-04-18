@@ -1,12 +1,10 @@
 package com.zinhao.chtholly.viewmodel
 
 import android.app.Application
-import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
-import androidx.media3.common.C
 import com.zinhao.chtholly.BotApp
 import com.zinhao.chtholly.db.MessageDao
 import com.zinhao.chtholly.entity.*
@@ -53,17 +51,18 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) , 
 
     fun sendMessage(currentUser: String, content: String) {
         val newMessage = Message(currentUser, content, System.currentTimeMillis())
+        newMessage.isEnableCommand = true
 
         val messageList = _messages.value?.toMutableList()?: return
         messageList.add(newMessage)
         _messages.value = messageList
 
-        val mainMessage = createMessage(newMessage)
+        val mainAskable = createAskable(newMessage)
         BotApp.getInstance().insert(newMessage)
         viewModelScope.launch(Dispatchers.IO) {
-            mainMessage.handle()
-            if (mainMessage.isReplyReady){
-                mainMessage.answer?.let {
+            mainAskable.handle()
+            if (mainAskable.isReplyReady){
+                mainAskable.answer?.let {
                     addBotMessage(it)
                 }
 
@@ -71,16 +70,16 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) , 
         }
     }
 
-    fun createMessage(message: Message): Command {
-        val mainMessage: Command?
+    fun createAskable(message: Message): Command {
+        val mainAskable: Command?
         if (BotApp.getInstance().mode == OpenAiSession::class.java) {
-            mainMessage = OpenAiAskAble(BotApp.getInstance().packageName, message, this)
+            mainAskable = OpenAiAskAble(BotApp.getInstance().packageName, message, this)
         } else if (BotApp.getInstance().mode == GeminiSession::class.java) {
-            mainMessage = GeminiAIAskAble(BotApp.getInstance().packageName, message, this)
+            mainAskable = GeminiAIAskAble(BotApp.getInstance().packageName, message, this)
         } else {
-            mainMessage = NekoAskAble(BotApp.getInstance().packageName, message)
+            mainAskable = NekoAskAble(BotApp.getInstance().packageName, message)
         }
-        return mainMessage
+        return mainAskable
     }
 
     override fun onReplySuccess(message: NetAiAskAble?) {

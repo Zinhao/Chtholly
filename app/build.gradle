@@ -5,7 +5,11 @@ plugins {
 
 android {
     compileSdk 34
-
+    packagingOptions {
+        resources {
+            excludes += '/META-INF/DEPENDENCIES'
+        }
+    }
     def date = new Date()
     def formatDate = date.format("yyyyMMdd")
     signingConfigs {

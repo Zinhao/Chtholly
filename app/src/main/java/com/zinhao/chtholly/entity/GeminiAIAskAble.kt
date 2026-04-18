@@ -5,25 +5,15 @@ import com.squareup.moshi.JsonAdapter
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.adapter
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
-import com.zinhao.chtholly.NekoChatService
-import com.zinhao.chtholly.network.AppendText
-import com.zinhao.chtholly.network.DoStepOnNode
-import com.zinhao.chtholly.network.FileReader
-import com.zinhao.chtholly.network.FileWriter
-import com.zinhao.chtholly.network.GetViewNode
+import com.zinhao.chtholly.network.*
 import com.zinhao.chtholly.network.gemini.FunctionCall
 import com.zinhao.chtholly.network.gemini.GeminiResponse
-import com.zinhao.chtholly.network.ListFiles
-import com.zinhao.chtholly.network.SendFile
 import com.zinhao.chtholly.session.GeminiSession.Companion.instance
 import com.zinhao.chtholly.utils.AsyncHelper
 import com.zinhao.chtholly.utils.FileLogger
-import com.zinhao.chtholly.utils.LocalFileCache
-import com.zinhao.chtholly.utils.QQChatHandler
 import okhttp3.Call
 import okhttp3.Response
 import org.json.JSONException
-import java.io.File
 import java.io.IOException
 import java.util.*
 
@@ -129,7 +119,11 @@ class GeminiAIAskAble : NetAiAskAble {
         // test_share_file.txt 的内容是什么？@冰糖
         // 创建一个新文件，把“20260417，今天天气多云，看起来随时可能下雨”记录下来@冰糖
         // 在 test_share_file.txt 添加一行：今天天气多云，随时都可能下雨
-        //@冰糖 把test_share_file.txt的内容写入到一个新的文件，新文件名称为new_file_test.txt
+        // @冰糖 把test_share_file.txt的内容写入到一个新的文件，新文件名称为new_file_test.txt
+        if(!question.isEnableCommand){
+            instance?.addToolErr(name, Exception("Insufficient permissions"),thoughtSignature)
+            return
+        }
         // 读取 diary_0415.txt 的内容
         when (name) {
             FileWriter.name -> {
