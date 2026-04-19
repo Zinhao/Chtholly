@@ -21,7 +21,7 @@ public class LayoutTreeUtils {
     private static StringBuilder builder;
     private static final String TAG = "LayoutTreeUtils";
     private static final Rect bound = new Rect();
-    private static final boolean PRINT_TREE = false;
+    private static final boolean PRINT_TREE = true;
     public static JSONObject treeAndPrintLayout(AccessibilityNodeInfo nodeInfo, int treeIndex,boolean showClickArg) throws JSONException {
         JSONObject root = new JSONObject();
         if(nodeInfo == null)
@@ -93,6 +93,35 @@ public class LayoutTreeUtils {
             builder.delete(builder.length() - 3, builder.length());
 
         return root;
+    }
+
+    public static AccessibilityNodeInfo treeFindTarget(AccessibilityNodeInfo nodeInfo, String viewId){
+        if(nodeInfo == null)
+            return null;
+        if(viewId == null){
+            return null;
+        }
+        if(viewId.equals(nodeInfo.getViewIdResourceName())){
+            return nodeInfo;
+        }
+        for (int i = 0; i < nodeInfo.getChildCount(); i++) {
+            AccessibilityNodeInfo child = nodeInfo.getChild(i);
+            if (child == null) {
+                continue;
+            }
+            if(viewId.equals(child.getViewIdResourceName())){
+                return child;
+            }else {
+                if (child.getChildCount() != 0) {
+                    AccessibilityNodeInfo result =  treeFindTarget(child, viewId);
+                    if(result!=null){
+                        return result;
+                    }
+                }
+            }
+
+        }
+        return null;
     }
 
     @NotNull

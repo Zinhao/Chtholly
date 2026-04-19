@@ -1,22 +1,26 @@
 <?xml version="1.0" encoding="utf-8"?>
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
-              android:layout_width="match_parent"
-              android:layout_height="match_parent" android:orientation="vertical">
+             android:layout_width="match_parent"
+             android:layout_height="match_parent" xmlns:app="http://schemas.android.com/apk/res-auto"
+             android:orientation="vertical">
 
     <com.zinhao.chtholly.customview.AccessibilityLogcatView
-        android:id="@+id/aclv"
+        android:id="@+id/logcatView"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:layout_gravity="bottom"
-        android:layout_margin="20dp"
-        android:background="#80000000"
+        android:layout_marginBottom="90dp"
+        android:visibility="gone"
+        android:background="@drawable/circle_shape_black_alpha80"
         android:textColor="@color/black" />
 
     <LinearLayout
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="left|center"
+            android:id="@+id/currentInfo"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
         android:padding="10dp"
+        android:layout_gravity="bottom"
+        android:layout_marginBottom="90dp"
         android:background="@drawable/circle_shape_black_alpha80"
         android:orientation="vertical">
         <TextView
@@ -47,7 +51,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:textColor="@color/white"
-            android:text="[0] /help \n [1] 听我说"
+            android:text=""
             />
         <ProgressBar
             android:id="@+id/callApiProgress"
@@ -57,6 +61,27 @@
 
            />
     </LinearLayout>
+
+    <com.google.android.material.tabs.TabLayout
+            android:id="@+id/menuTab"
+            android:layout_width="match_parent"
+            android:layout_height="50dp"
+            android:layout_margin="20dp"
+            android:background="@drawable/circle_shape_black_alpha80"
+            android:layout_gravity="center|bottom"
+    >
+        <com.google.android.material.tabs.TabItem
+                android:layout_height="wrap_content"
+                android:layout_width="wrap_content"
+                android:text="日志"
+        >
+        </com.google.android.material.tabs.TabItem>
+        <com.google.android.material.tabs.TabItem
+                android:layout_height="wrap_content"
+                android:layout_width="wrap_content"
+                android:text="当前会话"
+        />
+    </com.google.android.material.tabs.TabLayout>
 
 
 </FrameLayout>

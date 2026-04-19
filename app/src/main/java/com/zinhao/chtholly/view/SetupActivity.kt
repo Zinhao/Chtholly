@@ -102,7 +102,7 @@ class SetupActivity : AppCompatActivity() {
     }
 
     private fun updateStepIndicator(currentStep: Int) {
-        val stepTexts = listOf("服务器", "触发词/性格","管理员信息", "TTS", "完成")
+        val stepTexts = listOf("服务器", "触发词/性格","管理员信息", "TTS", "FeiShu","完成")
         binding.stepIndicator.text = "${currentStep + 1}/${stepTexts.size} ${stepTexts[currentStep]}"
 
         // 更新按钮文字

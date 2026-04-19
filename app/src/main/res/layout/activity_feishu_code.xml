@@ -15,14 +15,14 @@
         <ImageView
             android:layout_width="80dp"
             android:layout_height="80dp"
-            android:src="@drawable/audio_chat_svgrepo_com"
+            android:src="@drawable/soul_svgrepo_com"
             android:layout_marginBottom="16dp"/>
 
         <!-- 标题 -->
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="飞书配置"
+            android:text="飞书CODE"
             android:textSize="24sp"
             android:textStyle="bold"
             android:layout_marginBottom="8dp"/>
@@ -30,22 +30,22 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="bot接收信息的渠道"
+            android:text="输入FeiShu验证码"
             android:textSize="14sp"
             android:textColor="?android:attr/textColorSecondary"
             android:layout_marginBottom="24dp"/>
 
         <com.google.android.material.textfield.TextInputLayout
-                android:id="@+id/appIdInputDescLayout"
+                android:id="@+id/codeInputDescLayout"
                 style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:visibility="visible"
-                android:hint="App Id"
+                android:hint="FeiShu验证码"
                 android:layout_marginBottom="5dp">
 
             <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/etAppId"
+                    android:id="@+id/etCode"
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
                     android:inputType="text"/>
@@ -59,21 +59,11 @@
                 android:textSize="12sp"
                 android:layout_marginBottom="10dp"
                 android:lineSpacingMultiplier="1.2"/>
-
-        <com.google.android.material.textfield.TextInputLayout
-                android:id="@+id/secretLayout"
-                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+        <Button android:id="@+id/btMain"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:hint="App Secret"
-                android:layout_marginBottom="16dp">
-
-            <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/etSecret"
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:inputType="textPassword"/>
-        </com.google.android.material.textfield.TextInputLayout>
+                android:text="验证"
+        />
 
     </LinearLayout>
 </ScrollView>

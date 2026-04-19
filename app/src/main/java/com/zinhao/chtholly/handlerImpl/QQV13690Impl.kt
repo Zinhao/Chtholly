@@ -172,11 +172,10 @@ class QQV13690Impl(context: Context, messageCallback: MessageCallback) : QQChatH
             return
         }
         val grayBar = id2FindGroupLastMessage(nodeInfo)
-        grayBar?.let {
-            BotApp.getInstance().insert(it)
-            messageList.add(it)
-            Log.d(TAG,"grayBar find")
-            messageCallback.onFind(it)
+        grayBar?.let { grayBarMessage->
+            BotApp.getInstance().insert(grayBarMessage)
+            messageList.add(grayBarMessage)
+            messageCallback.onFind(grayBarMessage)
         }
     }
 

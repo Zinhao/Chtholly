@@ -16,7 +16,7 @@
                       android:id="@+id/ctrlTab"
                       android:orientation="vertical">
             <Button
-                    android:id="@+id/b3"
+                    android:id="@+id/testBt"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="测试"/>

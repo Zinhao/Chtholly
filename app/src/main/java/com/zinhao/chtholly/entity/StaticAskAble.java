@@ -6,6 +6,7 @@ public class StaticAskAble extends Command{
     public StaticAskAble(String packageName, Message question, String staticAnswer) {
         super(packageName, question);
         this.staticAnswer = staticAnswer;
+        setReplyReady(true);
     }
 
     @Override

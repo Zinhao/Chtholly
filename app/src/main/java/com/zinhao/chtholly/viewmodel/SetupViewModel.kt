@@ -43,6 +43,12 @@ class SetupViewModel(application: Application) : AndroidViewModel(application) {
     private val _botSoulList = MutableLiveData<List<AICharacter>>()
     val botSoulList: LiveData<List<AICharacter>> = _botSoulList
 
+    private val _feishuAppId = MutableLiveData<String>("")
+    val feishuAppId: LiveData<String> = _feishuAppId
+
+    private val _feishuAppSecret = MutableLiveData<String>("")
+    val feishuAppSecret: LiveData<String> = _feishuAppSecret
+
     // ==================== 向导状态 ====================
 
     private val _currentStep = MutableLiveData<Int>(0)
@@ -72,6 +78,8 @@ class SetupViewModel(application: Application) : AndroidViewModel(application) {
         _botName.value = BotApp.getInstance().botName
         _ttsServerUrl.value = BotApp.getInstance().ttsUrl
         _botDescription.value = BotApp.getInstance().aiSoul
+        _feishuAppId.value = BotApp.getInstance().feishuAppId
+        _feishuAppSecret.value = BotApp.getInstance().feishuAppSecret
         BotApp.getInstance().loadAICharacter {
             _botSoulList.postValue(it)
         }
@@ -115,6 +123,14 @@ class SetupViewModel(application: Application) : AndroidViewModel(application) {
 
     fun updateBotDescription(desc: String) {
         _botDescription.value = desc.trim()
+    }
+
+    fun updateFeishuAppId(appId: String) {
+        _feishuAppId.value = appId.trim()
+    }
+
+    fun updateFeishuAppSecret(appSecret: String) {
+        _feishuAppSecret.value = appSecret.trim()
     }
 
     // ==================== 步骤控制 ====================
@@ -195,6 +211,8 @@ class SetupViewModel(application: Application) : AndroidViewModel(application) {
             aiSoul = _botDescription.value
             ttsUrl = _ttsServerUrl.value
             chatUrl = _baseUrl.value
+            feishuAppId = _feishuAppId.value ?: ""
+            feishuAppSecret = _feishuAppSecret.value ?: ""
             isFirstRun = false
         }
         // 保存到 SharedPreferences
@@ -207,6 +225,8 @@ class SetupViewModel(application: Application) : AndroidViewModel(application) {
             putString(BotApp.CONFIG_BOT_NAME, _botName.value)
             putString(BotApp.CONFIG_SOUL_DESC, _botDescription.value)
             putBoolean(BotApp.CONFIG_IS_FIRST_RUN, false)
+            putString(BotApp.CONFIG_FEISHU_APP_SECRET,_feishuAppSecret.value)
+            putString(BotApp.CONFIG_FEISHU_APP_ID,_feishuAppId.value)
             apply()
         }
         _setupComplete.value = true

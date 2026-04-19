@@ -20,25 +20,27 @@ public class Step {
     private NeedGesture needGesture;
 
 
-    private long daley;
+    private long delay;
 
     /**
      * 丛目标viewId的子项中选择,findPosition [1,0,3] 指选中 viewId[1][0][3]
      */
-    /// ============================================================ 根据位置搜索
+    /// ============================================================ 根据位置搜索 ActionType.normal
     private boolean findChildByPosition = false;
     private int[] findPosition;
     private String needHasId;
 
-    /// ============================================================ 根据文本搜索
+    /// ============================================================ 根据文本搜索 ActionType.normal
     private String targetText;
     private String targetTextViewId;
     /// 先上寻找 父node 次数
     private int targetParentTimes = 0;
 
-    /// ============================================================ 调用函数拉起页面
+    /// ============================================================ 调用函数拉起页面 ActionType.function
     private String functionName;
     private String functionArg;
+
+
 
     public boolean isCustomGesture() {
         return getActionType() == Step.ActionType.custom;
@@ -55,9 +57,11 @@ public class Step {
         normal,
         global,
         custom,
-        function
+        function,
+        input
     }
 
+    // 调用函数
     public Step(String functionName,String functionArg){
         this(null,null,0,ActionType.function);
         this.functionName = functionName;
@@ -70,27 +74,42 @@ public class Step {
         this.viewId = viewId;
         this.actionId = actionId;
         this.actionType = actionType;
+        delay =500;
         mode = IndexTargetMode.onlyOne;
     }
 
-    public Step(String packageName, String viewId, int actionId, ActionType actionType, long daley) {
+    // 普通操作
+    public Step(String packageName, String viewId, int actionId, ActionType actionType, long delay) {
         this(packageName, viewId, actionId, actionType);
-        this.daley = daley;
+        this.delay = delay;
     }
 
-    public Step(String packageName, String viewId, int actionId, ActionType actionType, long daley, boolean findChildByPosition, int[] findPosition) {
-        this(packageName, viewId, actionId, actionType, daley);
+    // 点击列表 item
+    public Step(String packageName, String viewId, int actionId, ActionType actionType, long delay, boolean findChildByPosition, int[] findPosition) {
+        this(packageName, viewId, actionId, actionType, delay);
         this.findChildByPosition = findChildByPosition;
         this.findPosition = findPosition;
         mode = IndexTargetMode.position;
     }
 
-    public Step(String packageName, String viewId, int actionId, long daley, ActionType actionType, int targetParentTimes,String targetText,String targetTextViewId) {
-        this(packageName, viewId, actionId, actionType, daley,false,new int[]{});
+    // 点击文本 可向上寻找父节点
+    public Step(String packageName, String viewId, int actionId, long delay, ActionType actionType, int targetParentTimes, String targetText, String targetTextViewId) {
+        this(packageName, viewId, actionId, actionType, delay,false,new int[]{});
         this.targetParentTimes = targetParentTimes;
         this.targetText = targetText;
         this.targetTextViewId = targetTextViewId;
         mode = IndexTargetMode.text;
+    }
+
+    // 输入文本
+    public Step(String packageName, String viewId, String inputText) {
+        this.packageName = packageName;
+        this.viewId = viewId;
+        this.delay = 500;
+        this.actionId = AccessibilityNodeInfo.ACTION_SET_TEXT;
+        this.actionType = ActionType.input;
+        targetText = inputText;
+        mode = IndexTargetMode.onlyOne;
     }
 
     public void setInNodesPosition(int inNodesPosition) {
@@ -116,20 +135,22 @@ public class Step {
         return actionType == ActionType.global;
     }
 
-    public long getDaley() {
-        return daley;
+    public long getDelay() {
+        return delay;
     }
 
-    public void setDaley(long daley) {
-        this.daley = daley;
+    public void setDelay(long delay) {
+        this.delay = delay;
     }
 
     @Override
     public @NotNull String toString() {
         if(mode == IndexTargetMode.text){
-            return  actionDesc(actionId) + "find "+(isGlobalAction()?"🟧":targetText)+ " in " +viewId+ ", delay:"+daley;
+            return  actionDesc(actionId) + "find "+(isGlobalAction()?"Global":targetText)+ " in " +viewId+ ", delay:"+ delay;
+        }else if(actionType == ActionType.function){
+            return "Function "+functionName +" => "+ functionArg +" delay:"+ delay;
         }
-        return actionDesc(actionId) + " " +(isGlobalAction()?"🟧":viewId)+ (isFindChildByPosition()?Arrays.toString(findPosition):" ") + ", delay:"+daley;
+        return actionDesc(actionId) + " " +(isGlobalAction()?"Global":viewId)+ (isFindChildByPosition()?Arrays.toString(findPosition):" ") + ", delay:"+ delay;
     }
 
     private static String actionDesc(int id){

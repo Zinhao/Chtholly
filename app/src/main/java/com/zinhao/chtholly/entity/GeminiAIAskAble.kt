@@ -5,9 +5,19 @@ import com.squareup.moshi.JsonAdapter
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.adapter
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
-import com.zinhao.chtholly.network.*
 import com.zinhao.chtholly.network.gemini.FunctionCall
 import com.zinhao.chtholly.network.gemini.GeminiResponse
+import com.zinhao.chtholly.network.gemini.tools.AppendTextTool
+import com.zinhao.chtholly.network.gemini.tools.CreateReminder
+import com.zinhao.chtholly.network.gemini.tools.DoStepOnNode
+import com.zinhao.chtholly.network.gemini.tools.FileReaderTool
+import com.zinhao.chtholly.network.gemini.tools.FileWriterTool
+import com.zinhao.chtholly.network.gemini.tools.GetReminders
+import com.zinhao.chtholly.network.gemini.tools.GetSystemTime
+import com.zinhao.chtholly.network.gemini.tools.GetViewNode
+import com.zinhao.chtholly.network.gemini.tools.ListFilesTool
+import com.zinhao.chtholly.network.gemini.tools.MutedUserTool
+import com.zinhao.chtholly.network.gemini.tools.SendFileTool
 import com.zinhao.chtholly.session.GeminiSession.Companion.instance
 import com.zinhao.chtholly.utils.AsyncHelper
 import com.zinhao.chtholly.utils.FileLogger
@@ -120,34 +130,40 @@ class GeminiAIAskAble : NetAiAskAble {
         // 创建一个新文件，把“20260417，今天天气多云，看起来随时可能下雨”记录下来@冰糖
         // 在 test_share_file.txt 添加一行：今天天气多云，随时都可能下雨
         // @冰糖 把test_share_file.txt的内容写入到一个新的文件，新文件名称为new_file_test.txt
-        if(!question.isEnableCommand){
+        // 打开应用Chtholly
+        if(!question.isEnableCommand && name!=MutedUserTool.name){
             instance?.addToolErr(name, Exception("Insufficient permissions"),thoughtSignature)
             return
         }
         // 读取 diary_0415.txt 的内容
         when (name) {
-            FileWriter.name -> {
-                FileWriter.geminiCallFun?.call(this,thoughtSignature,this@GeminiAIAskAble)
+            FileWriterTool.name -> {
+                FileWriterTool.funImpl?.call(this,thoughtSignature,this@GeminiAIAskAble)
             }
-            ListFiles.name -> {
-                ListFiles.geminiCallFun?.call(this,thoughtSignature,this@GeminiAIAskAble)
+            ListFilesTool.name -> {
+                ListFilesTool.funImpl?.call(this,thoughtSignature,this@GeminiAIAskAble)
             }
-            FileReader.name -> {
-                FileReader.geminiCallFun?.call(this,thoughtSignature,this@GeminiAIAskAble)
+            FileReaderTool.name -> {
+                FileReaderTool.funImpl?.call(this,thoughtSignature,this@GeminiAIAskAble)
             }
-            AppendText.name->{
-                AppendText.geminiCallFun?.call(this,thoughtSignature,this@GeminiAIAskAble)
+            AppendTextTool.name->{
+                AppendTextTool.funImpl?.call(this,thoughtSignature,this@GeminiAIAskAble)
             }
-            SendFile.name->{
-                SendFile.geminiCallFun?.call(this,thoughtSignature,this@GeminiAIAskAble)
+            SendFileTool.name->{
+                SendFileTool.funImpl?.call(this,thoughtSignature,this@GeminiAIAskAble)
             }
-            // 打开应用Chtholly
             GetViewNode.name->{
-                GetViewNode.geminiCallFun?.call(this,thoughtSignature,this@GeminiAIAskAble)
+                GetViewNode.funImpl?.call(this,thoughtSignature,this@GeminiAIAskAble)
             }
             DoStepOnNode.name ->{
-                DoStepOnNode.geminiCallFun?.call(this,thoughtSignature,this@GeminiAIAskAble)
+                DoStepOnNode.funImpl?.call(this,thoughtSignature,this@GeminiAIAskAble)
             }
+            MutedUserTool.name -> {
+                MutedUserTool.funImpl?.call(this,thoughtSignature,this@GeminiAIAskAble)
+            }
+            CreateReminder.name->{CreateReminder.funImpl?.call(this,thoughtSignature,this@GeminiAIAskAble)}
+            GetReminders.name->{GetReminders.funImpl?.call(this,thoughtSignature,this@GeminiAIAskAble)}
+            GetSystemTime.name->{GetSystemTime.funImpl?.call(this,thoughtSignature,this@GeminiAIAskAble)}
         }
     }
 

@@ -123,12 +123,14 @@ public abstract class BaseChatHandler {
         if(viewId.equals(source.getViewIdResourceName())){
             return source;
         }
-        List<AccessibilityNodeInfo> targets = source.findAccessibilityNodeInfosByViewId(viewId);
+        List<AccessibilityNodeInfo> targetList = source.findAccessibilityNodeInfosByViewId(viewId);
         AccessibilityNodeInfo target = null;
-        if (!targets.isEmpty()) {
-            if(position<targets.size()){
-                target = targets.get(position);
+        if (!targetList.isEmpty()) {
+            if(position<targetList.size()){
+                target = targetList.get(position);
             }
+        }else{
+            return LayoutTreeUtils.treeFindTarget(source,viewId);
         }
         return target;
     }

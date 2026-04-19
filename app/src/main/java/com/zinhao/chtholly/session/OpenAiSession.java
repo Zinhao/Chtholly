@@ -155,6 +155,9 @@ public class OpenAiSession extends NekoSession implements RemoteChatApiSession {
         return len;
     }
 
+    @Override
+    public void loadChatHistory() {}
+
     public int summarize(){
         int len = 0;
         for (int i = 0; i < chats.length(); i++) {

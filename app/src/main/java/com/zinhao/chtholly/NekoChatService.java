@@ -12,9 +12,11 @@ import android.content.Intent;
 import android.content.pm.ServiceInfo;
 import android.net.Uri;
 import android.os.Build;
+import android.os.Bundle;
 import android.os.Handler;
 import android.provider.Settings;
 import android.util.Log;
+import android.view.ContextThemeWrapper;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.WindowManager;
@@ -28,10 +30,13 @@ import androidx.media3.common.MediaMetadata;
 import androidx.media3.common.Player;
 import androidx.media3.exoplayer.ExoPlayer;
 
+import com.google.android.material.tabs.TabLayout;
+import com.lark.oapi.service.application.v6.resource.Bot;
 import com.zinhao.chtholly.databinding.FloatBtBinding;
 import com.zinhao.chtholly.databinding.FloatHelperBinding;
 import com.zinhao.chtholly.databinding.FloatLogcatBinding;
 import com.zinhao.chtholly.entity.*;
+import com.zinhao.chtholly.network.FeiShuApi;
 import com.zinhao.chtholly.session.GeminiSession;
 import com.zinhao.chtholly.session.OpenAiSession;
 import com.zinhao.chtholly.utils.*;
@@ -66,12 +71,10 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
     private WindowManager.LayoutParams logcatViewParams;
     FloatBtBinding floatMenuBinding;
     private boolean floatInit;
-    boolean lockScreen = false;
     private WindowManager.LayoutParams floatMenuParam;
 
 
     private WindowManager windowManager;
-    private final List<RemindMessage> _remindMessages = new Vector<>();
 
     private long lastReplyTime = System.currentTimeMillis();
     private final List<Command> waitQAs = new Vector<>();
@@ -79,6 +82,12 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
     private QQChatHandler qqChatHandler;
     private WXChatHandler wxChatHandler;
     private RBChatHandler rbChatHandler;
+
+    private FeiShuApi feiShuApi;
+
+    public FeiShuApi getFeiShuApi() {
+        return feiShuApi;
+    }
 
     private Timer mainTimer;
 
@@ -96,18 +105,24 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
         rbChatHandler = new RBChatHandler(this);
         windowManager = getSystemService(WindowManager.class);
         helperViewParams = OverlayUtils.makeNotTouchWindowParams(0, 0, 0, 0);
-        logcatViewParams = OverlayUtils.makeNotTouchWindowParams(0, 0, 0, 0);
+        logcatViewParams = OverlayUtils.makeFloatWindowParams(0, 0, 0, 0);
         floatMenuParam = OverlayUtils.makeFloatWindowParams(300, 300, 1, 1);
-
         speakStartVoice();
-
         createNotificationChannel();
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
             startForeground(1, getNotification(), ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE);
         } else {
             startForeground(1, getNotification());
         }
-        mainTimer.schedule(mainTimeTask, 0, 100);
+        mainTimer.schedule(mainTimeTask, 0, 500);
+
+        AsyncHelper.INSTANCE.doAsyncPart(new Runnable() {
+            @Override
+            public void run() {
+                feiShuApi = new FeiShuApi(BotApp.getInstance().getFeishuAppId(),BotApp.getInstance().getFeishuAppSecret());
+            }
+        });
+
     }
 
     private static final long MINUTE_MILL = 60*1000;
@@ -116,11 +131,18 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
     private final TimerTask mainTimeTask = new TimerTask() {
         @Override
         public void run() {
+            ReminderManager.ReminderItem reminderItem = ReminderManager.INSTANCE.getNextReminder();
+            if(reminderItem != null){
+                if(reminderItem.getStartTime() < System.currentTimeMillis()){
+                    ReminderManager.INSTANCE.clearExpired();
+                    addReminder(reminderItem);
+                }
+            }
             if (waitQAs.isEmpty()) {
                 if(System.currentTimeMillis() - lastReplyTime > BORING_ASK_TIME){
                     lastReplyTime = System.currentTimeMillis();
                     mHandler.post(()-> {
-                        backToChatUseShare();
+                        backToChatUseShare(NekoAskAble.COME_BACK);
                         addToQAList(new Message(null,NekoAskAble.TIME_TOO_FAST,System.currentTimeMillis()));
                     });
                 }
@@ -131,6 +153,7 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
                     }
                     AccessibilityNodeInfo root = getRootInActiveWindow();
                     if(root != null){
+                        addLogcat("timer tick...");
                         handleQAs(root);
                         removeSuccessMessage();
                         root.recycle();
@@ -157,15 +180,18 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
         addLogcat("onServiceConnected: ");
 
         instance = new WeakReference<>(this);
-        LayoutInflater layoutInflater = LayoutInflater.from(this);
+        ContextThemeWrapper contextThemeWrapper = new ContextThemeWrapper(this, R.style.Theme_Chtholly);
+        LayoutInflater layoutInflater = LayoutInflater.from(contextThemeWrapper);
         logcatBinding = FloatLogcatBinding.inflate(layoutInflater, null, false);
         helperBinding = FloatHelperBinding.inflate(layoutInflater, null, false);
         floatMenuBinding = FloatBtBinding.inflate(layoutInflater, null, false);
         if (Settings.canDrawOverlays(this)) {
             // 有权限
             showCtrlWindow();
-            logcatBinding.aclv.setVisibility(View.GONE);
+            logcatBinding.getRoot().setVisibility(View.GONE);
             helperBinding.getRoot().setVisibility(View.GONE);
+            logcatBinding.logcatView.setVisibility(View.VISIBLE);
+            logcatBinding.currentInfo.setVisibility(View.GONE);
         }
         bindClickListener();
         controllerViewToMinSize();
@@ -223,6 +249,10 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
             saveTreeToJsonFile(event);
         }
 
+        if(System.currentTimeMillis() - failedBackTime < 5*1000L){
+            return;
+        }
+
         if (QQChatHandler.PACKAGE_NAME.equals(event.getPackageName().toString())) {
             qqChatHandler.handle(event);
             logcatBinding.currentPage.setText(qqChatHandler.getCurrentPageName());
@@ -237,54 +267,75 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
             helperBinding.acbv.setNodeInfo(root);
             helperBinding.acbv.postInvalidate();
         }
-        if (waitQAs.isEmpty()) {
-            logcatBinding.callApiProgress.setVisibility(View.GONE);
-            logcatBinding.tvWaitQAList.setVisibility(View.GONE);
-        }else{
-            logcatBinding.tvWaitQAList.setVisibility(View.VISIBLE);
-            logcatBinding.tvWaitQAList.setText(strWaitQAs());
+        if (logcatBinding.getRoot().getVisibility() == View.VISIBLE) {
+            if(waitQAs.isEmpty()){
+                logcatBinding.callApiProgress.setVisibility(View.GONE);
+            }else{
+                logcatBinding.callApiProgress.setVisibility(View.VISIBLE);
+            }
         }
     }
 
     private String strWaitQAs(){
+        if(waitQAs.isEmpty()){
+            return "empty";
+        }
         StringBuilder stringBuilder = new StringBuilder();
         for (int i = 0; i < waitQAs.size(); i++) {
-            stringBuilder.append('[').append(i).append("] ").append(waitQAs.get(i).getQuestion().getMessage()).append("\n");
+            stringBuilder.append('【').append(i).append("】").append(waitQAs.get(i).getQuestion().getMessage()).append("\n");
         }
         return stringBuilder.toString();
     }
 
-    private void backToChatUseShare(){
-        if(!CHAT_GROUP.equals(qqChatHandler.getCurrentPageName())
-                && qqChatHandler.getTargetChatTitle() != null){
-            Command c = new NekoAskAble(PACKAGE_NAME,
+    private void backToChatUseShare(String reason){
+        if(!CHAT_GROUP.equals(qqChatHandler.getCurrentPageName()) && qqChatHandler.getTargetChatTitle() != null){
+            Command backToChatMessage = new NekoAskAble(PACKAGE_NAME,
                     new Message(BotApp.getInstance().getAdminName(),
-                            "返回对话窗口", System.currentTimeMillis()));
-            c.initShareStepTo(qqChatHandler.getChatTitle(),FUNC_SHARE_TEXT,NekoAskAble.COME_BACK);
-            c.getAnswer().setMessage(null);
-            c.setReplyReady(true);
-            c.handle();
-            waitQAs.add(c);
+                            "返回对话窗口=>"+qqChatHandler.getTargetChatTitle(), System.currentTimeMillis()));
+            backToChatMessage.initShareStepTo(qqChatHandler.getChatTitle(),FUNC_SHARE_TEXT,reason);
+            backToChatMessage.getAnswer().setMessage(null);
+            backToChatMessage.setReplyReady(true);
+            backToChatMessage.handle();
+            waitQAs.add(backToChatMessage);
+            updateWaitQaText();
         }
     }
+
+    private void updateWaitQaText(){
+        mHandler.post(()->{
+            if(logcatBinding!= null && logcatBinding.getRoot().getVisibility() == View.VISIBLE){
+                logcatBinding.tvWaitQAList.setText(strWaitQAs());
+            }
+        });
+    }
+
+    private long failedBackTime = System.currentTimeMillis();
+    private void timeoutRemove(Command qa){
+        failedBackTime = System.currentTimeMillis();
+        qa.finishStepAction();
+        waitQAs.remove(0);
+        updateWaitQaText();
+        addLogcat("timeoutRemove: "+qa.getQuestion().getMessage() + " => time out, remove! the size of after remove:"+ waitQAs.size());
+    }
+
     // 检查队列的消息
     private void handleQAs(AccessibilityNodeInfo source) {
-        if (source == null)
+        if (source == null){
             return;
+        }
+        addLogcat("handleQAs..."+waitQAs.size());
         if (!waitQAs.isEmpty()) {
             Command qa = waitQAs.get(0);
-            lastReplyTime = System.currentTimeMillis();
             if (System.currentTimeMillis() - qa.getQuestion().getTimeStamp() > 60*1000L) {
-                qa.finishStepAction();
-                addLogcat("handleQAs: "+qa.getQuestion().getMessage() + " => out of 30 s, remove!");
-                waitQAs.remove(0);
-                return;
+                timeoutRemove(qa);
             }
+
             if (!qa.isReplyReady()) {
                 addLogcat("handleQAs: wait answer ready:" + qa.getQuestion().getMessage());
                 return;
             }
             if (qa.sendSuccess() && qa.actionSuccess()) {
+                addLogcat("sendSuccess && actionSuccess: "+qa.getQuestion().getMessage());
                 return;
             }
             if (qa.haveAction()) {
@@ -293,15 +344,32 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
                     return;
                 }
             } else {
-                if (source.getPackageName().equals(qqChatHandler.getPackageName())) {
-                    qqChatHandler.writeAndSend(qa);
-                } else if (source.getPackageName().equals(wxChatHandler.getPackageName())) {
-                    wxChatHandler.writeAndSend(qa);
-                } else if (source.getPackageName().equals(rbChatHandler.getPackageName())) {
-                    rbChatHandler.writeAndSend(qa);
+                if(qa.getPackageName()!=null && qa.getPackageName().equals(FeiShuApi.FEI_SHU_PACKAGE)){
+                    qa.finishTextReply();
+                    AsyncHelper.INSTANCE.doAsyncPart(new Runnable() {
+                        @Override
+                        public void run() {
+                            try {
+                                feiShuApi.sendTextMessage(qa.getAnswer().getMessage());
+                            } catch (Exception e) {
+                                if(e.getMessage() != null){
+                                    FileLogger.INSTANCE.e(TAG,e.getMessage(),e);
+                                }
+                            }
+                        }
+                    });
+                }else{
+                    if (source.getPackageName().equals(qqChatHandler.getPackageName())) {
+                        qqChatHandler.writeAndSend(qa);
+                    } else if (source.getPackageName().equals(wxChatHandler.getPackageName())) {
+                        wxChatHandler.writeAndSend(qa);
+                    } else if (source.getPackageName().equals(rbChatHandler.getPackageName())) {
+                        rbChatHandler.writeAndSend(qa);
+                    }
                 }
             }
             if (qa.sendSuccess()) {
+                lastReplyTime = System.currentTimeMillis();
                 addLogcat("handleQAs: send success:" + qa.getAnswer().getMessage());
             }
         }
@@ -314,17 +382,17 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
         source.refresh();
         Step step = qa.getNextStep();
         boolean result = false;
-        if (step.getDaley() != 0) {
+        if (step.getDelay() != 0) {
             mHandler.postDelayed(() -> {
-                step.setDaley(0);
-                handleQAs(getRootInActiveWindow());
-            }, step.getDaley());
+                step.setDelay(0);
+            }, step.getDelay());
         } else {
             result = doStep(source,step);
-            if (System.currentTimeMillis() - qa.getQuestion().getTimeStamp() > 30000) {
-                result = true;
-                qa.finishStepAction();
-                addLogcat("doAction: 寻找视图超时！结束任务。");
+            // 为防止卡死在一条指令上面，设置一个30秒超时，超时会自动完成任务。
+            if (System.currentTimeMillis() - qa.getQuestion().getTimeStamp() > 30*1000L) {
+                timeoutRemove(qa);
+                backToChatUseShare("find view out time");
+                return false;
             }
         }
         addLogcat(String.format(Locale.US, "doAction: %s result:%s ", step , result));
@@ -337,16 +405,25 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
     public boolean doStep(AccessibilityNodeInfo source,Step step){
         boolean result = false;
         if(step.getActionType() == Step.ActionType.function){
-            result = true;
             if(step.getFunctionName()!=null && step.getFunctionArg()!=null){
                 if(step.getFunctionName().equals(FUNC_SHARE_FILE)){
                     shareFile(new File(step.getFunctionArg()));
+                    result = true;
                 }else if(step.getFunctionName().equals(FUNC_SHARE_TEXT)){
                     shareText(step.getFunctionArg());
+                    result = true;
                 }
             }
         } else if (step.isGlobalAction()) {
             result = performGlobalAction(step.getActionId());
+        }else if (step.getActionType() == Step.ActionType.input) {
+            AccessibilityNodeInfo targetView = findTargetView(source, step);
+            if(targetView!=null){
+                Bundle arg = new Bundle();
+                String sendMessage = step.getTargetText();
+                arg.putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, sendMessage);
+                result = targetView.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, arg);
+            }
         } else {
             AccessibilityNodeInfo targetView = findTargetView(source, step);
             if (targetView != null) {
@@ -362,8 +439,6 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
                         result = doCustomGesture(source, step);
                     }
                 }
-                // 为防止卡死在一条指令上面，设置一个30秒超时，超时会自动完成任务。
-
             }
         }
         return result;
@@ -398,9 +473,12 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
     }
 
     private void removeSuccessMessage() {
-        waitQAs.removeIf(commandMessage -> {
-            return commandMessage.sendSuccess() && commandMessage.actionSuccess();
-        });
+        boolean removeResult = waitQAs.removeIf(commandMessage ->
+                commandMessage.sendSuccess() && commandMessage.actionSuccess()
+        );
+        if(removeResult){
+            updateWaitQaText();
+        }
     }
 
     private AccessibilityNodeInfo findTargetView(AccessibilityNodeInfo source, Step step) {
@@ -548,7 +626,15 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
     public void addRemind(long seconds, String message, String master) {
         long remindTime = System.currentTimeMillis() + seconds * 1000L;
         addLogcat(String.format(Locale.CHINA, "addAlarm: %s %s", dateTimeFormat.format(remindTime), message));
-        _remindMessages.add(new RemindMessage("system", message, remindTime, master));
+    }
+
+    public void addReminder(ReminderManager.ReminderItem reminderItem) {
+        StaticAskAble staticAskAble = new StaticAskAble(getPackageName(),
+                new Message(null,null,System.currentTimeMillis()),
+                dateTimeFormat.format(reminderItem.getStartTime())+"需要去做的事情:"+reminderItem.getTitle());
+        staticAskAble.handle();
+        waitQAs.add(staticAskAble);
+        updateWaitQaText();
     }
 
     @Override
@@ -594,13 +680,29 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
         if (logcatBinding == null) {
             return;
         }
-        logcatBinding.aclv.appendLogcat(l);
+        logcatBinding.logcatView.appendLogcat(l);
     }
 
     @Override
     public void onFind(Message message) {
         logcatBinding.callApiProgress.setVisibility(View.VISIBLE);
         addToQAList(message);
+    }
+
+    public void onFindFeiShuMessage(Message message){
+        logcatBinding.callApiProgress.setVisibility(View.VISIBLE);
+        Command mainMessage;
+        if (BotApp.getInstance().getMode() == OpenAiSession.class) {
+            mainMessage = new OpenAiAskAble(FeiShuApi.FEI_SHU_PACKAGE, message, this);
+        } else if (BotApp.getInstance().getMode() == GeminiSession.class) {
+            mainMessage = new GeminiAIAskAble(FeiShuApi.FEI_SHU_PACKAGE, message, this);
+        } else {
+            mainMessage = new NekoAskAble(FeiShuApi.FEI_SHU_PACKAGE, message);
+        }
+        mainMessage.handle();
+        waitQAs.add(mainMessage);
+        updateWaitQaText();
+        addLogcat("waitQAs[" + waitQAs.size() + "] " + message.getSpeaker() + ": " + message.getMessage());
     }
 
     private void addToQAList(Message message){
@@ -614,6 +716,7 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
         }
         mainMessage.handle();
         waitQAs.add(mainMessage);
+        updateWaitQaText();
         addLogcat("waitQAs[" + waitQAs.size() + "] " + message.getSpeaker() + ": " + message.getMessage());
     }
 
@@ -650,7 +753,8 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
     @SuppressLint("ClickableViewAccessibility")
     public void bindClickListener() {
         floatMenuBinding.b1.setChecked(helperBinding.getRoot().getVisibility()==View.VISIBLE);
-        floatMenuBinding.b2.setChecked(logcatBinding.aclv.getVisibility()==View.VISIBLE);
+        floatMenuBinding.b2.setChecked(logcatBinding.getRoot().getVisibility()==View.VISIBLE);
+
         floatMenuBinding.saySwitch.setChecked(BotApp.getInstance().isWithSpeaker());
 
         floatMenuBinding.b1.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
@@ -662,13 +766,44 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
         floatMenuBinding.b2.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                logcatBinding.aclv.setVisibility(isChecked?View.VISIBLE:View.GONE);
+                logcatBinding.getRoot().setVisibility(isChecked?View.VISIBLE:View.GONE);
             }
         });
-        floatMenuBinding.b3.setOnClickListener(new View.OnClickListener() {
+
+        floatMenuBinding.saySwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                BotApp.getInstance().setWithSpeaker(isChecked);
+            }
+        });
+
+        logcatBinding.menuTab.addOnTabSelectedListener(new TabLayout.OnTabSelectedListener() {
+            @Override
+            public void onTabSelected(TabLayout.Tab tab) {
+                if(tab.getPosition()==0){
+                    logcatBinding.logcatView.setVisibility(View.VISIBLE);
+                    logcatBinding.currentInfo.setVisibility(View.GONE);
+                }else{
+                    logcatBinding.logcatView.setVisibility(View.GONE);
+                    logcatBinding.currentInfo.setVisibility(View.VISIBLE);
+                }
+            }
+
+            @Override
+            public void onTabUnselected(TabLayout.Tab tab) {
+
+            }
+
+            @Override
+            public void onTabReselected(TabLayout.Tab tab) {
+
+            }
+        });
+
+        floatMenuBinding.testBt.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-//               backToChatUseShare();
+                backToChatUseShare("test back to chat");
             }
         });
 
@@ -692,14 +827,6 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
                 }
             }
         });
-
-
-        floatMenuBinding.saySwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-            @Override
-            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                BotApp.getInstance().setWithSpeaker(isChecked);
-            }
-        });
     }
 
     private static String treeFileName(AccessibilityEvent event) {
@@ -720,10 +847,6 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
         return FilenameFilter.sanitizeWithReplacement("tree_" + fileName + ".json", '_');
     }
 
-    private void testShareText(){
-        shareText(NekoAskAble.TIME_TOO_FAST);
-    }
-
     public static final String FUNC_SHARE_TEXT = "share_text";
     public void shareText(String text) {
         Intent sendIntent = new Intent();
@@ -740,26 +863,6 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
         }
     }
 
-    private void testSharFile(){
-        File f = LocalFileCache.getInstance().getWorkSpaceDir();
-        File createFile = new File(f, "test_share_file.txt");
-        LocalFileCache.getInstance().writeText(createFile, NekoAskAble.COME_BACK);
-        mHandler.postDelayed(new Runnable() {
-            @Override
-            public void run() {
-                File[] files = f.listFiles();
-                if (files != null && files.length > 0) {
-                    File toSendFile = files[0];
-                    Command c = new NekoAskAble(PACKAGE_NAME, new Message(BotApp.getInstance().getAdminName(), "测试文件分享", System.currentTimeMillis()));
-                    c.initShareStepTo(qqChatHandler.getChatTitle(),FUNC_SHARE_FILE,toSendFile.getPath());
-                    c.getAnswer().setMessage("发送" + toSendFile.getName());
-                    c.setReplyReady(true);
-                    c.handle();
-                    waitQAs.add(c);
-                }
-            }
-        }, 5000);
-    }
     public static final String FUNC_SHARE_FILE = "share_file";
     public void shareFile(File file) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {

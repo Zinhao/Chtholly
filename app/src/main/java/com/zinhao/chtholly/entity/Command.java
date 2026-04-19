@@ -409,12 +409,25 @@ public abstract class Command{
         return true;
     }
 
+    @HelpDoc(desc = "测试返回对话窗口")
+    private boolean testBack(){
+        return blockUserSpeak("丛雨");
+    }
+
     public boolean initShareStepTo(String targetChatTitle,String functionName,String functionArg){
         if(QQChatHandler.PACKAGE_NAME.equals(packageName)){
             steps = QQChatHandler.chooseShareTarget(targetChatTitle,functionName,functionArg);
             getAnswer().setMessage(NekoAskAble.OK);
         }else{
             getAnswer().setMessage(NekoAskAble.DONT_SUPPORT);
+        }
+        return true;
+    }
+
+    public boolean blockUserSpeak(String userName) {
+        if(packageName.equals(QQChatHandler.PACKAGE_NAME)){
+            steps = NekoChatService.getInstance().getQqChatHandler().blockSay(userName);
+            getAnswer().setMessage(NekoAskAble.BLOCK);
         }
         return true;
     }

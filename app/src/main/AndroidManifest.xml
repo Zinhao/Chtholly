@@ -47,6 +47,7 @@
         <activity android:name="com.zinhao.chtholly.view.SetupActivity" android:exported="false" />
         <activity android:name="com.zinhao.chtholly.view.ChatActivity"
                   android:label="@string/chat_page"/>
+        <activity android:name="com.zinhao.chtholly.view.FeishuCodeActivity"/>
 
         <service
             android:name=".NekoChatService"

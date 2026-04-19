@@ -38,6 +38,7 @@ public class BotApp extends Application {
 
     public static final String CONFIG_FEISHU_APP_ID = "feishu_app_id";
     public static final String CONFIG_FEISHU_APP_SECRET = "feishu_app_secret";
+    public static final String CONFIG_FEISHU_RECEIVE_OPENID = "feishu_receive_openid";
 
 
     private boolean isFirstRun;
@@ -54,6 +55,7 @@ public class BotApp extends Application {
 
     private String feishuAppId;
     private String feishuAppSecret;
+    private String feishuReceiveOpenid;
 
     private static BotApp instance;
     private SharedPreferences sharedPreferences;
@@ -110,6 +112,7 @@ public class BotApp extends Application {
         //飞书配置
         feishuAppId = sharedPreferences.getString(CONFIG_FEISHU_APP_ID,"");
         feishuAppSecret = sharedPreferences.getString(CONFIG_FEISHU_APP_SECRET,"");
+        feishuReceiveOpenid = sharedPreferences.getString(CONFIG_FEISHU_RECEIVE_OPENID,"");
 
         if(apiKey.isEmpty()){
             mode = NekoSession.class;
@@ -184,6 +187,31 @@ public class BotApp extends Application {
     public void setCurrentCharacter(@NotNull AICharacter currentCharacter) {
         this.currentCharacter = currentCharacter;
         this.aiSoul = currentCharacter.desc;
+    }
+
+    public String getFeishuAppId() {
+        return feishuAppId;
+    }
+
+    public String getFeishuAppSecret() {
+        return feishuAppSecret;
+    }
+
+    public void setFeishuAppId(String feishuAppId) {
+        this.feishuAppId = feishuAppId;
+    }
+
+    public void setFeishuAppSecret(String feishuAppSecret) {
+        this.feishuAppSecret = feishuAppSecret;
+    }
+
+    public String getFeishuReceiveOpenid() {
+        return feishuReceiveOpenid;
+    }
+
+    public void setFeishuReceiveOpenid(String feishuReceiveOpenid) {
+        this.feishuReceiveOpenid = feishuReceiveOpenid;
+        sharedPreferences.edit().putString(CONFIG_FEISHU_RECEIVE_OPENID, feishuReceiveOpenid).apply();
     }
 
     public boolean isFirstRun() {

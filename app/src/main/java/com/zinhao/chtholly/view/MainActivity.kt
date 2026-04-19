@@ -99,5 +99,9 @@ class MainActivity : AppCompatActivity() {
         binding.btSoulEdit.setOnClickListener {
             startActivity(Intent(this, CharacterActivity::class.java))
         }
+
+        binding.btFeiShuCode.setOnClickListener {
+            startActivity(Intent(this, FeishuCodeActivity::class.java))
+        }
     }
 }

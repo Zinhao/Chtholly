@@ -31,6 +31,7 @@ class GeminiSession private constructor(private var chatApi: String?) : NekoSess
     RemoteChatApiSession {
     private val data: JSONObject = JSONObject()
     private var currentModel: RemoteModel = RemoteModel(MODEL_GEMINI_3_FL_PRE)
+    private var lastMessageTimeStamp: Long = 0
     private val modelList: List<RemoteModel> = arrayListOf(
         RemoteModel(MODEL_GEMINI_3_PRO_PRE),
         RemoteModel(MODEL_GEMINI_3_FL_PRE)
@@ -61,10 +62,10 @@ class GeminiSession private constructor(private var chatApi: String?) : NekoSess
             val generationConfigObj = JSONObject()
             generationConfigObj.put("thinkingConfig", t)
             data.put("generationConfig", generationConfigObj)
+            loadChatHistory()
         } catch (e: JSONException) {
             throw RuntimeException(e)
         }
-//        loadLast10()
     }
 
     fun contentsToJsonArray(): JSONArray{
@@ -73,31 +74,6 @@ class GeminiSession private constructor(private var chatApi: String?) : NekoSess
             contentArr.put(JSONObject(contentToJson(content)))
         }
         return contentArr
-    }
-
-    private fun loadLast10(){
-        contents.clear()
-        BotApp.getInstance().loadMessage(MessageDao.MessageGetAllListener { result ->
-            if(result.isEmpty()){return@MessageGetAllListener}
-            val intoContentMessage = arrayListOf<Message>()
-            if(result.size <= 10){
-                intoContentMessage.addAll(result)
-            }else{
-                intoContentMessage.addAll(result.subList(result.size-10, result.size-1))
-            }
-            for (message in intoContentMessage){
-                val messageContent = "${message.message}"
-                FileLogger.i(TAG,"load last history: $messageContent")
-                val role: String
-                if(BotApp.getInstance().botName == message.speaker){
-                    role = ROLE_MODEL
-                }else{
-                    role = ROLE_USER
-                }
-                val content = Content(listOf(Part(messageContent,null,null,null)),role)
-                contents.add(content)
-            }
-        })
     }
 
     fun contentToJson(content: Content): String {
@@ -149,6 +125,30 @@ class GeminiSession private constructor(private var chatApi: String?) : NekoSess
         return len
     }
 
+    override fun loadChatHistory(){
+        contents.clear()
+        BotApp.getInstance().loadMessage(MessageDao.MessageGetAllListener { result ->
+            if(result.isEmpty()){return@MessageGetAllListener}
+            val intoContentMessage = arrayListOf<Message>()
+            if(result.size <= 10){
+                intoContentMessage.addAll(result)
+            }else{
+                intoContentMessage.addAll(result.subList(result.size-10, result.size-1))
+            }
+            for (message in intoContentMessage){
+                val messageContent = "${message.message}"
+                val role: String
+                if(BotApp.getInstance().botName == message.speaker){
+                    role = ROLE_MODEL
+                }else{
+                    role = ROLE_USER
+                }
+                val content = Content(listOf(Part(messageContent,null,null,null)),role)
+                contents.add(content)
+            }
+        })
+    }
+
     override fun summarize(): Int {
         val chatLen = contents.size
         requestChatSummarize()
@@ -170,11 +170,17 @@ class GeminiSession private constructor(private var chatApi: String?) : NekoSess
     }
 
     fun addContent(content: Content) {
+        lastMessageTimeStamp = System.currentTimeMillis()
         contents.add(content)
     }
 
     @Throws(JSONException::class)
     override fun callApi(message: NetAiAskAble,add: Boolean): Boolean {
+        if(System.currentTimeMillis() - lastMessageTimeStamp > 10*60*1000L) {
+            lastMessageTimeStamp = System.currentTimeMillis()
+            val timeContent = Content(listOf(Part("(当前时间:${dateTimeFormat.format(System.currentTimeMillis())})",null,null,null)),ROLE_USER)
+            contents.add(timeContent)
+        }
         if(add){
             val realText = if(BotApp.getInstance().isWithSpeaker){message.questionWithSpeaker()}else {message.question.message}
             val newContent = Content(listOf(Part(realText,null,null,null)),ROLE_USER)
