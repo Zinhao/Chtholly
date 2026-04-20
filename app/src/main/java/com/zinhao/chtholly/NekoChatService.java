@@ -119,7 +119,12 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
         AsyncHelper.INSTANCE.doAsyncPart(new Runnable() {
             @Override
             public void run() {
-                feiShuApi = new FeiShuApi(BotApp.getInstance().getFeishuAppId(),BotApp.getInstance().getFeishuAppSecret());
+                if(BotApp.getInstance().getFeishuAppId().isEmpty()){
+
+                }else{
+                    feiShuApi = new FeiShuApi(BotApp.getInstance().getFeishuAppId(),BotApp.getInstance().getFeishuAppSecret());
+                }
+
             }
         });
 
@@ -344,7 +349,7 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
                     return;
                 }
             } else {
-                if(qa.getPackageName()!=null && qa.getPackageName().equals(FeiShuApi.FEI_SHU_PACKAGE)){
+                if(qa.getPackageName()!=null && qa.getPackageName().equals(FeiShuApi.FEI_SHU_PACKAGE) && feiShuApi!=null){
                     qa.finishTextReply();
                     AsyncHelper.INSTANCE.doAsyncPart(new Runnable() {
                         @Override

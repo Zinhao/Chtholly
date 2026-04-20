@@ -85,7 +85,7 @@ public class Message {
     @NonNull
     @Override
     public @NotNull String toString() {
-        return tag +" [leve"+ leve +"] "+ speaker+": "+ message +", permission:"+enableCommand;
+        return speaker +"("+ tag +")"+"say: "+ message +", permission:" + enableCommand;
     }
 
     @Override

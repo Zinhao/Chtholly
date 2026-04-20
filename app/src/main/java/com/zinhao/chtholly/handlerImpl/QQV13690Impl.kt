@@ -68,29 +68,32 @@ class QQV13690Impl(context: Context, messageCallback: MessageCallback) : QQChatH
         }
         if("com.tencent.mobileqq.activity.TextPreviewActivity" == event.className){
             event.source?.let {
-                j8lFindText(it)
+                doubleClickWaitFillMessage?.let { m->
+                    j8lFindText(it,m)
+                }
             }
         }
     }
 
-    private fun j8lFindText(nodeInfo: AccessibilityNodeInfo){
-        if(doubleClickWaitFillMessage == null){
-            return
-        }
+    private fun j8lFindText(nodeInfo: AccessibilityNodeInfo, waitFillMessage: Message){
         if(nodeInfo.childCount!=0){
             val j8lNode = findFirstNodeInfo(nodeInfo,PACKAGE_NAME+":id/j8l")
             j8lNode?.let {
                 val messageText = it.getChild(0).text.toString()
-                doubleClickWaitFillMessage!!.message = messageText
-                if (!isAtName(doubleClickWaitFillMessage, BotApp.getInstance().botName)) {
-                    if (!doubleClickWaitFillMessage!!.isOther) {
+                if("群主" == waitFillMessage.tag || "管理员" == waitFillMessage.tag) {
+                    waitFillMessage.isEnableCommand = true
+                }
+                waitFillMessage.message = messageText
+                FileLogger.d(TAG,waitFillMessage.toString())
+                if (!isAtName(waitFillMessage, BotApp.getInstance().botName)) {
+                    if (!waitFillMessage.isOther) {
                         return
                     }
                 }
-                doubleClickWaitFillMessage?.message = messageText.replace("@" + BotApp.getInstance().botName, "").trim { it <= ' ' }
+                waitFillMessage.message = messageText.replace("@" + BotApp.getInstance().botName, "").trim { it <= ' ' }
                 if (messageList.isNotEmpty()) {
                     val last = messageList.last()
-                    if (last.message == doubleClickWaitFillMessage?.message && System.currentTimeMillis() - last.getTimeStamp() < 10000) {
+                    if (last.message == waitFillMessage.message && System.currentTimeMillis() - last.getTimeStamp() < 10000) {
                         Log.d(
                             TAG,
                             "findLastMessage: in close time, same message:" + last.message
@@ -100,22 +103,20 @@ class QQV13690Impl(context: Context, messageCallback: MessageCallback) : QQChatH
                     }
                 }
 
-                if("群主" == doubleClickWaitFillMessage?.tag || "管理员" == doubleClickWaitFillMessage?.tag) {
-                    doubleClickWaitFillMessage?.isEnableCommand = true
-                }
+
 
                 if (NekoChatService.getInstance() != null) {
                     NekoChatService.getInstance().addLogcat(
                         String.format(
                             Locale.US,
                             "✨findLastMessage:%s",
-                            doubleClickWaitFillMessage.toString(),
+                            waitFillMessage.toString(),
                         )
                     )
                 }
-                BotApp.getInstance().insert(doubleClickWaitFillMessage)
-                messageList.add(doubleClickWaitFillMessage)
-                messageCallback.onFind(doubleClickWaitFillMessage)
+                BotApp.getInstance().insert(waitFillMessage)
+                messageList.add(waitFillMessage)
+                messageCallback.onFind(waitFillMessage)
             }
         }
     }
@@ -127,22 +128,20 @@ class QQV13690Impl(context: Context, messageCallback: MessageCallback) : QQChatH
             if ("android.widget.TextView" == messageItemChild.className && j == 0) {
                 //"text": "下午2:11"
             }
-            if("android.widget.RelativeLayout" == messageItemChild.className && j ==1){
-                if(messageItemChild.viewIdResourceName.contains(":id/mgo")){
-                    val mgoChild = messageItemChild.getChild(0)
-                    if(mgoChild!=null){
-                        val nickName = mgoChild.contentDescription.toString()
-                        emptyMessage.speaker = nickName.replace("的资料卡","")
-                        mgoChild.recycle()
-                    }
+            if("android.widget.RelativeLayout" == messageItemChild.className && messageItemChild.viewIdResourceName.contains(":id/mgo")){
+                val mgoChild = messageItemChild.getChild(0)
+                if(mgoChild!=null){
+                    val nickName = mgoChild.contentDescription.toString()
+                    emptyMessage.speaker = nickName.replace("的资料卡","")
+                    mgoChild.recycle()
                 }
             }
-            if ("android.widget.FrameLayout" == messageItemChild.className && j == 2) {
+            if ("android.widget.FrameLayout" == messageItemChild.className) {
                 for (k in 0..<messageItemChild.getChildCount()) {
                     val nbtChild = messageItemChild.getChild(k)
                     if ("android.widget.TextView".contentEquals(nbtChild.getClassName()) && k == 0) {
                         val leveAndTag = nbtChild.text.toString()
-                        if(leveAndTag.contains(" ")){
+                        if(leveAndTag.contains(" ") && leveAndTag.uppercase().contains("LV")){
                             val sp = leveAndTag.split(" ")
                             if(sp.size == 2){
                                 emptyMessage.tag = sp[1]
@@ -163,7 +162,6 @@ class QQV13690Impl(context: Context, messageCallback: MessageCallback) : QQChatH
             }
             messageItemChild.recycle()
         }
-        FileLogger.d(TAG,emptyMessage.toString())
         return emptyMessage
     }
 
