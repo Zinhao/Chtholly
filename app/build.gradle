@@ -122,6 +122,8 @@ dependencies {
     implementation "org.jetbrains.kotlin:kotlin-reflect:1.9.0"
     // Moshi Kotlin适配器（核心修复包）
     implementation "com.squareup.moshi:moshi-kotlin:1.15.0"
+    // 关键点：使用 Codegen（注解处理器）
+    implementation "com.squareup.moshi:moshi-kotlin-codegen:1.15.1"
 
 //    implementation("com.google.genai:google-genai:1.45.0")
     //飞书

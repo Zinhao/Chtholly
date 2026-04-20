@@ -91,8 +91,8 @@ class QQV13690Impl(context: Context, messageCallback: MessageCallback) : QQChatH
                     }
                 }
                 waitFillMessage.message = messageText.replace("@" + BotApp.getInstance().botName, "").trim { it <= ' ' }
-                if (messageList.isNotEmpty()) {
-                    val last = messageList.last()
+                if (checkSameList.isNotEmpty()) {
+                    val last = checkSameList.last()
                     if (last.message == waitFillMessage.message && System.currentTimeMillis() - last.getTimeStamp() < 10000) {
                         Log.d(
                             TAG,
@@ -115,7 +115,7 @@ class QQV13690Impl(context: Context, messageCallback: MessageCallback) : QQChatH
                     )
                 }
                 BotApp.getInstance().insert(waitFillMessage)
-                messageList.add(waitFillMessage)
+                checkSameList.add(waitFillMessage)
                 messageCallback.onFind(waitFillMessage)
             }
         }
@@ -172,7 +172,7 @@ class QQV13690Impl(context: Context, messageCallback: MessageCallback) : QQChatH
         val grayBar = id2FindGroupLastMessage(nodeInfo)
         grayBar?.let { grayBarMessage->
             BotApp.getInstance().insert(grayBarMessage)
-            messageList.add(grayBarMessage)
+            checkSameList.add(grayBarMessage)
             messageCallback.onFind(grayBarMessage)
         }
     }

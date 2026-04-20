@@ -12,6 +12,11 @@ import com.zinhao.chtholly.NekoChatService;
 import com.zinhao.chtholly.entity.Command;
 import com.zinhao.chtholly.entity.Message;
 import com.zinhao.chtholly.entity.Step;
+import com.zinhao.chtholly.network.gemini.Content;
+import com.zinhao.chtholly.network.gemini.Part;
+import com.zinhao.chtholly.session.GeminiGateWayAgent;
+import com.zinhao.chtholly.session.GeminiSession;
+import com.zinhao.chtholly.session.NekoSession;
 
 import java.util.*;
 
@@ -19,7 +24,7 @@ public class QQChatHandler extends BaseChatHandler {
     private static final String TAG = "QQChatHandler";
     public static final String PACKAGE_NAME = "com.tencent.mobileqq";
 
-    protected final List<Message> messageList = new Vector<>();
+    protected final List<Message> checkSameList = new Vector<>();
 
     protected String currentPageName;
     private String targetChatTitle = null;
@@ -27,10 +32,13 @@ public class QQChatHandler extends BaseChatHandler {
     private final String versionName;
     private int versionCode = 0;
 
+    private GeminiGateWayAgent  gateWayAgent;
+
     public QQChatHandler(Context context, MessageCallback messageCallback) {
         super(messageCallback);
         versionName = getAppVersion(context,PACKAGE_NAME);
         versionCode = getAppVersionCode(context,PACKAGE_NAME);
+        gateWayAgent = new GeminiGateWayAgent(BotApp.getInstance().getChatUrl(),BotApp.getInstance().getApiKey());
     }
 
     public int getVersionCode() {
@@ -90,33 +98,56 @@ public class QQChatHandler extends BaseChatHandler {
         if (hitMessage.speaker == null || hitMessage.message == null) {
             return;
         }
-        if (isPersonal) {
-            // 此处不要去验证$message.speaker,因为id2FindAdminLastMessage()中，speaker都填的是$AdminName
-            if (isAtName(hitMessage, BotApp.getInstance().getAdminName())) {
-                Log.i(TAG, "findAddNewChatMessage:last is @admin message!");
-                return;
-            }
-        } else {
-            if (!isAtName(hitMessage, botName)) {
-                if(!hitMessage.isOther()){
+
+        if(!checkSameList.isEmpty()){
+            for(Message message : checkSameList){
+                if(message.message.equals(hitMessage.message)){
+                    Log.d(TAG, "same message:"+hitMessage.message +", size:"+checkSameList.size());
                     return;
                 }
             }
+        }
+
+        if (isPersonal) {
+            // 此处不要去验证$message.speaker,因为id2FindAdminLastMessage()中，speaker都填的是$AdminName
+            if (isAtName(hitMessage, BotApp.getInstance().getAdminName())) {
+                Log.i(TAG, "last is @admin message!");
+                return;
+            }
+        } else {
             if (botName.equals(hitMessage.speaker)) {
+                return;
+            }
+            boolean pass = isAtName(hitMessage, botName);
+            if(hitMessage.isOther()){
+                pass = true;
+            }
+            if(!pass){
+                if(hitMessage.message.startsWith("@")){
+                    Log.i(TAG, "@other person, return!");
+                   return;
+                }
+                Content c1;
+                if(checkSameList.isEmpty()){
+                    c1 = new Content(Collections.singletonList(new Part("(EMPTY)", null,
+                            null, null)), GeminiSession.ROLE_USER);
+                }else{
+                    c1 = new Content(Collections.singletonList(new Part(checkSameList.get(checkSameList.size()-1).message, null,
+                            null, null)), GeminiSession.ROLE_USER);
+                }
+                Content c2 = new Content(Collections.singletonList(new Part(hitMessage.message, null,
+                        null, null)), GeminiSession.ROLE_USER);
+
+                checkSameList.add(hitMessage);
+                pass = gateWayAgent.needReply(Arrays.asList(c1,c2));
+            }else{
+                checkSameList.add(hitMessage);
+            }
+            if(!pass){
                 return;
             }
         }
 
-        hitMessage.message = hitMessage.message.replace("@" + botName, "").trim();
-        if (!messageList.isEmpty()) {
-            Message last = messageList.get(messageList.size() - 1);
-            if (last.message.equals(hitMessage.message)
-                    && System.currentTimeMillis() - last.getTimeStamp() < 30000) {
-                Log.d(TAG, "findLastMessage: in close time, same message:"+last.message);
-                //in close time, same message
-                return;
-            }
-        }
         if("群主".equals(hitMessage.tag) || "管理员".equals(hitMessage.tag)) {
             hitMessage.setEnableCommand(true);
         }
@@ -125,7 +156,9 @@ public class QQChatHandler extends BaseChatHandler {
                     String.format(Locale.US, "✨findAddNewChatMessage: %s", hitMessage));
         }
         BotApp.getInstance().insert(hitMessage);
-        messageList.add(hitMessage);
+        if(checkSameList.size() > 20){
+            checkSameList.remove(0);
+        }
         messageCallback.onFind(hitMessage);
     }
 
@@ -168,7 +201,9 @@ public class QQChatHandler extends BaseChatHandler {
                 // chat 文本消息
                 if (QQChatHandler.CHAT_GROUP.equals(pageName)) {
                     updatePageNeedNode(event.getSource());
-                    findLastMessage(event.getSource());
+                    AsyncHelper.INSTANCE.doAsyncPart(()->{
+                        findLastMessage(event.getSource());
+                    });
                 }
             }
         } else {
@@ -176,7 +211,9 @@ public class QQChatHandler extends BaseChatHandler {
 //                拍一拍，欢迎消息，撤回消息
                 if (QQChatHandler.CHAT_GROUP.equals(pageName)) {
                     updatePageNeedNode(event.getSource());
-                    findLastMessage(event.getSource());
+                    AsyncHelper.INSTANCE.doAsyncPart(()->{
+                        findLastMessage(event.getSource());
+                    });
                 }
             }
         }
@@ -206,6 +243,9 @@ public class QQChatHandler extends BaseChatHandler {
                     // ab6[2] = nbt[2]["text"] = 群主
                     for (int k = 0; k < messageItemChild.getChildCount(); k++) {
                         AccessibilityNodeInfo nbtChild = messageItemChild.getChild(k);
+                        if(nbtChild == null){
+                            continue;
+                        }
                         if("android.widget.ImageView".contentEquals(nbtChild.getClassName()) && k!=0){
                             String desc = nbtChild.getContentDescription().toString();
                             int leve = 0;

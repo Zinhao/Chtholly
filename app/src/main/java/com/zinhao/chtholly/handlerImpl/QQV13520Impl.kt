@@ -153,8 +153,8 @@ class QQV13520Impl(context: Context, messageCallback: MessageCallback) : QQChatH
             }
         }
         hitMessage.message = hitMessage.message.replace("@" + botName, "").trim { it <= ' ' }
-        if (!messageList.isEmpty()) {
-            val last = messageList.get(messageList.size - 1)
+        if (!checkSameList.isEmpty()) {
+            val last = checkSameList.get(checkSameList.size - 1)
             if (last.message == hitMessage.message && System.currentTimeMillis() - last.getTimeStamp() < 10000) {
                 Log.d(
                     TAG,
@@ -179,7 +179,7 @@ class QQV13520Impl(context: Context, messageCallback: MessageCallback) : QQChatH
             )
         }
         BotApp.getInstance().insert(hitMessage)
-        messageList.add(hitMessage)
+        checkSameList.add(hitMessage)
         messageCallback.onFind(hitMessage)
     }
 

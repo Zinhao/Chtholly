@@ -171,7 +171,7 @@ class GeminiAIAskAble : NetAiAskAble {
         val moshi: Moshi = Moshi.Builder().add(KotlinJsonAdapterFactory()).build()
 
         @OptIn(ExperimentalStdlibApi::class)
-        private val geminiResponseAdapter: JsonAdapter<GeminiResponse> =
+        val geminiResponseAdapter: JsonAdapter<GeminiResponse> =
             moshi.adapter<GeminiResponse>()
 
 

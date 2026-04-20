@@ -62,6 +62,8 @@ public class BotApp extends Application {
     private MessageDao messageDao;
     private AICharacterDao aiCharacterDao;
 
+    private String replyGateway;
+
     private int speakerId = 0;
 
     public void setTtsUrl(String ttsUrl) {
@@ -113,7 +115,7 @@ public class BotApp extends Application {
         feishuAppId = sharedPreferences.getString(CONFIG_FEISHU_APP_ID,"");
         feishuAppSecret = sharedPreferences.getString(CONFIG_FEISHU_APP_SECRET,"");
         feishuReceiveOpenid = sharedPreferences.getString(CONFIG_FEISHU_RECEIVE_OPENID,"");
-
+        replyGateway = getString(R.string.reply_gateway);
         if(apiKey.isEmpty()){
             mode = NekoSession.class;
         }else{
@@ -124,6 +126,10 @@ public class BotApp extends Application {
                 .build();
         messageDao = database.messageDao();
         aiCharacterDao = database.characterDao();
+    }
+
+    public String getReplyGateway() {
+        return replyGateway;
     }
 
     public SharedPreferences getSharedPreferences() {
@@ -248,6 +254,16 @@ public class BotApp extends Application {
             @Override
             public void run() {
                 List<Message> result = messageDao.getAll();
+                listener.onSuccess(result);
+            }
+        });
+    }
+
+    public void getLastTenMessages(MessageDao.MessageGetAllListener listener){
+        AsyncHelper.INSTANCE.doAsyncPart(new Runnable() {
+            @Override
+            public void run() {
+                List<Message> result = messageDao.getLastTenMessages();
                 listener.onSuccess(result);
             }
         });

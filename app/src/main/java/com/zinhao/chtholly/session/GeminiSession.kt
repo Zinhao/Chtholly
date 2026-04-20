@@ -1,18 +1,26 @@
 package com.zinhao.chtholly.session
 
 import android.util.Log
+import com.squareup.moshi.JsonAdapter
+import com.squareup.moshi.Moshi
+import com.squareup.moshi.Types
+import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import com.zinhao.chtholly.BotApp
 import com.zinhao.chtholly.NekoChatService
 import com.zinhao.chtholly.db.MessageDao
 import com.zinhao.chtholly.entity.GeminiAIAskAble
 import com.zinhao.chtholly.entity.Message
 import com.zinhao.chtholly.entity.NetAiAskAble
-import com.zinhao.chtholly.network.LoggingInterceptor
-import com.zinhao.chtholly.network.gemini.Content
-import com.zinhao.chtholly.network.gemini.Part
 import com.zinhao.chtholly.network.GEMINI_TOOLS
+import com.zinhao.chtholly.network.LoggingInterceptor
 import com.zinhao.chtholly.network.Tool
+import com.zinhao.chtholly.network.gemini.Content
 import com.zinhao.chtholly.network.gemini.FunctionResponse
+import com.zinhao.chtholly.network.gemini.GenerationConfig
+import com.zinhao.chtholly.network.gemini.Part
+import com.zinhao.chtholly.network.gemini.PostRequest
+import com.zinhao.chtholly.network.gemini.SystemInstruction
+import com.zinhao.chtholly.network.gemini.ThinkingConfig
 import com.zinhao.chtholly.session.RemoteChatApiSession.RemoteModel
 import com.zinhao.chtholly.utils.FileLogger
 import okhttp3.MediaType.Companion.toMediaType
@@ -24,99 +32,62 @@ import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
 import java.text.SimpleDateFormat
-import java.util.Locale
+import java.util.*
 import java.util.concurrent.TimeUnit
 
 class GeminiSession private constructor(private var chatApi: String?) : NekoSession(),
     RemoteChatApiSession {
-    private val data: JSONObject = JSONObject()
+    private var data: PostRequest
+    private val tools: MutableList<Tool>  = arrayListOf()
+    private var systemInstruction: SystemInstruction
+    private val contents: MutableList<Content>  = arrayListOf()
+
     private var currentModel: RemoteModel = RemoteModel(MODEL_GEMINI_3_FL_PRE)
     private var lastMessageTimeStamp: Long = 0
     private val modelList: List<RemoteModel> = arrayListOf(
         RemoteModel(MODEL_GEMINI_3_PRO_PRE),
         RemoteModel(MODEL_GEMINI_3_FL_PRE)
     )
-    private var contents: MutableList<Content>  = arrayListOf()
-    private val tools: MutableList<Tool>  = arrayListOf()
+
     private val okHttpClient: OkHttpClient = OkHttpClient.Builder()
         .callTimeout(100, TimeUnit.SECONDS)
         .writeTimeout(100, TimeUnit.SECONDS)
         .readTimeout(100, TimeUnit.SECONDS)
         .addInterceptor(LoggingInterceptor())
         .build()
-    private val systemInstruction: JSONObject = JSONObject()
+
+    private val moshi: Moshi = Moshi.Builder().add(KotlinJsonAdapterFactory()).build()
+    private val dataAdapter: JsonAdapter<PostRequest> = moshi.adapter(PostRequest::class.java)
 
     init {
-        contents.clear()
+        loadChatHistory()
+        systemInstruction = SystemInstruction(listOf(Part(BotApp.getInstance().aiSoul,
+            null,null,null)))
+
+        data = PostRequest(null,
+            systemInstruction,
+            GenerationConfig(ThinkingConfig("low"))
+            ,contents)
         tools.add(GEMINI_TOOLS)
-        try {
-            setAgentPrompt(BotApp.getInstance().aiSoul)
-
-            data.put(ROLE_SYSTEM, systemInstruction)
-
-            data.put(CONTENTS, contentsToJsonArray())
-            data.put("tools", toolsToJsonArray())
-
-            val t = JSONObject()
-            t.put("thinkingLevel", "low")
-            val generationConfigObj = JSONObject()
-            generationConfigObj.put("thinkingConfig", t)
-            data.put("generationConfig", generationConfigObj)
-            loadChatHistory()
-        } catch (e: JSONException) {
-            throw RuntimeException(e)
-        }
-    }
-
-    fun contentsToJsonArray(): JSONArray{
-        val contentArr = JSONArray()
-        for (content in contents){
-            contentArr.put(JSONObject(contentToJson(content)))
-        }
-        return contentArr
-    }
-
-    fun contentToJson(content: Content): String {
-        // 获取针对 Content 类的 Adapter
-        val jsonAdapter = GeminiAIAskAble.moshi.adapter(Content::class.java)
-        // 将对象转换为 JSON 字符串
-        return jsonAdapter.toJson(content)
-    }
-
-    fun toolsToJsonArray(): JSONArray{
-        val toolArr = JSONArray()
-        val toolsAdapter = GeminiAIAskAble.moshi.adapter(Tool::class.java)
-        for (tool in tools){
-            toolArr.put(JSONObject(toolsAdapter.toJson(tool)))
-        }
-        return toolArr
     }
 
     override fun setAgentPrompt(charaDesc: String) {
-        val partsArray = JSONArray()
-        val st = JSONObject()
         val agentSys = charaDesc.replace("\$name", BotApp.getInstance().getBotName())
-
-        try {
-            st.put("text", agentSys)
-            partsArray.put(st)
-
-            systemInstruction.put("parts", partsArray)
-        } catch (e: JSONException) {
-            Log.d(TAG, "setChara: failed.")
-        }
+        data.systemInstruction = SystemInstruction(listOf(Part(agentSys,
+            null,null,null)))
     }
 
-    override fun getAgentPrompt(): String {
-        try {
-            return systemInstruction.optString(CONTENTS)
-        } catch (e: JSONException) {
-            throw RuntimeException(e)
-        }
+    fun lastContent(): Content?{
+        if(contents.isEmpty()){return null}
+        return contents.last()
+    }
+
+    override fun getAgentPrompt(): String? {
+        return data.systemInstruction.parts.firstOrNull()?.text
     }
 
     override fun getContextChat(): String {
-        return data.getJSONArray(CONTENTS).toString()
+        return dataAdapter.toJson(data)
     }
 
     override fun clearContext():Int {
@@ -126,8 +97,8 @@ class GeminiSession private constructor(private var chatApi: String?) : NekoSess
     }
 
     override fun loadChatHistory(){
-        contents.clear()
-        BotApp.getInstance().loadMessage(MessageDao.MessageGetAllListener { result ->
+        clearContext()
+        BotApp.getInstance().getLastTenMessages(MessageDao.MessageGetAllListener { result ->
             if(result.isEmpty()){return@MessageGetAllListener}
             val intoContentMessage = arrayListOf<Message>()
             if(result.size <= 10){
@@ -189,7 +160,6 @@ class GeminiSession private constructor(private var chatApi: String?) : NekoSess
         }else if(contents.isNotEmpty()){
             FileLogger.i(TAG, "callApi: ${contents.last().parts.firstOrNull()?.functionResponse.toString()}")
         }
-        data.put(CONTENTS, contentsToJsonArray())
         return requestChatCompletions(message)
     }
 
@@ -200,7 +170,7 @@ class GeminiSession private constructor(private var chatApi: String?) : NekoSess
             BotApp.getInstance().getPackageName(),
             question
         ) { message ->
-            contents = arrayListOf()
+            clearContext()
             addContent(Content(arrayListOf(Part(message.answer.message, null,null,"")), ROLE_MODEL))
             NekoChatService.getInstance()
                 .addLogcat("requestChatSummarize:" + message.getAnswer().getMessage())
@@ -210,7 +180,7 @@ class GeminiSession private constructor(private var chatApi: String?) : NekoSess
     }
 
     override fun requestChatCompletions(message: NetAiAskAble): Boolean {
-        val requestBody: RequestBody = data.toString().toRequestBody("application/json;charset=utf-8".toMediaType())
+        val requestBody: RequestBody = dataAdapter.toJson(data).toRequestBody("application/json;charset=utf-8".toMediaType())
         val request = Request.Builder().post(requestBody)
             .url("$chatApi/models/${currentModel.str}:generateContent")
             .addHeader("Content-Type", "application/json")
