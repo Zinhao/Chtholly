@@ -102,8 +102,14 @@ public abstract class Command{
 
     protected boolean handleAsk() {
         Log.i(TAG,"Command handleAsk:"+getQuestion().toString());
-        if(getQuestion().getMessage().startsWith("/")){
-            if(!getQuestion().isEnableCommand()){
+        if(getQuestion().isEnableCommand()){
+            if(getQuestion().getMessage()== null){
+                return false;
+            }
+            if(getQuestion().getMessage().isEmpty()){
+                return false;
+            }
+            if(!getQuestion().getMessage().replace("@"+BotApp.getInstance().getBotName(),"").trim().startsWith("/")){
                 return false;
             }
             Log.i(TAG,"Command invoke");

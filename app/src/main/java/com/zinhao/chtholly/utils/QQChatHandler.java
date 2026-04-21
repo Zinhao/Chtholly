@@ -111,45 +111,23 @@ public class QQChatHandler extends BaseChatHandler {
         if (isPersonal) {
             // 此处不要去验证$message.speaker,因为id2FindAdminLastMessage()中，speaker都填的是$AdminName
             if (isAtName(hitMessage, BotApp.getInstance().getAdminName())) {
-                Log.i(TAG, "last is @admin message!");
+                Log.i(TAG, "last is bot message!");
                 return;
             }
         } else {
             if (botName.equals(hitMessage.speaker)) {
                 return;
             }
-            boolean pass = isAtName(hitMessage, botName);
-            if(hitMessage.isOther()){
-                pass = true;
-            }
-            if(!pass){
-                if(hitMessage.message.startsWith("@")){
-                    Log.i(TAG, "@other person, return!");
-                   return;
-                }
-                Content c1;
-                if(checkSameList.isEmpty()){
-                    c1 = new Content(Collections.singletonList(new Part("(EMPTY)", null,
-                            null, null)), GeminiSession.ROLE_USER);
-                }else{
-                    c1 = new Content(Collections.singletonList(new Part(checkSameList.get(checkSameList.size()-1).message, null,
-                            null, null)), GeminiSession.ROLE_USER);
-                }
-                Content c2 = new Content(Collections.singletonList(new Part(hitMessage.message, null,
-                        null, null)), GeminiSession.ROLE_USER);
-
-                checkSameList.add(hitMessage);
-                pass = gateWayAgent.needReply(Arrays.asList(c1,c2));
-            }else{
-                checkSameList.add(hitMessage);
-            }
+            boolean pass = messageCheckIn(hitMessage,BotApp.getInstance().getBotName());
             if(!pass){
                 return;
             }
         }
-
         if("群主".equals(hitMessage.tag) || "管理员".equals(hitMessage.tag)) {
             hitMessage.setEnableCommand(true);
+        }
+        if(Objects.equals(currentPageName, CHAT_PERSON)){
+            hitMessage.setMessage(hitMessage.getMessage().replace("@"+BotApp.getInstance().getBotName(),""));
         }
         if(NekoChatService.getInstance()!=null){
             NekoChatService.getInstance().addLogcat(
@@ -160,6 +138,42 @@ public class QQChatHandler extends BaseChatHandler {
             checkSameList.remove(0);
         }
         messageCallback.onFind(hitMessage);
+    }
+
+    private boolean messageCheckIn(Message hitMessage,String botName){
+        boolean pass = isAtName(hitMessage, botName);
+        if(hitMessage.isOther()){
+            pass = true;
+        }
+        if (pass) {
+            // 检查@消息频率
+            if(!checkSameList.isEmpty() && hitMessage.message.contains("@")){
+                if(System.currentTimeMillis() - checkSameList.get(0).timeStamp < 2*60*1000){
+                    FileLogger.INSTANCE.i(TAG,"message too busy!");
+                    return false;
+                }
+            }
+            checkSameList.add(hitMessage);
+        } else {
+            if(hitMessage.message.startsWith("@")){
+                Log.i(TAG, "@other person, return!");
+                return false;
+            }
+            Content c1;
+            if(checkSameList.isEmpty()){
+                c1 = new Content(Collections.singletonList(new Part("(EMPTY)", null,
+                        null, null)), GeminiSession.ROLE_USER);
+            }else{
+                c1 = new Content(Collections.singletonList(new Part(checkSameList.get(checkSameList.size()-1).message, null,
+                        null, null)), GeminiSession.ROLE_USER);
+            }
+            Content c2 = new Content(Collections.singletonList(new Part(hitMessage.message, null,
+                    null, null)), GeminiSession.ROLE_USER);
+
+            checkSameList.add(hitMessage);
+            pass = gateWayAgent.needReply(Arrays.asList(c1,c2));
+        }
+        return pass;
     }
 
     @Override

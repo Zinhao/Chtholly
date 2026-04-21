@@ -202,9 +202,11 @@ class QQV13690Impl(context: Context, messageCallback: MessageCallback) : QQChatH
             isChatMessage = true
         }
         if(isChatMessage){
-            val lastNotFillMessage = doubleClickLastMessage(rootNodeList!!.last())
-            lastNotFillMessage.let {
-                doubleClickWaitFillMessage = it
+            rootNodeList?.last()?.let {
+                val lastNotFillMessage = doubleClickLastMessage(it)
+                lastNotFillMessage.let {
+                    doubleClickWaitFillMessage = it
+                }
             }
         }else{
             vd6NodeList?.let {
