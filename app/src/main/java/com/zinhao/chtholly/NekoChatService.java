@@ -114,8 +114,8 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
         } else {
             startForeground(1, getNotification());
         }
-        mainTimer.schedule(mainTimeTask, 0, 500);
-
+        mainTimer.schedule(mainTimeTask, 0, LOOP_INTERVAL);
+        BotApp.getInstance().getSession();
         AsyncHelper.INSTANCE.doAsyncPart(new Runnable() {
             @Override
             public void run() {
@@ -133,9 +133,15 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
     private static final long MINUTE_MILL = 60*1000;
     private static final long HOUR_MILL = 60*MINUTE_MILL;
     private static final long BORING_ASK_TIME = 48 * HOUR_MILL;
+    private long timeTick = 0;
+    private static final int LOOP_INTERVAL = 500;
     private final TimerTask mainTimeTask = new TimerTask() {
         @Override
         public void run() {
+            timeTick++;
+            if(timeTick % 120 == 0){
+                qqChatHandler.plusHp();
+            }
             ReminderManager.ReminderItem reminderItem = ReminderManager.INSTANCE.getNextReminder();
             if(reminderItem != null){
                 if(reminderItem.getStartTime() < System.currentTimeMillis()){
@@ -690,8 +696,10 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
 
     @Override
     public void onFind(Message message) {
-        logcatBinding.callApiProgress.setVisibility(View.VISIBLE);
-        addToQAList(message);
+        mHandler.post(()->{
+            logcatBinding.callApiProgress.setVisibility(View.VISIBLE);
+            addToQAList(message);
+        });
     }
 
     public void onFindFeiShuMessage(Message message){

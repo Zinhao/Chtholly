@@ -1,14 +1,13 @@
 package com.zinhao.chtholly.session
 
 import android.util.Log
+import androidx.media3.common.C
 import com.squareup.moshi.JsonAdapter
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import com.zinhao.chtholly.BotApp
 import com.zinhao.chtholly.entity.GeminiAIAskAble.Companion.geminiResponseAdapter
-import com.zinhao.chtholly.network.GEMINI_TOOLS
 import com.zinhao.chtholly.network.LoggingInterceptor
-import com.zinhao.chtholly.network.Tool
 import com.zinhao.chtholly.network.gemini.*
 import com.zinhao.chtholly.session.GeminiSession.Companion.MODEL_GEMINI_3_FL_PRE
 import okhttp3.MediaType.Companion.toMediaType
@@ -18,19 +17,18 @@ import okhttp3.RequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
 import java.util.concurrent.TimeUnit
 
-class GeminiGateWayAgent(val api: String, val key: String) {
+class SummarizeChatAgent(val api: String, val key: String) {
     private val okHttpClient: OkHttpClient = OkHttpClient.Builder()
-        .callTimeout(10, TimeUnit.SECONDS)
-        .writeTimeout(10, TimeUnit.SECONDS)
-        .readTimeout(10, TimeUnit.SECONDS)
+        .callTimeout(100, TimeUnit.SECONDS)
+        .writeTimeout(100, TimeUnit.SECONDS)
+        .readTimeout(100, TimeUnit.SECONDS)
         .addInterceptor(LoggingInterceptor())
         .build()
 
     private var data: PostRequest
-    private val tools: MutableList<Tool>  = arrayListOf()
     private val systemInstruction: SystemInstruction = SystemInstruction(listOf(
         Part(
-            BotApp.getInstance().replyGateWayAgentDesc.replace("\$name", BotApp.getInstance().botName),
+            BotApp.getInstance().summarizeChatAgentDesc,
             null, null, null
         )
     ))
@@ -42,30 +40,32 @@ class GeminiGateWayAgent(val api: String, val key: String) {
     private val dataAdapter: JsonAdapter<PostRequest> = moshi.adapter(PostRequest::class.java)
 
     init {
+        Log.d("SummarizeChatAgent", "init:"+ systemInstruction.parts.firstOrNull()?.text)
         data = PostRequest(null,
             systemInstruction,
             GenerationConfig(ThinkingConfig("low"))
             ,contents)
-        tools.add(GEMINI_TOOLS)
-        Log.d("GeminiGateWayAgent", ""+ systemInstruction.parts.firstOrNull()?.text)
     }
 
     fun printContents() {
         val sb = StringBuilder()
         contents.forEach {
             it.parts.firstOrNull()?.text?.let {
-                sb.append(it).append("\n")
+                sb.append(it.replace('\n','\t')).append("\n")
             }
         }
-        Log.d("GeminiGateWayAgent", sb.toString())
+        Log.d("SummarizeChatAgent", sb.toString())
     }
 
-    fun needReply(inputs: List<Content>): Boolean {
-        if(key.isBlank()) return false
-        if(api.isBlank()) return false
-        if(inputs.isEmpty()) return false
+    fun requestSummarize(inputs: List<Content>): Content? {
+        Log.d("SummarizeChatAgent", "requestSummarize:${inputs.size}")
+        if(key.isBlank()) return null
+        if(api.isBlank()) return null
+        if(inputs.isEmpty()) return null
+
         contents.clear()
         contents.addAll(inputs)
+
         printContents()
         val dataString = dataAdapter.toJson(data)
         val requestBody: RequestBody = dataString.toRequestBody("application/json;charset=utf-8".toMediaType())
@@ -83,18 +83,14 @@ class GeminiGateWayAgent(val api: String, val key: String) {
                 val candidate = geminiAnswerResult?.candidates?.firstOrNull()
                 candidate?.let {
                     if (candidate.finishReason.lowercase() == "stop"){
-                        candidate.content.parts.firstOrNull()?.let {
-                            val r =  it.text?.lowercase() == "true" || it.text?.lowercase() == "yes"
-                            Log.d("GeminiGateWayAgent", "聊天意图: ${it.text}")
-                            return r
-                        }
+                        return candidate.content
                     }
                 }
             }
         }catch (e: Exception){
-            return false
+            return null
         }
 
-        return false
+        return null
     }
 }

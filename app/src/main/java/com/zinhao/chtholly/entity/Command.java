@@ -17,16 +17,18 @@ import com.zinhao.chtholly.session.RemoteChatApiSession;
 import com.zinhao.chtholly.session.GeminiSession;
 import com.zinhao.chtholly.session.NekoSession;
 import com.zinhao.chtholly.session.OpenAiSession;
-import com.zinhao.chtholly.utils.ChatPageViewIds;
-import com.zinhao.chtholly.utils.QQChatHandler;
+import com.zinhao.chtholly.utils.*;
 import org.jetbrains.annotations.NotNull;
 
+import java.io.File;
+import java.io.IOException;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.regex.Pattern;
 
@@ -109,20 +111,26 @@ public abstract class Command{
             if(getQuestion().getMessage().isEmpty()){
                 return false;
             }
-            if(!getQuestion().getMessage().replace("@"+BotApp.getInstance().getBotName(),"").trim().startsWith("/")){
+            String noAtMessage = getQuestion().getMessage().replace("@"+BotApp.getInstance().getBotName(),"").trim();
+            if(!noAtMessage.startsWith("/")){
                 return false;
             }
             Log.i(TAG,"Command invoke");
             try {
-                String[] methodAndArgs = parseArgs();
+                String[] methodAndArgs = parseArgs(noAtMessage);
                 String MethodName = methodAndArgs[0];
                 if(methodAndArgs.length>1){
                     args = new String[methodAndArgs.length-1];
                     System.arraycopy(methodAndArgs, 1, args, 0, methodAndArgs.length - 1);
                 }
                 Method method = Command.class.getDeclaredMethod(MethodName.replace('/',' ').trim());
-                method.invoke(this);
-                replyReady = true;
+                Object result = method.invoke(this);
+                if(result instanceof Boolean){
+                    boolean bool = ((Boolean)result).booleanValue();
+                    if(bool){
+                        replyReady = true;
+                    }
+                }
                 return true;
             } catch (NoSuchMethodException | InvocationTargetException | IllegalAccessException e) {
                 Log.e(getClass().getSimpleName(), "Command invoke err: " + getClass().getSimpleName(), e);
@@ -255,13 +263,36 @@ public abstract class Command{
     @HelpDoc(desc = "消息上下文")
     protected boolean printContext() {
         NekoSession nekoSession = BotApp.getInstance().getSession();
+        boolean wait = false;
         if(nekoSession instanceof RemoteChatApiSession){
-            String his = ((RemoteChatApiSession) nekoSession).getContextChat();
-            getAnswer().setMessage(his);
+            String chatContext = ((RemoteChatApiSession) nekoSession).getContextChat();
+            SimpleDateFormat dateTimeFormat = new SimpleDateFormat("yyyyMMddHHmm", Locale.CHINA);
+            if(NekoChatService.getInstance()!=null && QQChatHandler.PACKAGE_NAME.equals(packageName)){
+                String chatTitle = NekoChatService.getInstance().getQqChatHandler().getChatTitle();
+                if(chatTitle!=null && !chatTitle.isEmpty()){
+                    wait = true;
+                    File file = new File(LocalFileCache.getInstance().getWorkSpaceDir(), "printContext_"+dateTimeFormat.format(new Date())+".json");
+                    AsyncHelper.INSTANCE.doAsyncPart(new Runnable() {
+                        @Override
+                        public void run() {
+                            try {
+                                LocalFileCache.getInstance().writeTextSync(file,chatContext);
+                                setReplyReady(true);
+                            } catch (IOException e) {
+                                FileLogger.INSTANCE.e(TAG,e.getMessage(),e);
+                            }
+                        }
+                    });
+                    initShareStepTo(chatTitle,NekoChatService.FUNC_SHARE_FILE,file.getPath());
+                    getAnswer().setMessage(null);
+                }
+            }else{
+                getAnswer().setMessage(chatContext);
+            }
         }else{
             getAnswer().setMessage(NekoAskAble.HARD);
         }
-        return true;
+        return !wait;
     }
 
     @HelpDoc(desc = "切换模型")
@@ -438,8 +469,7 @@ public abstract class Command{
         return true;
     }
 
-    private String[] parseArgs() {
-        String input = getQuestion().getMessage().trim();
+    private String[] parseArgs(String input) {
         if (input.isEmpty()) {
             return new String[0];
         }

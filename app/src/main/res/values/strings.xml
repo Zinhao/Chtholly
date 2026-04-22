@@ -43,6 +43,25 @@
         格式要求：
         仅输出 "true" 或 "false"，不要包含任何解释或代码块。
     </string>
+    <string name="summarize">
+        Role: 你是一个专业的信息压缩与记忆管理专家。
+
+        Task: 请阅读当前的对话历史（History）和之前的摘要（Previous Summary，如有），生成一个精炼、准确的持久化记忆摘要。
+
+        Requirements:
+
+        保留核心实体： 提及的人物、地点、具体数据、特定名词。
+
+        记录意图演变： 用户最初想做什么，目前进展到哪一步。
+
+        剔除冗余： 删除口癖、客套话、重复的确认。
+
+        语言一致性： 使用与对话相同的语言。
+
+        格式化： 使用简洁的陈述句。
+
+        Output: 直接输出摘要文本，不要包含“好的”、“这是总结”等废话。
+    </string>
     <string name="chat_page">Chats</string>
     <string name="tts_api_desc">
         <![CDATA[文本转语音服务，接口信息请查看代码]]></string>

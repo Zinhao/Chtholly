@@ -3,12 +3,9 @@ package com.zinhao.chtholly.session
 import android.util.Log
 import com.squareup.moshi.JsonAdapter
 import com.squareup.moshi.Moshi
-import com.squareup.moshi.Types
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import com.zinhao.chtholly.BotApp
-import com.zinhao.chtholly.NekoChatService
 import com.zinhao.chtholly.db.MessageDao
-import com.zinhao.chtholly.entity.GeminiAIAskAble
 import com.zinhao.chtholly.entity.Message
 import com.zinhao.chtholly.entity.NetAiAskAble
 import com.zinhao.chtholly.network.GEMINI_TOOLS
@@ -22,25 +19,25 @@ import com.zinhao.chtholly.network.gemini.PostRequest
 import com.zinhao.chtholly.network.gemini.SystemInstruction
 import com.zinhao.chtholly.network.gemini.ThinkingConfig
 import com.zinhao.chtholly.session.RemoteChatApiSession.RemoteModel
+import com.zinhao.chtholly.utils.AsyncHelper
 import com.zinhao.chtholly.utils.FileLogger
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
-import org.json.JSONArray
 import org.json.JSONException
-import org.json.JSONObject
 import java.text.SimpleDateFormat
 import java.util.*
 import java.util.concurrent.TimeUnit
 
-class GeminiSession private constructor(private var chatApi: String?) : NekoSession(),
+class GeminiSession private constructor(private var chatApi: String) : NekoSession(),
     RemoteChatApiSession {
     private var data: PostRequest
     private val tools: MutableList<Tool>  = arrayListOf()
     private var systemInstruction: SystemInstruction
     private val contents: MutableList<Content>  = arrayListOf()
+    private val summarizeChatAgent: SummarizeChatAgent
 
     private var currentModel: RemoteModel = RemoteModel(MODEL_GEMINI_3_FL_PRE)
     private var lastMessageTimeStamp: Long = 0
@@ -61,6 +58,7 @@ class GeminiSession private constructor(private var chatApi: String?) : NekoSess
 
     init {
         loadChatHistory()
+        summarizeChatAgent = SummarizeChatAgent(chatApi, BotApp.getInstance().apiKey)
         systemInstruction = SystemInstruction(listOf(Part(BotApp.getInstance().aiSoul,
             null,null,null)))
 
@@ -99,6 +97,7 @@ class GeminiSession private constructor(private var chatApi: String?) : NekoSess
     override fun loadChatHistory(){
         clearContext()
         BotApp.getInstance().getLastTenMessages(MessageDao.MessageGetAllListener { result ->
+            Log.d(TAG, "loadChatHistory: "+result.size)
             if(result.isEmpty()){return@MessageGetAllListener}
             val intoContentMessage = arrayListOf<Message>()
             if(result.size <= 10){
@@ -106,8 +105,10 @@ class GeminiSession private constructor(private var chatApi: String?) : NekoSess
             }else{
                 intoContentMessage.addAll(result.subList(result.size-10, result.size-1))
             }
+            val hisContent = arrayListOf<Content>()
             for (message in intoContentMessage){
-                val messageContent = "${message.message}"
+                val messageContent = "${message.speaker}:${message.message}"
+                Log.d(TAG, "loadChatHistory: ${message.speaker}:${message.message.replace('\n', ' ')}")
                 val role: String
                 if(BotApp.getInstance().botName == message.speaker){
                     role = ROLE_MODEL
@@ -115,8 +116,9 @@ class GeminiSession private constructor(private var chatApi: String?) : NekoSess
                     role = ROLE_USER
                 }
                 val content = Content(listOf(Part(messageContent,null,null,null)),role)
-                contents.add(content)
+                hisContent.add(content)
             }
+            contents.addAll(0,hisContent)
         })
     }
 
@@ -160,23 +162,34 @@ class GeminiSession private constructor(private var chatApi: String?) : NekoSess
         }else if(contents.isNotEmpty()){
             FileLogger.i(TAG, "callApi: ${contents.last().parts.firstOrNull()?.functionResponse.toString()}")
         }
-        return requestChatCompletions(message)
+
+        if(contents.size > SUMMARIZE_SIZE){
+            AsyncHelper.doAsyncPart {
+                // 使用 toList() 或 toMutableList() 立即创建内容的副本
+                val contentToSummarize = contents.subList(0, SUMMARIZE_SIZE - SUMMARIZE_PIN).toList()
+
+                val sumContent = summarizeChatAgent.requestSummarize(contentToSummarize)
+
+                sumContent?.let { summarized ->
+                    summarized.parts.firstOrNull()?.text?.let { FileLogger.i(TAG,"summarizeResult:$it") }
+                    // 同样，先拷贝出最后部分，防止清除上下文后丢失
+                    val lastPinChats = contents.subList(SUMMARIZE_SIZE - SUMMARIZE_PIN, SUMMARIZE_SIZE).toList()
+
+                    clearContext() // 现在可以安全清除了
+
+                    contents.add(summarized)
+                    contents.addAll(lastPinChats)
+                }
+                requestChatCompletions(message)
+            }
+        }else{
+            requestChatCompletions(message)
+        }
+        return true
     }
 
     override fun requestChatSummarize() {
-        NekoChatService.getInstance().addLogcat("requestChatSummarize:length")
-        val question = Message("SYSTEM", "使用不超过50字总结对话", System.currentTimeMillis())
-        val summarizeMessage = GeminiAIAskAble(
-            BotApp.getInstance().getPackageName(),
-            question
-        ) { message ->
-            clearContext()
-            addContent(Content(arrayListOf(Part(message.answer.message, null,null,"")), ROLE_MODEL))
-            NekoChatService.getInstance()
-                .addLogcat("requestChatSummarize:" + message.getAnswer().getMessage())
-            NekoChatService.getInstance().onReplySuccess(message)
-        }
-        summarizeMessage.handle()
+        FileLogger.e(TAG, "requestChatSummarize:length")
     }
 
     override fun requestChatCompletions(message: NetAiAskAble): Boolean {
@@ -232,6 +245,8 @@ class GeminiSession private constructor(private var chatApi: String?) : NekoSess
         const val MODEL_GEMINI_3_PRO_PRE: String = "gemini-3.1-pro-preview"
 
         private val dateFormat = SimpleDateFormat("yyyyMMdd", Locale.CHINA)
+        const val SUMMARIZE_SIZE = 36
+        const val SUMMARIZE_PIN = 8
         private val dateTimeFormat = SimpleDateFormat("yyyy年MM月dd日 HH:mm:ss", Locale.CHINA)
         @JvmStatic
         var instance: GeminiSession? = null

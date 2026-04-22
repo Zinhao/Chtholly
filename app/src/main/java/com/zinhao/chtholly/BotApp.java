@@ -62,7 +62,8 @@ public class BotApp extends Application {
     private MessageDao messageDao;
     private AICharacterDao aiCharacterDao;
 
-    private String replyGateway;
+    private String replyGateWayAgentDesc;
+    private String summarizeChatAgentDesc;
 
     private int speakerId = 0;
 
@@ -115,7 +116,8 @@ public class BotApp extends Application {
         feishuAppId = sharedPreferences.getString(CONFIG_FEISHU_APP_ID,"");
         feishuAppSecret = sharedPreferences.getString(CONFIG_FEISHU_APP_SECRET,"");
         feishuReceiveOpenid = sharedPreferences.getString(CONFIG_FEISHU_RECEIVE_OPENID,"");
-        replyGateway = getString(R.string.reply_gateway);
+        replyGateWayAgentDesc = getString(R.string.reply_gateway);
+        summarizeChatAgentDesc = getString(R.string.summarize);
         if(apiKey.isEmpty()){
             mode = NekoSession.class;
         }else{
@@ -128,8 +130,8 @@ public class BotApp extends Application {
         aiCharacterDao = database.characterDao();
     }
 
-    public String getReplyGateway() {
-        return replyGateway;
+    public String getReplyGateWayAgentDesc() {
+        return replyGateWayAgentDesc;
     }
 
     public SharedPreferences getSharedPreferences() {
@@ -143,6 +145,10 @@ public class BotApp extends Application {
         }else{
             mode = GeminiSession.class;
         }
+    }
+
+    public String getSummarizeChatAgentDesc() {
+        return summarizeChatAgentDesc;
     }
 
     public void setWithSpeaker(boolean withSpeaker) {

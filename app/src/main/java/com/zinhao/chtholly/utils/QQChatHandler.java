@@ -17,6 +17,8 @@ import com.zinhao.chtholly.network.gemini.Part;
 import com.zinhao.chtholly.session.GeminiGateWayAgent;
 import com.zinhao.chtholly.session.GeminiSession;
 import com.zinhao.chtholly.session.NekoSession;
+import com.zinhao.chtholly.session.RemoteChatApiSession;
+import org.checkerframework.checker.units.qual.C;
 
 import java.util.*;
 
@@ -32,7 +34,9 @@ public class QQChatHandler extends BaseChatHandler {
     private final String versionName;
     private int versionCode = 0;
 
-    private GeminiGateWayAgent  gateWayAgent;
+    private final GeminiGateWayAgent gateWayAgent;
+
+    private int hp = 2;
 
     public QQChatHandler(Context context, MessageCallback messageCallback) {
         super(messageCallback);
@@ -47,6 +51,12 @@ public class QQChatHandler extends BaseChatHandler {
 
     public String getVersionName() {
         return versionName;
+    }
+
+    public void plusHp() {
+        if(hp < 3){
+            hp++;
+        }
     }
 
     @Override
@@ -120,8 +130,21 @@ public class QQChatHandler extends BaseChatHandler {
             }
             boolean pass = messageCheckIn(hitMessage,BotApp.getInstance().getBotName());
             if(!pass){
+                NekoSession nekoSession = BotApp.getInstance().getSession();
+                if(nekoSession instanceof GeminiSession){
+                    FileLogger.INSTANCE.i(TAG, "add to context but not answer:" + hitMessage.message);
+                    Content content = new Content(
+                            Collections.singletonList(new Part(messageWithSpeaker(hitMessage),null,null,null)),
+                            GeminiSession.ROLE_USER
+                    );
+                    ((GeminiSession) nekoSession).addContent(content);
+                    //val realText = if(BotApp.getInstance().isWithSpeaker){message.questionWithSpeaker()}else {message.question.message}
+                    //val newContent = Content(listOf(Part(realText,null,null,null)),ROLE_USER)
+
+                }
                 return;
             }
+            hp--;
         }
         if("群主".equals(hitMessage.tag) || "管理员".equals(hitMessage.tag)) {
             hitMessage.setEnableCommand(true);
@@ -147,16 +170,14 @@ public class QQChatHandler extends BaseChatHandler {
         }
         if (pass) {
             // 检查@消息频率
-            if(!checkSameList.isEmpty() && hitMessage.message.contains("@")){
-                if(System.currentTimeMillis() - checkSameList.get(0).timeStamp < 2*60*1000){
-                    FileLogger.INSTANCE.i(TAG,"message too busy!");
-                    return false;
-                }
+            if(hitMessage.message.contains("@")){
+                pass = hp>0;
             }
             checkSameList.add(hitMessage);
         } else {
             if(hitMessage.message.startsWith("@")){
                 Log.i(TAG, "@other person, return!");
+                checkSameList.add(hitMessage);
                 return false;
             }
             Content c1;

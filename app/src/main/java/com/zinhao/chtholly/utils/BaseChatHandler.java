@@ -8,8 +8,10 @@ import android.util.Log;
 import android.view.accessibility.AccessibilityEvent;
 import android.view.accessibility.AccessibilityNodeInfo;
 import androidx.annotation.Nullable;
+import com.zinhao.chtholly.BotApp;
 import com.zinhao.chtholly.entity.Command;
 import com.zinhao.chtholly.entity.Message;
+import com.zinhao.chtholly.session.GeminiSession;
 
 import java.util.List;
 
@@ -171,6 +173,16 @@ public abstract class BaseChatHandler {
             }
         }
         return true;
+    }
+
+    public static String messageWithSpeaker(Message message){
+        if(message == null){
+            return "";
+        }
+        if(message.getSpeaker() == null){
+            return message.message;
+        }
+        return BotApp.getInstance().isWithSpeaker() ? message.speaker + ":"+ message.message : message.message;
     }
 }
 
