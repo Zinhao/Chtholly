@@ -107,7 +107,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun showFloatWindow(context: Context) {
         val service = NekoChatService.getInstance()
         if (service != null) {
-            service.showCtrlWindow()
+            service.addFloatToWindow()
         } else {
             _toastMessage.value = "请先打开服务"
         }

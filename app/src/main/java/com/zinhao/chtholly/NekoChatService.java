@@ -30,8 +30,7 @@ import androidx.media3.common.MediaMetadata;
 import androidx.media3.common.Player;
 import androidx.media3.exoplayer.ExoPlayer;
 
-import com.google.android.material.tabs.TabLayout;
-import com.lark.oapi.service.application.v6.resource.Bot;
+import com.zinhao.chtholly.databinding.FloatBlackScreenBinding;
 import com.zinhao.chtholly.databinding.FloatBtBinding;
 import com.zinhao.chtholly.databinding.FloatHelperBinding;
 import com.zinhao.chtholly.databinding.FloatLogcatBinding;
@@ -72,6 +71,20 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
     FloatBtBinding floatMenuBinding;
     private boolean floatInit;
     private WindowManager.LayoutParams floatMenuParam;
+    FloatBlackScreenBinding floatBlackScreenBinding;
+    private WindowManager.LayoutParams blackScreenParams;
+    private boolean blackScreenShow = false;
+
+    private void showBlackScreen() {
+        if(blackScreenShow) {
+            return;
+        }
+        mHandler.post(()->{
+            floatMenuBinding.getRoot().setVisibility(View.GONE);
+            floatBlackScreenBinding.getRoot().setVisibility(View.VISIBLE);
+            blackScreenShow = true;
+        });
+    }
 
 
     private WindowManager windowManager;
@@ -105,7 +118,8 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
         rbChatHandler = new RBChatHandler(this);
         windowManager = getSystemService(WindowManager.class);
         helperViewParams = OverlayUtils.makeNotTouchWindowParams(0, 0, 0, 0);
-        logcatViewParams = OverlayUtils.makeFloatWindowParams(0, 0, 0, 0);
+        logcatViewParams = OverlayUtils.makeNotTouchWindowParams(0, 0, 0, 0);
+        blackScreenParams = OverlayUtils.makeFloatWindowParams(0, 0, 0, 0);
         floatMenuParam = OverlayUtils.makeFloatWindowParams(300, 300, 1, 1);
         speakStartVoice();
         createNotificationChannel();
@@ -141,7 +155,9 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
             timeTick++;
             if(timeTick % 120 == 0){
                 qqChatHandler.plusHp();
+                showBlackScreen();
             }
+
             ReminderManager.ReminderItem reminderItem = ReminderManager.INSTANCE.getNextReminder();
             if(reminderItem != null){
                 if(reminderItem.getStartTime() < System.currentTimeMillis()){
@@ -193,16 +209,17 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
         instance = new WeakReference<>(this);
         ContextThemeWrapper contextThemeWrapper = new ContextThemeWrapper(this, R.style.Theme_Chtholly);
         LayoutInflater layoutInflater = LayoutInflater.from(contextThemeWrapper);
+
         logcatBinding = FloatLogcatBinding.inflate(layoutInflater, null, false);
         helperBinding = FloatHelperBinding.inflate(layoutInflater, null, false);
         floatMenuBinding = FloatBtBinding.inflate(layoutInflater, null, false);
+        floatBlackScreenBinding = FloatBlackScreenBinding.inflate(layoutInflater, null, false);
         if (Settings.canDrawOverlays(this)) {
             // 有权限
-            showCtrlWindow();
+            addFloatToWindow();
             logcatBinding.getRoot().setVisibility(View.GONE);
             helperBinding.getRoot().setVisibility(View.GONE);
-            logcatBinding.logcatView.setVisibility(View.VISIBLE);
-            logcatBinding.currentInfo.setVisibility(View.GONE);
+            floatBlackScreenBinding.getRoot().setVisibility(View.GONE);
         }
         bindClickListener();
         controllerViewToMinSize();
@@ -671,7 +688,7 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
         isControllerMinSize = false;
     }
 
-    public void showCtrlWindow() {
+    public void addFloatToWindow() {
         if (!Settings.canDrawOverlays(getApplicationContext())) {
             Intent rqIntent = new Intent(getApplicationContext(), FloatWindowActivity.class);
             rqIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
@@ -680,6 +697,7 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
             if (!floatInit) {
                 windowManager.addView(helperBinding.getRoot(), helperViewParams);
                 windowManager.addView(logcatBinding.getRoot(), logcatViewParams);
+                windowManager.addView(floatBlackScreenBinding.getRoot(),blackScreenParams);
                 windowManager.addView(floatMenuBinding.getRoot(), floatMenuParam);
             }
             floatInit = true;
@@ -765,6 +783,7 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
 
     @SuppressLint("ClickableViewAccessibility")
     public void bindClickListener() {
+
         floatMenuBinding.b1.setChecked(helperBinding.getRoot().getVisibility()==View.VISIBLE);
         floatMenuBinding.b2.setChecked(logcatBinding.getRoot().getVisibility()==View.VISIBLE);
 
@@ -787,29 +806,6 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
             @Override
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
                 BotApp.getInstance().setWithSpeaker(isChecked);
-            }
-        });
-
-        logcatBinding.menuTab.addOnTabSelectedListener(new TabLayout.OnTabSelectedListener() {
-            @Override
-            public void onTabSelected(TabLayout.Tab tab) {
-                if(tab.getPosition()==0){
-                    logcatBinding.logcatView.setVisibility(View.VISIBLE);
-                    logcatBinding.currentInfo.setVisibility(View.GONE);
-                }else{
-                    logcatBinding.logcatView.setVisibility(View.GONE);
-                    logcatBinding.currentInfo.setVisibility(View.VISIBLE);
-                }
-            }
-
-            @Override
-            public void onTabUnselected(TabLayout.Tab tab) {
-
-            }
-
-            @Override
-            public void onTabReselected(TabLayout.Tab tab) {
-
             }
         });
 
@@ -838,6 +834,14 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
                 } else {
                     controllerViewToMinSize();
                 }
+            }
+        });
+        floatBlackScreenBinding.getRoot().setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                v.setVisibility(View.GONE);
+                floatMenuBinding.getRoot().setVisibility(View.VISIBLE);
+                blackScreenShow = false;
             }
         });
     }

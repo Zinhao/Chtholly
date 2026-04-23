@@ -1,22 +1,14 @@
 package com.zinhao.chtholly.view
 
-import android.annotation.SuppressLint
 import android.app.AlertDialog
 import android.content.DialogInterface
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import android.provider.Settings
-import android.view.LayoutInflater
-import android.view.MotionEvent
-import android.view.View
-import android.view.View.OnTouchListener
-import android.widget.Button
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import com.zinhao.chtholly.NekoChatService
-import com.zinhao.chtholly.OverlayUtils
-import com.zinhao.chtholly.R
 import java.util.*
 
 /** @noinspection deprecation
@@ -50,7 +42,7 @@ class FloatWindowActivity : AppCompatActivity() {
         }
         if (Settings.canDrawOverlays(this)) {
             // 有权限
-            NekoChatService.getInstance().showCtrlWindow()
+            NekoChatService.getInstance().addFloatToWindow()
             finishAndRemoveTask()
         }
     }
