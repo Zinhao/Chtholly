@@ -69,13 +69,17 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
     FloatLogcatBinding logcatBinding;
     private WindowManager.LayoutParams logcatViewParams;
     FloatBtBinding floatMenuBinding;
-    private boolean floatInit;
     private WindowManager.LayoutParams floatMenuParam;
     FloatBlackScreenBinding floatBlackScreenBinding;
     private WindowManager.LayoutParams blackScreenParams;
+    private long nextShowBlackScreen = 160;
+    private boolean floatInit;
     private boolean blackScreenShow = false;
 
     private void showBlackScreen() {
+        if(!floatInit) {
+            return;
+        }
         if(blackScreenShow) {
             return;
         }
@@ -83,6 +87,21 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
             floatMenuBinding.getRoot().setVisibility(View.GONE);
             floatBlackScreenBinding.getRoot().setVisibility(View.VISIBLE);
             blackScreenShow = true;
+        });
+    }
+
+    private void hideBlackScreen() {
+        if(!floatInit) {
+            return;
+        }
+        if(!blackScreenShow) {
+            return;
+        }
+        nextShowBlackScreen = timeTick + AUTO_SHOW_BLACK_SCREEN_DELAY;
+        mHandler.post(()->{
+            floatMenuBinding.getRoot().setVisibility(View.VISIBLE);
+            floatBlackScreenBinding.getRoot().setVisibility(View.GONE);
+            blackScreenShow = false;
         });
     }
 
@@ -147,14 +166,18 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
     private static final long MINUTE_MILL = 60*1000;
     private static final long HOUR_MILL = 60*MINUTE_MILL;
     private static final long BORING_ASK_TIME = 48 * HOUR_MILL;
-    private long timeTick = 0;
     private static final int LOOP_INTERVAL = 500;
+
+    private long timeTick = 0;
+    private static final long AUTO_SHOW_BLACK_SCREEN_DELAY = 160;
     private final TimerTask mainTimeTask = new TimerTask() {
         @Override
         public void run() {
             timeTick++;
             if(timeTick % 120 == 0){
                 qqChatHandler.plusHp();
+            }
+            if(timeTick > nextShowBlackScreen){
                 showBlackScreen();
             }
 
@@ -174,6 +197,7 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
                     });
                 }
             } else {
+                hideBlackScreen();
                 mHandler.post(() -> {
                     if(waitQAs.isEmpty()){
                         return;
@@ -380,9 +404,7 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
                             try {
                                 feiShuApi.sendTextMessage(qa.getAnswer().getMessage());
                             } catch (Exception e) {
-                                if(e.getMessage() != null){
-                                    FileLogger.INSTANCE.e(TAG,e.getMessage(),e);
-                                }
+                                FileLogger.INSTANCE.e(TAG, "err:"+e.getLocalizedMessage(),e);
                             }
                         }
                     });
@@ -839,9 +861,7 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
         floatBlackScreenBinding.getRoot().setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                v.setVisibility(View.GONE);
-                floatMenuBinding.getRoot().setVisibility(View.VISIBLE);
-                blackScreenShow = false;
+                hideBlackScreen();
             }
         });
     }
