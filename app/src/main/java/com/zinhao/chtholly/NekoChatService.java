@@ -115,6 +115,8 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
     private WXChatHandler wxChatHandler;
     private RBChatHandler rbChatHandler;
 
+    private SystemSettingsHandler systemSettingsHandler;
+
     private FeiShuApi feiShuApi;
 
     public FeiShuApi getFeiShuApi() {
@@ -135,6 +137,7 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
         qqChatHandler = QQHandlerCompat.INSTANCE.get(this,this);
         wxChatHandler = new WXChatHandler(this);
         rbChatHandler = new RBChatHandler(this);
+        systemSettingsHandler = new SystemSettingsHandler(this);
         windowManager = getSystemService(WindowManager.class);
         helperViewParams = OverlayUtils.makeNotTouchWindowParams(0, 0, 0, 0);
         logcatViewParams = OverlayUtils.makeNotTouchWindowParams(0, 0, 0, 0);
@@ -192,7 +195,7 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
                 if(System.currentTimeMillis() - lastReplyTime > BORING_ASK_TIME){
                     lastReplyTime = System.currentTimeMillis();
                     mHandler.post(()-> {
-                        backToChatUseShare(NekoAskAble.COME_BACK);
+                        backToQQChatUseShare(NekoAskAble.COME_BACK);
                         addToQAList(new Message(null,NekoAskAble.TIME_TOO_FAST,System.currentTimeMillis()));
                     });
                 }
@@ -313,6 +316,8 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
             wxChatHandler.handle(event);
         } else if (RBChatHandler.PACKAGE_NAME.equals(event.getPackageName().toString())) {
             rbChatHandler.handle(event);
+        } else if(SystemSettingsHandler.PACKAGE_NAME.equals(event.getPackageName().toString())){
+            systemSettingsHandler.handle(event);
         }
         if(helperBinding.acbv.getVisibility() == View.VISIBLE){
             AccessibilityNodeInfo root = getRootInActiveWindow();
@@ -339,11 +344,14 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
         return stringBuilder.toString();
     }
 
-    private void backToChatUseShare(String reason){
+    private void backToQQChatUseShare(String reason){
         if(!CHAT_GROUP.equals(qqChatHandler.getCurrentPageName()) && qqChatHandler.getTargetChatTitle() != null){
-            Command backToChatMessage = new NekoAskAble(PACKAGE_NAME,
-                    new Message(BotApp.getInstance().getAdminName(),
-                            "返回对话窗口=>"+qqChatHandler.getTargetChatTitle(), System.currentTimeMillis()));
+            Message backMessage = new Message(null,
+                    "返回对话窗口=>"+qqChatHandler.getTargetChatTitle(), System.currentTimeMillis());
+            backMessage.setEnableCommand(true);
+
+            Command backToChatMessage = new NekoAskAble(PACKAGE_NAME, backMessage);
+
             backToChatMessage.initShareStepTo(qqChatHandler.getChatTitle(),FUNC_SHARE_TEXT,reason);
             backToChatMessage.getAnswer().setMessage(null);
             backToChatMessage.setReplyReady(true);
@@ -441,7 +449,7 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
             // 为防止卡死在一条指令上面，设置一个30秒超时，超时会自动完成任务。
             if (System.currentTimeMillis() - qa.getQuestion().getTimeStamp() > 30*1000L) {
                 timeoutRemove(qa);
-                backToChatUseShare("find view out time");
+                backToQQChatUseShare("find view out time");
                 return false;
             }
         }
@@ -834,7 +842,7 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
         floatMenuBinding.testBt.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                backToChatUseShare("test back to chat");
+                backToQQChatUseShare("test back to chat");
             }
         });
 
