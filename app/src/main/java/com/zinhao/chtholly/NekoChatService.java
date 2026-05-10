@@ -744,9 +744,9 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
 
     @Override
     public void onFind(Message message) {
+        addToQAList(message);
         mHandler.post(()->{
             logcatBinding.callApiProgress.setVisibility(View.VISIBLE);
-            addToQAList(message);
         });
     }
 

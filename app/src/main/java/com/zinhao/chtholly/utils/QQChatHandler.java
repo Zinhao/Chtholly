@@ -95,13 +95,8 @@ public class QQChatHandler extends BaseChatHandler {
             return;
         }
         String botName = BotApp.getInstance().getBotName();
-        boolean isPersonal = !nodeInfo.findAccessibilityNodeInfosByViewId(getPackageName() + ":id/title_sub").isEmpty();
         Message hitMessage = null;
-        if (isPersonal) {
-            hitMessage = id2FindPersonLastMessage(nodeInfo);
-        } else {
-            hitMessage = id2FindGroupLastMessage(nodeInfo);
-        }
+        hitMessage = id2FindGroupLastMessage(nodeInfo);
         if(hitMessage == null){
             return;
         }
@@ -118,34 +113,24 @@ public class QQChatHandler extends BaseChatHandler {
             }
         }
 
-        if (isPersonal) {
-            // 此处不要去验证$message.speaker,因为id2FindAdminLastMessage()中，speaker都填的是$AdminName
-            if (isAtName(hitMessage, BotApp.getInstance().getAdminName())) {
-                Log.i(TAG, "last is bot message!");
-                return;
-            }
-        } else {
-            if (botName.equals(hitMessage.speaker)) {
-                return;
-            }
-            boolean pass = messageCheckIn(hitMessage,BotApp.getInstance().getBotName());
-            if(!pass){
-                NekoSession nekoSession = BotApp.getInstance().getSession();
-                if(nekoSession instanceof GeminiSession){
-                    FileLogger.INSTANCE.i(TAG, "add to context but not answer:" + hitMessage.message);
-                    Content content = new Content(
-                            Collections.singletonList(new Part(messageWithSpeaker(hitMessage),null,null,null)),
-                            GeminiSession.ROLE_USER
-                    );
-                    ((GeminiSession) nekoSession).addContent(content);
-                    //val realText = if(BotApp.getInstance().isWithSpeaker){message.questionWithSpeaker()}else {message.question.message}
-                    //val newContent = Content(listOf(Part(realText,null,null,null)),ROLE_USER)
-
-                }
-                return;
-            }
-            hp--;
+        if (botName.equals(hitMessage.speaker)) {
+            return;
         }
+        boolean pass = messageCheckIn(hitMessage,BotApp.getInstance().getBotName());
+        if(!pass){
+            NekoSession nekoSession = BotApp.getInstance().getSession();
+            if(nekoSession instanceof GeminiSession){
+                FileLogger.INSTANCE.i(TAG, "add to context but not answer:" + hitMessage.message);
+                Content content = new Content(
+                        Collections.singletonList(new Part(messageWithSpeaker(hitMessage),null,null,null)),
+                        GeminiSession.ROLE_USER
+                );
+                ((GeminiSession) nekoSession).addContent(content);
+            }
+            return;
+        }
+        hp--;
+
         if("群主".equals(hitMessage.tag) || "管理员".equals(hitMessage.tag)) {
             hitMessage.setEnableCommand(true);
         }
@@ -236,9 +221,7 @@ public class QQChatHandler extends BaseChatHandler {
                 // chat 文本消息
                 if (QQChatHandler.CHAT_GROUP.equals(pageName)) {
                     updatePageNeedNode(event.getSource());
-                    AsyncHelper.INSTANCE.doAsyncPart(()->{
-                        findLastMessage(event.getSource());
-                    });
+                    findLastMessage(event.getSource());
                 }
             }
         } else {
@@ -246,9 +229,7 @@ public class QQChatHandler extends BaseChatHandler {
 //                拍一拍，欢迎消息，撤回消息
                 if (QQChatHandler.CHAT_GROUP.equals(pageName)) {
                     updatePageNeedNode(event.getSource());
-                    AsyncHelper.INSTANCE.doAsyncPart(()->{
-                        findLastMessage(event.getSource());
-                    });
+                    findLastMessage(event.getSource());
                 }
             }
         }
