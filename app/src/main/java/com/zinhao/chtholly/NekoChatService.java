@@ -406,14 +406,11 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
             } else {
                 if(qa.getPackageName()!=null && qa.getPackageName().equals(FeiShuApi.FEI_SHU_PACKAGE) && feiShuApi!=null){
                     qa.finishTextReply();
-                    AsyncHelper.INSTANCE.doAsyncPart(new Runnable() {
-                        @Override
-                        public void run() {
-                            try {
-                                feiShuApi.sendTextMessage(qa.getAnswer().getMessage());
-                            } catch (Exception e) {
-                                FileLogger.INSTANCE.e(TAG, "err:"+e.getLocalizedMessage(),e);
-                            }
+                    AsyncHelper.INSTANCE.doAsyncPart(() -> {
+                        try {
+                            feiShuApi.sendTextMessage(qa.getAnswer().getMessage());
+                        } catch (Exception e) {
+                            FileLogger.INSTANCE.e(TAG, "err:"+e.getLocalizedMessage(),e);
                         }
                     });
                 }else{

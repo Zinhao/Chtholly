@@ -61,9 +61,18 @@ class GeminiGateWayAgent(val api: String, val key: String) {
     }
 
     fun needReply(inputs: List<Content>): Boolean {
-        if(key.isBlank()) return false
-        if(api.isBlank()) return false
-        if(inputs.isEmpty()) return false
+        if(key.isBlank()) {
+            Log.d(javaClass.simpleName, "needReply: key.isBlank")
+            return false
+        }
+        if(api.isBlank()){
+            Log.d(javaClass.simpleName, "needReply: api.isBlank")
+            return false
+        }
+        if(inputs.isEmpty()){
+            Log.d(javaClass.simpleName, "needReply: inputs.isEmpty()")
+            return false
+        }
         contents.clear()
         contents.addAll(inputs)
         printContents()
@@ -92,9 +101,9 @@ class GeminiGateWayAgent(val api: String, val key: String) {
                 }
             }
         }catch (e: Exception){
+            Log.e(javaClass.simpleName, "needReply: ", e)
             return false
         }
-
         return false
     }
 }

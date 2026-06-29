@@ -3,6 +3,8 @@ package com.zinhao.chtholly.utils;
 import android.accessibilityservice.AccessibilityService;
 import android.content.Context;
 import android.os.Build;
+import android.os.Handler;
+import android.os.Looper;
 import android.util.Log;
 import android.view.accessibility.AccessibilityEvent;
 import android.view.accessibility.AccessibilityNodeInfo;
@@ -17,8 +19,6 @@ import com.zinhao.chtholly.network.gemini.Part;
 import com.zinhao.chtholly.session.GeminiGateWayAgent;
 import com.zinhao.chtholly.session.GeminiSession;
 import com.zinhao.chtholly.session.NekoSession;
-import com.zinhao.chtholly.session.RemoteChatApiSession;
-import org.checkerframework.checker.units.qual.C;
 
 import java.util.*;
 
@@ -35,11 +35,13 @@ public class QQChatHandler extends BaseChatHandler {
     private int versionCode = 0;
 
     private final GeminiGateWayAgent gateWayAgent;
+    private final Handler mHandler;
 
-    private int hp = 2;
+    private int hp = 5;
 
     public QQChatHandler(Context context, MessageCallback messageCallback) {
         super(messageCallback);
+        mHandler = new  Handler(Looper.getMainLooper());
         versionName = getAppVersion(context,PACKAGE_NAME);
         versionCode = getAppVersionCode(context,PACKAGE_NAME);
         gateWayAgent = new GeminiGateWayAgent(BotApp.getInstance().getChatUrl(),BotApp.getInstance().getApiKey());
@@ -54,7 +56,7 @@ public class QQChatHandler extends BaseChatHandler {
     }
 
     public void plusHp() {
-        if(hp < 3){
+        if(hp < 5){
             hp++;
         }
     }
@@ -116,8 +118,8 @@ public class QQChatHandler extends BaseChatHandler {
         if (botName.equals(hitMessage.speaker)) {
             return;
         }
-        boolean pass = messageCheckIn(hitMessage,BotApp.getInstance().getBotName());
-        if(!pass){
+        int checkResult = messageCheckIn(hitMessage,BotApp.getInstance().getBotName());
+        if(checkResult == CHECK_FAILED){
             NekoSession nekoSession = BotApp.getInstance().getSession();
             if(nekoSession instanceof GeminiSession){
                 FileLogger.INSTANCE.i(TAG, "add to context but not answer:" + hitMessage.message);
@@ -127,10 +129,15 @@ public class QQChatHandler extends BaseChatHandler {
                 );
                 ((GeminiSession) nekoSession).addContent(content);
             }
-            return;
+        }else if (checkResult == CHECK_PASS){
+            passMessage(hitMessage);
+        }else if (checkResult == CHECK_WAIT){
+            Log.d(TAG, "findLastMessage: CHECK_WAIT");
         }
-        hp--;
+    }
 
+    private void passMessage(Message hitMessage){
+        hp--;
         if("群主".equals(hitMessage.tag) || "管理员".equals(hitMessage.tag)) {
             hitMessage.setEnableCommand(true);
         }
@@ -148,7 +155,10 @@ public class QQChatHandler extends BaseChatHandler {
         messageCallback.onFind(hitMessage);
     }
 
-    private boolean messageCheckIn(Message hitMessage,String botName){
+    private static final int CHECK_WAIT = 516;
+    private static final int CHECK_PASS = 517;
+    private static final int CHECK_FAILED = 518;
+    private int messageCheckIn(Message hitMessage,String botName){
         boolean pass = isAtName(hitMessage, botName);
         if(hitMessage.isOther()){
             pass = true;
@@ -159,27 +169,42 @@ public class QQChatHandler extends BaseChatHandler {
                 pass = hp>0;
             }
             checkSameList.add(hitMessage);
+            if(pass){
+                return CHECK_PASS;
+            }
         } else {
             if(hitMessage.message.startsWith("@")){
                 Log.i(TAG, "@other person, return!");
                 checkSameList.add(hitMessage);
-                return false;
-            }
-            Content c1;
-            if(checkSameList.isEmpty()){
-                c1 = new Content(Collections.singletonList(new Part("(EMPTY)", null,
-                        null, null)), GeminiSession.ROLE_USER);
-            }else{
-                c1 = new Content(Collections.singletonList(new Part(checkSameList.get(checkSameList.size()-1).message, null,
-                        null, null)), GeminiSession.ROLE_USER);
-            }
-            Content c2 = new Content(Collections.singletonList(new Part(hitMessage.message, null,
-                    null, null)), GeminiSession.ROLE_USER);
+                return CHECK_FAILED;
+            }else {
+                AsyncHelper.INSTANCE.doAsyncPart(()->{
+                    Content c1;
+                    if(checkSameList.isEmpty()){
+                        c1 = new Content(Collections.singletonList(new Part("(EMPTY)", null,
+                                null, null)), GeminiSession.ROLE_USER);
+                    }else{
+                        c1 = new Content(Collections.singletonList(new Part(checkSameList.get(checkSameList.size()-1).message, null,
+                                null, null)), GeminiSession.ROLE_USER);
+                    }
+                    Content c2 = new Content(Collections.singletonList(new Part(hitMessage.message, null,
+                            null, null)), GeminiSession.ROLE_USER);
 
-            checkSameList.add(hitMessage);
-            pass = gateWayAgent.needReply(Arrays.asList(c1,c2));
+                    checkSameList.add(hitMessage);
+
+                    boolean checkResult = gateWayAgent.needReply(Arrays.asList(c1,c2));
+                    Log.d(TAG, "messageCheckIn: gateWayAgent:"+checkResult);
+                    if(checkResult){
+                        mHandler.post(()->{
+                            passMessage(hitMessage);
+                        });
+                    }
+                });
+                return CHECK_WAIT;
+            }
+
         }
-        return pass;
+        return CHECK_FAILED;
     }
 
     @Override
