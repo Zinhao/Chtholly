@@ -13,6 +13,7 @@ import com.zinhao.chtholly.BotApp;
 import com.zinhao.chtholly.BuildConfig;
 import com.zinhao.chtholly.NekoChatService;
 import com.zinhao.chtholly.db.AICharacterDao;
+import com.zinhao.chtholly.handlerImpl.QQChatHandler;
 import com.zinhao.chtholly.session.RemoteChatApiSession;
 import com.zinhao.chtholly.session.GeminiSession;
 import com.zinhao.chtholly.session.NekoSession;

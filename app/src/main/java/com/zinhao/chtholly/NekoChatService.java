@@ -35,6 +35,8 @@ import com.zinhao.chtholly.databinding.FloatBtBinding;
 import com.zinhao.chtholly.databinding.FloatHelperBinding;
 import com.zinhao.chtholly.databinding.FloatLogcatBinding;
 import com.zinhao.chtholly.entity.*;
+import com.zinhao.chtholly.handlerImpl.QQChatHandler;
+import com.zinhao.chtholly.handlerImpl.QQHandlerCompat;
 import com.zinhao.chtholly.network.FeiShuApi;
 import com.zinhao.chtholly.session.GeminiSession;
 import com.zinhao.chtholly.session.OpenAiSession;
@@ -50,7 +52,7 @@ import java.text.SimpleDateFormat;
 import java.util.*;
 
 import static com.zinhao.chtholly.BotApp.context;
-import static com.zinhao.chtholly.utils.QQChatHandler.*;
+import static com.zinhao.chtholly.handlerImpl.QQChatHandler.*;
 
 @SuppressLint("AccessibilityPolicy")
 public class NekoChatService extends AccessibilityService implements NetAiAskAble.DelayReplyCallback, MessageCallback {

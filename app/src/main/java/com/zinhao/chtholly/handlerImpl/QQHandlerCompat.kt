@@ -1,11 +1,12 @@
-package com.zinhao.chtholly.utils
+package com.zinhao.chtholly.handlerImpl
 
 import android.content.Context
-import com.zinhao.chtholly.handlerImpl.QQV13520Impl
-import com.zinhao.chtholly.handlerImpl.QQV13690Impl
+import com.zinhao.chtholly.utils.BaseChatHandler
+import com.zinhao.chtholly.utils.FileLogger
+import com.zinhao.chtholly.utils.MessageCallback
 
 object QQHandlerCompat {
-    fun get(context: Context,callback: MessageCallback): QQChatHandler{
+    fun get(context: Context, callback: MessageCallback): QQChatHandler {
         val versionCode = BaseChatHandler.getAppVersionCode(context, QQChatHandler.PACKAGE_NAME)
         FileLogger.i("QQHandlerCompat","qq version code:${versionCode}")
         return if(versionCode == 13520){

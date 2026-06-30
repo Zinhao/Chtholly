@@ -1,4 +1,4 @@
-package com.zinhao.chtholly.utils;
+package com.zinhao.chtholly.handlerImpl;
 
 import android.accessibilityservice.AccessibilityService;
 import android.content.Context;
@@ -19,6 +19,7 @@ import com.zinhao.chtholly.network.gemini.Part;
 import com.zinhao.chtholly.session.GeminiGateWayAgent;
 import com.zinhao.chtholly.session.GeminiSession;
 import com.zinhao.chtholly.session.NekoSession;
+import com.zinhao.chtholly.utils.*;
 
 import java.util.*;
 
@@ -166,7 +167,7 @@ public class QQChatHandler extends BaseChatHandler {
         if (pass) {
             // 检查@消息频率
             if(hitMessage.message.contains("@")){
-                pass = hp>0;
+                pass = hp > 0;
             }
             checkSameList.add(hitMessage);
             if(pass){

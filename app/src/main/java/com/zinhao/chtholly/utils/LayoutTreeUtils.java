@@ -13,8 +13,8 @@ import org.json.JSONObject;
 
 import java.util.Locale;
 
-import static com.zinhao.chtholly.utils.QQChatHandler.getChatNickId;
-import static com.zinhao.chtholly.utils.QQChatHandler.getChatTextId;
+import static com.zinhao.chtholly.handlerImpl.QQChatHandler.getChatNickId;
+import static com.zinhao.chtholly.handlerImpl.QQChatHandler.getChatTextId;
 
 public class LayoutTreeUtils {
 

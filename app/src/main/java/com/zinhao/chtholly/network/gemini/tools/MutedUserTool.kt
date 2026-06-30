@@ -7,7 +7,7 @@ import com.zinhao.chtholly.network.gemini.FunctionCall
 import com.zinhao.chtholly.network.gemini.Parameters
 import com.zinhao.chtholly.network.gemini.Properties
 import com.zinhao.chtholly.session.GeminiSession
-import com.zinhao.chtholly.utils.QQChatHandler
+import com.zinhao.chtholly.handlerImpl.QQChatHandler
 
 val MutedUserTool = FunctionDeclaration(
     description = "User banned from speaking",

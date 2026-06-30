@@ -9,7 +9,7 @@ import com.zinhao.chtholly.network.gemini.Parameters
 import com.zinhao.chtholly.network.gemini.Properties
 import com.zinhao.chtholly.session.GeminiSession
 import com.zinhao.chtholly.utils.LocalFileCache
-import com.zinhao.chtholly.utils.QQChatHandler
+import com.zinhao.chtholly.handlerImpl.QQChatHandler
 import java.io.File
 
 val SendFileTool = FunctionDeclaration(

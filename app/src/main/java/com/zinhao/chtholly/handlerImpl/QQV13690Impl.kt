@@ -13,7 +13,6 @@ import com.zinhao.chtholly.utils.FileLogger
 import com.zinhao.chtholly.utils.LayoutTreeUtils
 import com.zinhao.chtholly.utils.LocalFileCache
 import com.zinhao.chtholly.utils.MessageCallback
-import com.zinhao.chtholly.utils.QQChatHandler
 import java.util.Locale
 
 class QQV13690Impl(context: Context, messageCallback: MessageCallback) : QQChatHandler(context, messageCallback) {

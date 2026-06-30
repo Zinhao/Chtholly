@@ -9,7 +9,6 @@ import com.zinhao.chtholly.NekoChatService
 import com.zinhao.chtholly.entity.Message
 import com.zinhao.chtholly.utils.FileLogger
 import com.zinhao.chtholly.utils.MessageCallback
-import com.zinhao.chtholly.utils.QQChatHandler
 import java.util.Locale
 
 class QQV13520Impl(context: Context, messageCallback: MessageCallback) : QQChatHandler(context, messageCallback) {
