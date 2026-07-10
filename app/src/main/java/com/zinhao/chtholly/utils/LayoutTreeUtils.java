@@ -21,7 +21,7 @@ public class LayoutTreeUtils {
     private static StringBuilder builder;
     private static final String TAG = "LayoutTreeUtils";
     private static final Rect bound = new Rect();
-    private static final boolean PRINT_TREE = true;
+    private static final boolean PRINT_TREE = false;
     public static JSONObject treeAndPrintLayout(AccessibilityNodeInfo nodeInfo, int treeIndex,boolean showClickArg) throws JSONException {
         JSONObject root = new JSONObject();
         if(nodeInfo == null)
