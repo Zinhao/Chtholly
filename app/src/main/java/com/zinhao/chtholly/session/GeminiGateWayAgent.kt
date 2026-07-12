@@ -53,7 +53,7 @@ class GeminiGateWayAgent(val api: String, val key: String) {
     fun printContents() {
         val sb = StringBuilder()
         contents.forEach {
-            it.parts.firstOrNull()?.text?.let {
+            it.parts?.firstOrNull()?.text?.let {
                 sb.append(it).append("\n")
             }
         }
@@ -92,7 +92,7 @@ class GeminiGateWayAgent(val api: String, val key: String) {
                 val candidate = geminiAnswerResult?.candidates?.firstOrNull()
                 candidate?.let {
                     if (candidate.finishReason.lowercase() == "stop"){
-                        candidate.content.parts.firstOrNull()?.let {
+                        candidate.content.parts?.firstOrNull()?.let {
                             val r =  it.text?.lowercase() == "true" || it.text?.lowercase() == "yes"
                             Log.d("GeminiGateWayAgent", "聊天意图: ${it.text}")
                             return r

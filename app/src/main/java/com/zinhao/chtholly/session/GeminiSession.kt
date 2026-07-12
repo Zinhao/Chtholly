@@ -160,7 +160,7 @@ class GeminiSession private constructor(private var chatApi: String) : NekoSessi
             contents.add(newContent)
             FileLogger.i(TAG, "main callApi: $realText")
         }else if(contents.isNotEmpty()){
-            FileLogger.i(TAG, "sub callApi: ${contents.last().parts.firstOrNull()?.functionResponse.toString()}")
+            FileLogger.i(TAG, "sub callApi: ${contents.last().parts?.firstOrNull()?.functionResponse.toString()}")
         }
 
         if(contents.size > SUMMARIZE_SIZE){
@@ -171,7 +171,7 @@ class GeminiSession private constructor(private var chatApi: String) : NekoSessi
                 val sumContent = summarizeChatAgent.requestSummarize(contentToSummarize)
 
                 sumContent?.let { summarized ->
-                    summarized.parts.firstOrNull()?.text?.let { FileLogger.i(TAG,"summarizeResult:$it") }
+                    summarized.parts?.firstOrNull()?.text?.let { FileLogger.i(TAG,"summarizeResult:$it") }
                     // 同样，先拷贝出最后部分，防止清除上下文后丢失
                     val lastPinChats = contents.subList(SUMMARIZE_SIZE - SUMMARIZE_PIN, SUMMARIZE_SIZE).toList()
 

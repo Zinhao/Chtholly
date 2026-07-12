@@ -83,7 +83,7 @@ class GeminiAIAskAble : NetAiAskAble {
                             answerTextBuilder.clear()
                             var functionCounter = 0
                             AsyncHelper.doAsyncPart {
-                                candidate.content.parts.forEach { part ->
+                                candidate.content.parts?.forEach { part ->
                                     if (part.functionCall != null) {
                                         functionCounter++
                                     }

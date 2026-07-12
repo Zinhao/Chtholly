@@ -50,7 +50,7 @@ class SummarizeChatAgent(val api: String, val key: String) {
     fun printContents() {
         val sb = StringBuilder()
         contents.forEach {
-            it.parts.firstOrNull()?.text?.let {
+            it.parts?.firstOrNull()?.text?.let {
                 sb.append(it.replace('\n','\t')).append("\n")
             }
         }
