@@ -29,7 +29,7 @@ import java.util.*
 
 class GeminiAIAskAble : NetAiAskAble {
     val TAG = "GeminiAIAskAble"
-
+    var retryCount = 0
     constructor(
         packageName: String?,
         question: Message?,
@@ -100,12 +100,16 @@ class GeminiAIAskAble : NetAiAskAble {
                                     instance?.callApi(this,false)
                                 }
                             }
-
+                        }else if(candidate.finishReason.uppercase() == "MALFORMED_RESPONSE") {
+                            //retry
+                            if(retryCount < 3){
+                                retryCount++
+                                instance?.callApi(this,false)
+                            }
                         }
                     }
-
                 } catch (e: JSONException) {
-                    throw RuntimeException(e)
+                    Log.e("GeminiAIAskAble error", e.message,e)
                 }
             }
         } else {
