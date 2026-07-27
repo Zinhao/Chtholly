@@ -11,16 +11,7 @@ import com.lark.oapi.service.contact.v3.model.BatchGetIdUserReq;
 import com.lark.oapi.service.contact.v3.model.BatchGetIdUserReqBody;
 import com.lark.oapi.service.contact.v3.model.BatchGetIdUserResp;
 import com.lark.oapi.service.im.ImService;
-import com.lark.oapi.service.im.v1.model.CreateFileReq;
-import com.lark.oapi.service.im.v1.model.CreateFileReqBody;
-import com.lark.oapi.service.im.v1.model.CreateFileResp;
-import com.lark.oapi.service.im.v1.model.CreateImageReq;
-import com.lark.oapi.service.im.v1.model.CreateImageReqBody;
-import com.lark.oapi.service.im.v1.model.CreateImageResp;
-import com.lark.oapi.service.im.v1.model.CreateMessageReq;
-import com.lark.oapi.service.im.v1.model.CreateMessageReqBody;
-import com.lark.oapi.service.im.v1.model.CreateMessageResp;
-import com.lark.oapi.service.im.v1.model.P2MessageReceiveV1;
+import com.lark.oapi.service.im.v1.model.*;
 import com.zinhao.chtholly.BotApp;
 import com.zinhao.chtholly.NekoChatService;
 import com.zinhao.chtholly.entity.Message;
@@ -31,6 +22,7 @@ import org.json.JSONObject;
 
 import java.io.File;
 import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
@@ -41,6 +33,7 @@ public class FeiShuApi implements ChatApi{
     private final Client client;
     private final com.lark.oapi.ws.Client eventClient;
     private String receiveOpenId = "";
+    private HashMap<String, EventMessage> messageMap = new HashMap<>();
 
     public FeiShuApi(String appId, String appSecret) {
         receiveOpenId = BotApp.getInstance().getFeishuReceiveOpenid();
@@ -66,22 +59,33 @@ public class FeiShuApi implements ChatApi{
             .onP2MessageReceiveV1(new ImService.P2MessageReceiveV1Handler() {
                 @Override
                 public void handle(P2MessageReceiveV1 event) throws Exception {
-                    FileLogger.INSTANCE.i("FeiShuApi","data: %s\n"+Jsons.DEFAULT.toJson(event.getEvent()));
+                    FileLogger.INSTANCE.i(TAG,"handle: "+ Jsons.DEFAULT.toJson(event.getEvent()));
                     String sendOpenId = event.getEvent().getSender().getSenderId().getOpenId();
                     if(receiveOpenId.isEmpty()){
                         sendWaitCode(sendOpenId);
                     }else{
                         if(receiveOpenId.equals(sendOpenId)){
                             if(NekoChatService.getInstance()!=null){
-                                Message m = new Message(BotApp.getInstance().getAdminName(),
-                                        event.getEvent().getMessage().getContent(),
-                                        System.currentTimeMillis());
-                                m.setEnableCommand(true);
-                                NekoChatService.getInstance().onFindFeiShuMessage(m);
+                                EventMessage eventMessage = event.getEvent().getMessage();
+                                String messageId = eventMessage.getMessageId();
+                                if(messageMap.containsKey(messageId)){
+                                    FileLogger.INSTANCE.d(TAG,"repeat message:[ "+messageId + " ]: "+eventMessage.getContent());
+                                }else {
+                                    FileLogger.INSTANCE.d(TAG,"new message:[ "+messageId + " ]: "+eventMessage.getContent());
+                                    messageMap.put(messageId,eventMessage);
+                                    Message m = new Message(
+                                            BotApp.getInstance().getAdminName(),
+                                            eventMessage.getContent(),
+                                            System.currentTimeMillis());
+                                    m.setEnableCommand(true);
+                                    NekoChatService.getInstance().onFindFeiShuMessage(m);
+                                }
                             }
-
+                        }else {
+                            sendWaitCode(sendOpenId);
                         }
                     }
+
 
                 }
             }).build();

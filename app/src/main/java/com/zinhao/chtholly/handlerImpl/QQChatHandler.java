@@ -38,7 +38,7 @@ public class QQChatHandler extends BaseChatHandler {
     private final GeminiGateWayAgent gateWayAgent;
     private final Handler mHandler;
 
-    private int hp = 5;
+    private int hp = 3;
 
     public QQChatHandler(Context context, MessageCallback messageCallback) {
         super(messageCallback);

@@ -162,7 +162,6 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
                 }else{
                     feiShuApi = new FeiShuApi(BotApp.getInstance().getFeishuAppId(),BotApp.getInstance().getFeishuAppSecret());
                 }
-
             }
         });
 
@@ -750,7 +749,9 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
     }
 
     public void onFindFeiShuMessage(Message message){
-        logcatBinding.callApiProgress.setVisibility(View.VISIBLE);
+        mHandler.post(()->{
+            logcatBinding.callApiProgress.setVisibility(View.VISIBLE);
+        });
         Command mainMessage;
         if (BotApp.getInstance().getMode() == OpenAiSession.class) {
             mainMessage = new OpenAiAskAble(FeiShuApi.FEI_SHU_PACKAGE, message, this);
