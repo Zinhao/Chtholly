@@ -1,12 +1,13 @@
 package com.zinhao.chtholly.network;
 
+import android.util.Log;
+import com.google.android.material.timepicker.TimeFormat;
 import com.google.gson.JsonParser;
 import com.lark.oapi.Client;
 import com.lark.oapi.core.enums.AppType;
 import com.lark.oapi.core.enums.BaseUrlEnum;
 import com.lark.oapi.core.utils.Jsons;
 import com.lark.oapi.event.EventDispatcher;
-import com.lark.oapi.service.application.v6.resource.Bot;
 import com.lark.oapi.service.contact.v3.model.BatchGetIdUserReq;
 import com.lark.oapi.service.contact.v3.model.BatchGetIdUserReqBody;
 import com.lark.oapi.service.contact.v3.model.BatchGetIdUserResp;
@@ -22,7 +23,9 @@ import org.json.JSONObject;
 
 import java.io.File;
 import java.nio.charset.StandardCharsets;
+import java.text.SimpleDateFormat;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
@@ -34,6 +37,7 @@ public class FeiShuApi implements ChatApi{
     private final com.lark.oapi.ws.Client eventClient;
     private String receiveOpenId = "";
     private HashMap<String, EventMessage> messageMap = new HashMap<>();
+    private static final SimpleDateFormat dateTimeFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.CHINA);
 
     public FeiShuApi(String appId, String appSecret) {
         receiveOpenId = BotApp.getInstance().getFeishuReceiveOpenid();
@@ -72,13 +76,24 @@ public class FeiShuApi implements ChatApi{
                                     FileLogger.INSTANCE.d(TAG,"repeat message:[ "+messageId + " ]: "+eventMessage.getContent());
                                 }else {
                                     FileLogger.INSTANCE.d(TAG,"new message:[ "+messageId + " ]: "+eventMessage.getContent());
-                                    messageMap.put(messageId,eventMessage);
-                                    Message m = new Message(
-                                            BotApp.getInstance().getAdminName(),
-                                            eventMessage.getContent(),
-                                            System.currentTimeMillis());
-                                    m.setEnableCommand(true);
-                                    NekoChatService.getInstance().onFindFeiShuMessage(m);
+                                    boolean isNearSend = false;
+                                    try {
+                                        String t = eventMessage.getCreateTime();
+                                        long time = Long.parseLong(t);
+                                        FileLogger.INSTANCE.d(TAG,"create time:[ "+ dateTimeFormat.format(time) + " ]: "+eventMessage.getContent());
+                                        isNearSend = Math.abs(System.currentTimeMillis() - time) < 10000;
+                                    }catch (Exception e){
+                                        isNearSend = true;
+                                    }
+                                    if(isNearSend){
+                                        Message m = new Message(
+                                                BotApp.getInstance().getAdminName(),
+                                                eventMessage.getContent(),
+                                                System.currentTimeMillis());
+                                        m.setEnableCommand(true);
+                                        NekoChatService.getInstance().onFindFeiShuMessage(m);
+                                        messageMap.put(messageId,eventMessage);
+                                    }
                                 }
                             }
                         }else {
