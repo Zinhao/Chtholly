@@ -68,16 +68,24 @@ class SetupSoulFragment : Fragment() {
             binding.presetSoulDropdown.setOnItemClickListener { _, _, position, _ ->
                 val preset = soulPresets[position]
                 if(position == 0){
-                    binding.soulInputDescLayout.visibility = View.VISIBLE
                     binding.etSoulDesc.setText(preset.desc)
+                    viewModel.selectNewSoul(true)
                 }else{
-                    binding.soulInputDescLayout.visibility = View.GONE
                     if (preset.desc.isNotEmpty()) {
                         binding.tvSoulDesc.text = preset.desc
                         binding.etAtName.setText(preset.name)
                         viewModel.updateBotDescription(preset.desc)
                     }
+                    viewModel.selectNewSoul(false)
                 }
+            }
+        }
+
+        viewModel.isNewSoul.observe(viewLifecycleOwner) {
+            if(it){
+                binding.soulInputDescLayout.visibility = View.VISIBLE
+            }else{
+                binding.soulInputDescLayout.visibility = View.GONE
             }
         }
     }

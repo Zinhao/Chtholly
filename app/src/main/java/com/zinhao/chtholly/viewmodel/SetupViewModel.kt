@@ -121,6 +121,13 @@ class SetupViewModel(application: Application) : AndroidViewModel(application) {
         scheduleValidation()
     }
 
+    private var _isNewSoul =MutableLiveData<Boolean>(false)
+    val isNewSoul: LiveData<Boolean> = _isNewSoul
+
+    fun selectNewSoul(bool: Boolean) {
+        _isNewSoul.value = bool
+    }
+
     fun updateBotDescription(desc: String) {
         _botDescription.value = desc.trim()
     }
@@ -137,10 +144,12 @@ class SetupViewModel(application: Application) : AndroidViewModel(application) {
 
     fun goToNextStep() {
         if(_currentStep.value == 1){
-            val chara = AICharacter(_botName.value,_botDescription.value)
-            BotApp.getInstance().insert(chara,{
-                _botDescription.postValue(chara.desc)
-            })
+            if(isNewSoul.value == true) {
+                val chara = AICharacter(_botName.value,_botDescription.value)
+                BotApp.getInstance().insert(chara,{
+                    _botDescription.postValue(chara.desc)
+                })
+            }
         }
         val next = (_currentStep.value ?: 0) + 1
         if (next < (_totalSteps.value ?: SetupPagerAdapter.TOTAL_PAGE_COUNT)) {
@@ -248,7 +257,7 @@ class SetupViewModel(application: Application) : AndroidViewModel(application) {
             }
             is ServerPreset.Custom -> {
                 // 保持当前值或清空
-                _baseUrl.value = HostConsts.GEMINI_PROXY_API_HOST
+                _baseUrl.value = BotApp.getInstance().chatUrl
             }
         }
         scheduleValidation()

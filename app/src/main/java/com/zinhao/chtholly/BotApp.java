@@ -118,11 +118,7 @@ public class BotApp extends Application {
         feishuReceiveOpenid = sharedPreferences.getString(CONFIG_FEISHU_RECEIVE_OPENID,"");
         replyGateWayAgentDesc = getString(R.string.reply_gateway);
         summarizeChatAgentDesc = getString(R.string.summarize);
-        if(apiKey.isEmpty()){
-            mode = NekoSession.class;
-        }else{
-            mode = GeminiSession.class;
-        }
+        setApiKey(apiKey);
         currentCharacter = new AICharacter(botName,aiSoul);
         AppDatabase database = Room.databaseBuilder(this, AppDatabase.class, "app_data")
                 .build();
@@ -140,10 +136,11 @@ public class BotApp extends Application {
 
     public void setApiKey(String apiKey) {
         this.apiKey = apiKey;
+        //Default
         if(apiKey.isEmpty()){
             mode = NekoSession.class;
         }else{
-            mode = GeminiSession.class;
+            mode = OpenAiSession.class;
         }
     }
 

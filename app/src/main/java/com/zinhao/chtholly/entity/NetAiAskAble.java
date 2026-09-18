@@ -53,6 +53,11 @@ public class NetAiAskAble extends NekoAskAble implements Callback{
         }
     }
 
+    public void doReply(String answer){
+        this.
+        delayReplyCallback.onReplySuccess(this);
+    }
+
     /***
      *
      */

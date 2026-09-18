@@ -1,0 +1,17 @@
+{
+  "type": "object",
+  "properties": {
+    "willingnessToChat": {
+      "type": "integer",
+      "description": "聊天意愿，取值范围 1 到 100，数值越高表示越愿意聊天",
+      "minimum": 1,
+      "maximum": 100
+    },
+    "replyMessage": {
+      "type": "string",
+      "description": "回复的话"
+    }
+  },
+  "required": ["willingnessToChat", "replyMessage"],
+  "additionalProperties": false
+}

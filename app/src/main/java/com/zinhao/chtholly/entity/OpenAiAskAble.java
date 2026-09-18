@@ -57,45 +57,7 @@ public class OpenAiAskAble extends NetAiAskAble{
     //* 如果由于内容过滤器中的标志而省略内容，则为 content_filter；
     //* 如果模型达到 tool_calls，则为 tool_calls称为工具。
     @Override
-    public void onResponse(@NotNull Call call, @NotNull Response response) throws IOException {
-        if(response.code() == 200){
-            ResponseBody body = response.body();
-            if(body!=null){
-                try {
-                    if(getAnswer() != null){
-                        try {
-                            Choice nekoReply = parseResponse(body.string());
-                            if(nekoReply.getFinishReason().equals("length")){
-                                OpenAiSession.getInstance().requestChatSummarize();
-                            }else if(nekoReply.getFinishReason().equals("tool_calls")){
-                                doToolCall(nekoReply);
-                            }else if(nekoReply.getFinishReason().equals("stop")){
-                                String content = nekoReply.getMessage().getContent();
-                                if(content != null && !content.trim().equals("null")){
-                                    saveToDatabase(content);
-                                    doTTSReply(content);
-                                    OpenAiSession.getInstance().addAssistantChat(content);
-                                }
-                            }
-                        }catch (IllegalStateException e){
-                            NekoChatService.getInstance().addLogcat("onResponse: "+e.getMessage());
-                            Log.e(TAG, "onResponse: ", e);
-                        }
-                    }
-                } catch (JSONException e) {
-                    getAnswer().setMessage(e.getMessage());
-                }
-            }
-        }else{
-            getAnswer().setSpeaker("ServerErr [" + response.code()+"]");
-            getAnswer().setMessage(String.valueOf(response.code()));
-            replyReady = true;
-            if(delayReplyCallback !=null)
-                delayReplyCallback.onReplySuccess(this);
-        }
-
-        response.close();
-    }
+    public void onResponse(@NotNull Call call, @NotNull Response response) throws IOException {}
 
     @Override
     public void doToolCall(Choice nekoReply) {

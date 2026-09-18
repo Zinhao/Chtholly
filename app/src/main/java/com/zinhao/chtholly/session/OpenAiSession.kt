@@ -1,273 +1,329 @@
-package com.zinhao.chtholly.session;
+package com.zinhao.chtholly.session
 
-import android.util.Log;
-import com.zinhao.chtholly.BotApp;
-import com.zinhao.chtholly.network.LoggingInterceptor;
-import com.zinhao.chtholly.NekoChatService;
-import com.zinhao.chtholly.entity.*;
-import com.zinhao.chtholly.network.openai.OpenAiMethodTool;
+import android.content.Context
+import com.squareup.moshi.JsonAdapter
+import com.squareup.moshi.Moshi
+import com.squareup.moshi.adapter
+import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
+import com.zinhao.chtholly.BotApp
+import com.zinhao.chtholly.db.MessageDao
+import com.zinhao.chtholly.entity.Choice
+import com.zinhao.chtholly.entity.Message
+import com.zinhao.chtholly.entity.NekoReply
+import com.zinhao.chtholly.entity.NetAiAskAble
+import com.zinhao.chtholly.network.LoggingInterceptor
+import com.zinhao.chtholly.network.openai.*
+import com.zinhao.chtholly.session.RemoteChatApiSession.RemoteModel
+import com.zinhao.chtholly.utils.FileLogger
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
+import okhttp3.OkHttpClient
+import org.checkerframework.checker.units.qual.s
+import org.json.JSONException
+import org.json.JSONObject
+import retrofit2.Retrofit
+import retrofit2.converter.moshi.MoshiConverterFactory
+import java.io.IOException
+import java.text.SimpleDateFormat
+import java.util.*
+import java.util.concurrent.TimeUnit
 
-import okhttp3.MediaType;
-import okhttp3.OkHttpClient;
-import okhttp3.Request;
-import okhttp3.RequestBody;
-import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
+class OpenAiSession private constructor(private val chatUrl: String) : NekoSession(), RemoteChatApiSession {
+    private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+    private val okHttpClient: OkHttpClient =OkHttpClient.Builder()
+        .callTimeout(100, TimeUnit.SECONDS)
+        .writeTimeout(100, TimeUnit.SECONDS)
+        .readTimeout(100, TimeUnit.SECONDS) //                .sslSocketFactory()
+        .addInterceptor(LoggingInterceptor())
+        .build()
 
-import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Locale;
-import java.util.concurrent.TimeUnit;
+    private var currentModel: RemoteModel
+    private val modelList: MutableList<RemoteModel> = ArrayList<RemoteModel>()
+    private val systemPrompt = "根据场景对话 补充人物对话与聊天意愿数值"
+    private val summarizePrompt = "使用不超过50字总结场景对话"
+    private var charaDesc = ""
 
-public class OpenAiSession extends NekoSession implements RemoteChatApiSession {
-    private static final String TAG = "OpenAiSession";
-
-    private static final String ROLE = "role";
-    private static final String CONTENT = "content";
-    private static final String TOOL_CALL_ID = "tool_call_id";
-
-    private static final String ROLE_SYSTEM = "system";
-    private static final String ROLE_ASSISTANT = "assistant";
-    private static final String ROLE_USER = "user";
-    private static final String ROLE_TOOL = "tool";
-
-    public static final String MODEL_GPT_3_5_TURBO = "gpt-3.5-turbo";
-    public static final String MODEL_GPT_4_TURBO = "gpt-4-turbo";
-    public static final String MODEL_GPT_4O_MINI = "gpt-4o-mini";
-    public static final String MODEL_GPT_4O = "gpt-4o";
-
-    private static final SimpleDateFormat dateFormat = new SimpleDateFormat("yyyyMMdd", Locale.CHINA);
-    private static final SimpleDateFormat dateTimeFormat = new SimpleDateFormat("yyyy年MM月dd日 HH:mm:ss", Locale.CHINA);
-    private final JSONObject data;
-    private JSONArray chats;
-    private final OkHttpClient okHttpClient;
-    private static OpenAiSession instance;
-    private final JSONObject firstSystemChat;
-    private RemoteModel currentModel;
-    private final List<RemoteModel> modelList = new ArrayList<>();
-    private String chatUrl;
+    private val chatList = ArrayList<Message>()
 
 
-    private static final Tool TOOL_1 = new Tool("function", OpenAiMethodTool.REMIND_TOOL);
-    private static final Tool TOOL_2 = new Tool("function", OpenAiMethodTool.HELP_TOOL);
-    static class Tool{
-        String type;
-        OpenAiMethodTool function;
-        // 构造函数
-        public Tool(String type, OpenAiMethodTool function) {
-            this.type = type;
-            this.function = function;
+    val moshi = Moshi.Builder()
+        .add(KotlinJsonAdapterFactory())
+        .build()
+
+    @OptIn(ExperimentalStdlibApi::class)
+    val nekoSchemAdapter: JsonAdapter<NekoSchem> =
+        moshi.adapter<NekoSchem>()
+
+    @OptIn(ExperimentalStdlibApi::class)
+    val nekoReplyAdapter: JsonAdapter<NekoReply> =
+        moshi.adapter<NekoReply>()
+
+    val retrofit = Retrofit.Builder()
+        .baseUrl(chatUrl) // LM Studio / OpenAI 兼容
+        .addConverterFactory(MoshiConverterFactory.create(moshi))
+        .client(okHttpClient)
+        .build()
+
+    val api = retrofit.create(OpenAiApi::class.java)
+
+    private val gemmaUncensored = "gemma-4-e4b-uncensored-hauhaucs-aggressive"
+
+    private val qwen3Nsfw = "qwen3-vl-8b-nsfw-caption-v4.5"
+    private val qwen3p5_9b_uncensored = "qwen3.5-9b-uncensored-hauhaucs-aggressive"
+    private val qwen3p5_4b_uncensored = "qwen3.5-4b-uncensored-hauhaucs-aggressive"
+    private val qwen3p5_4b_nsfw_ara_i1 = "qwen3.5-4b-nsfw-ara-heretic-literotica-i1"
+
+    private val mimo2p5 = "mimo-v2.5"
+    private val mimo2p5pro = "mimo-v2.5-pro"
+
+    init {
+        modelList.add(RemoteModel(mimo2p5))
+        modelList.add(RemoteModel(mimo2p5pro))
+//        modelList.add(RemoteModel(qwen3p5_9b_uncensored))
+        modelList.add(RemoteModel(qwen3p5_4b_uncensored))
+        modelList.add(RemoteModel(qwen3p5_4b_nsfw_ara_i1))
+        currentModel = modelList.get(0)
+//        loadChatHistory()
+        val botName = BotApp.getInstance().botName
+        charaDesc = BotApp.getInstance().aiSoul.replace("\$name",botName)
+        scope.launch {
+            loadNekoSchem()
+
         }
+    }
 
-        public String getType() {
-            return type;
+    fun loadNekoSchem(){
+        readTextFromAssetsSimplified(BotApp.getInstance(),"neko_schem.json")?.let {
+            nekoSchem = nekoSchemAdapter.fromJson(it)
+            resFormat = ResponseFormat(
+                JsonSchema("chat_reply", nekoSchem!!, true),
+                "json_schema"
+            )
         }
+    }
 
-        public OpenAiMethodTool getFunction() {
-            return function;
+    /**
+     * 使用 Kotlin 扩展函数和更简洁的写法
+     */
+    fun readTextFromAssetsSimplified(context: Context, fileName: String): String? {
+        return try {
+            context.assets.open(fileName).bufferedReader().use { it.readText() }
+        } catch (e: IOException) {
+            e.printStackTrace()
+            null
         }
+    }
 
-        // 将 Tool 对象转换为 JSON 对象
-        public JSONObject toJson() throws JSONException {
-            JSONObject jsonObject = new JSONObject();
-            jsonObject.put("type", this.type);
-            if (this.function != null) {
-                jsonObject.put("function", this.function.toJsonObject()); // 使用 AIMethodTool 的 toJsonObject 方法
+    override fun setAgentPrompt(charaDesc: String) {
+        val botName = BotApp.getInstance().botName
+        this.charaDesc = charaDesc.replace("\$name",botName)
+    }
+
+    override fun getAgentPrompt(): String { return charaDesc }
+
+    override fun getContextChat(): String {
+        return chatList.toString()
+    }
+
+    override fun clearContext(): Int {
+        val len = chatList.size
+        chatList.clear()
+        return len
+    }
+
+    override fun loadChatHistory() {
+        clearContext()
+        BotApp.getInstance().getLastTenMessages(MessageDao.MessageGetAllListener { result ->
+            FileLogger.d(TAG, "loadChatHistory: "+result.size)
+            if(result.isEmpty()){return@MessageGetAllListener}
+            val intoContentMessage = arrayListOf<Message>()
+            if(result.size <= 10){
+                intoContentMessage.addAll(result)
+            }else{
+                intoContentMessage.addAll(result.subList(result.size-10, result.size-1))
             }
-            return jsonObject;
+            chatList.addAll(intoContentMessage)
+        })
+    }
+
+    override fun summarize(): Int {
+        //todo 总结
+        return 0
+    }
+
+    override fun setModelIndex(index: Int) {
+        if (index >= 0 && index < modelList.size) {
+            this.currentModel = modelList.get(index)
         }
     }
 
-    private OpenAiSession(String chatUrl) {
-        this.chatUrl = chatUrl;
-        modelList.add(new RemoteModel(MODEL_GPT_3_5_TURBO));
-        modelList.add(new RemoteModel(MODEL_GPT_4O));
-        modelList.add(new RemoteModel(MODEL_GPT_4_TURBO));
-        modelList.add(new RemoteModel(MODEL_GPT_4O_MINI));
+    override fun getCurrentModel(): RemoteModel {
+        return currentModel
+    }
 
-        currentModel = modelList.get(0);
-        okHttpClient = new OkHttpClient.Builder()
-                .callTimeout(100, TimeUnit.SECONDS)
-                .writeTimeout(100, TimeUnit.SECONDS)
-                .readTimeout(100, TimeUnit.SECONDS)
-//                .sslSocketFactory()
-                .addInterceptor(new LoggingInterceptor())
-                .build();
-        data = new JSONObject();
-        chats = new JSONArray();
-        firstSystemChat = new JSONObject();
-        try {
-            firstSystemChat.put(ROLE,ROLE_SYSTEM);
-            firstSystemChat.put(CONTENT,
-                    BotApp.getInstance().getAiSoul().replace("$name",BotApp.getInstance().getBotName()));
-            chats.put(firstSystemChat);
+    override fun getModelList(): MutableList<RemoteModel> {
+        return modelList
+    }
 
-            JSONArray tools = new JSONArray();
-            tools.put(TOOL_1.toJson());
-            tools.put(TOOL_2.toJson());
+    fun addToolCalls(message: Choice.Message) {
 
-            data.put("model", currentModel.getStr());
-            data.put("temperature",1);
-            data.put("max_completion_tokens", 1000);
-            data.put("top_p",1);
-            data.put("messages",chats);
-            data.put("tools",tools);
-        } catch (JSONException e) {
-            throw new RuntimeException(e);
+    }
+
+    fun addToolCallResult(content: JSONObject?, callId: String?) {
+
+    }
+
+    @Throws(JSONException::class)
+    override fun callApi(message: NetAiAskAble, add: Boolean): Boolean {
+        chatList.add(message.question)
+        return requestChatCompletions(message)
+    }
+
+    override fun requestChatSummarize() {
+
+    }
+
+    private val sb = StringBuilder()
+
+    override fun requestChatCompletions(message: NetAiAskAble): Boolean {
+        sb.clear()
+        sb.append(charaDesc).append("\n").append("\n")
+        chatList.forEach {
+            FileLogger.i(TAG, "${it.speaker}: ${it.message}")
+            sb.append(it.speaker).append(": ").append("\"").append(it.message).append("\"").append("\n")
         }
-    }
-
-    public void setModel(String model){
-        try {
-            data.put("model",model);
-        } catch (JSONException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    public void setAgentPrompt(String charaDesc){
-        try {
-            firstSystemChat.put(CONTENT, charaDesc.replace("$name",BotApp.getInstance().getBotName()));
-            Log.d(TAG, "setChara: "+chats.get(0));
-        } catch (JSONException e) {
-            Log.d(TAG, "setChara: failed.");
-        }
-    }
-
-    public String getAgentPrompt() {
-        try {
-            return firstSystemChat.getString(CONTENT);
-        } catch (JSONException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    public String getContextChat(){
-        return chats.toString();
-    }
-
-    @Override
-    public int clearContext() {
-        int len = chats.length();
-        chats = new JSONArray();
-        return len;
-    }
-
-    @Override
-    public void loadChatHistory() {}
-
-    public int summarize(){
-        int len = 0;
-        for (int i = 0; i < chats.length(); i++) {
+        sb.append("\n")
+        sb.append("接下来${BotApp.getInstance().botName}会说什么？")
+        scope.launch {
             try {
-                JSONObject chat = chats.getJSONObject(i);
-                if(chat.getString(ROLE).equals(ROLE_USER)){
-                    len++;
+                val nekoSchemStr = chatCompletion(
+                    prompt = systemPrompt,
+                    text = sb.toString(),
+                    model = currentModel.str
+                )
+                val nekoReply = nekoReplyAdapter.fromJson(nekoSchemStr)
+                nekoReply?.let {
+                    FileLogger.d(TAG, "nekoReply: $nekoSchemStr")
+                    message.saveToDatabase(it.replyMessage)
+                    chatList.add(message.answer)
+                    message.delayReplyCallback.onReplySuccess(message)
                 }
-            } catch (JSONException e) {
+            }catch (e: Exception){
+                FileLogger.e(TAG,e.localizedMessage?:e.javaClass.name,e)
+            }finally {
 
             }
         }
-        chats = new JSONArray();
-        chats.put(firstSystemChat);
-        return len;
+        return true
     }
 
-    @Override
-    public void setModelIndex(int index) {
-        if(index>=0 && index<modelList.size()){
-            this.currentModel = modelList.get(index);
-        }
-    }
-
-    @Override
-    public RemoteModel getCurrentModel() {
-        return currentModel;
-    }
-
-    @Override
-    public List<RemoteModel> getModelList() {
-        return modelList;
-    }
-
-    public void addAssistantChat(String message){
-        addTextChat(ROLE_ASSISTANT,message);
-    }
-
-    public void addSystemChat(String message){
-        addTextChat(ROLE_SYSTEM,message);
-    }
-
-    public void addToolCalls(Choice.Message message){
-        chats.put(message.getRawJsonString());
-    }
-
-    public void addToolCallResult(JSONObject content,String callId){
-        JSONObject function_call_result_message = new JSONObject();
-        try {
-            function_call_result_message.put(ROLE,ROLE_TOOL);
-            function_call_result_message.put(CONTENT,content);
-            function_call_result_message.put(TOOL_CALL_ID,callId);
-        } catch (JSONException e) {
-            throw new RuntimeException(e);
-        }
-        chats.put(function_call_result_message);
-    }
-
-    private void addTextChat(String role, String text){
-        JSONObject newChat = new JSONObject();
-        try {
-            newChat.put("role",role);
-            newChat.put("content",text);
-            Log.d(TAG, String.format(Locale.CHINA,"addChat: %s: %s",role,text));
-        } catch (JSONException e) {
-            Log.e(TAG, String.format(Locale.CHINA,"addChat: %s: %s",role,text));
-        }
-        chats.put(newChat);
-    }
-
-    public static OpenAiSession getInstance() {
-        if(instance == null){
-            instance = new OpenAiSession(BotApp.getInstance().getChatUrl());
-        }
-        return instance;
-    }
-
-    public boolean callApi(NetAiAskAble message,boolean add) throws JSONException {
-        if(add){
-            addTextChat(ROLE_USER,message.getQuestion().getMessage());
-        }
-        data.put("messages",chats);
-        return requestChatCompletions(message);
-    }
-
-    public void requestChatSummarize(){
-        NekoChatService.getInstance().addLogcat("requestChatSummarize:length");
-        Message question = new Message("system","使用不超过50字总结对话",System.currentTimeMillis());
-        NetAiAskAble summarizeMessage = new OpenAiAskAble(BotApp.getInstance().getPackageName(), question, new NetAiAskAble.DelayReplyCallback() {
-            @Override
-            public void onReplySuccess(NetAiAskAble message) {
-                chats = new JSONArray();
-                chats.put(firstSystemChat);
-                NekoChatService.getInstance().addLogcat("requestChatSummarize:"+message.getAnswer().getMessage());
-                addTextChat(ROLE_SYSTEM,message.getAnswer().getMessage());
+    private var nekoSchem: NekoSchem? = null
+    private var resFormat: ResponseFormat? = null
+    private suspend fun chatCompletion(
+        imageBase64: String? = null,
+        text: String? = null,
+        prompt: String = "Describe this image in two sentences",
+        model: String = modelList[0].str,
+        contextLength: Int = 4096,
+        temperature: Double = 0.1,
+        jsonSchema: String? = null):String?
+    {
+        var targetFormat: ResponseFormat? = null
+        if(jsonSchema != null){
+            val schem = nekoSchemAdapter.fromJson(jsonSchema)
+            val newFormat = ResponseFormat(
+                JsonSchema("chat_reply", schem!!, true),
+                "json_schema"
+            )
+            targetFormat = newFormat
+        }else{
+            if(resFormat == null){
+                loadNekoSchem()
             }
-        });
-        summarizeMessage.handle();
+            targetFormat = resFormat
+        }
+        targetFormat?.let { tf ->
+            tf.json_schema.schema.properties?.let {
+                it.replyMessage.description = "${BotApp.getInstance().botName}将要说的话，不要描写动作，仅话语"
+                it.willingnessToChat!!.description =
+                    "聊天意愿数值，这个数值决定${BotApp.getInstance().botName}" +
+                            "后续继续聊天，取值范围 1 到 100，数值越高表示越愿意聊天"
+            }
+
+        }
+        try {
+            val request = ChatRequest(
+                model = model,
+                messages = listOf(
+                    ChatMessage(
+                        role = "developer",
+                        content = listOf(
+                            ContentPart.TextPart(
+                                type = "text",
+                                text = prompt
+                            )
+                        )
+                    ),
+                    ChatMessage(
+                        role = "user",
+                        content = listOfNotNull(
+                            imageBase64?.let {
+                                ContentPart.ImagePart(
+                                    type = "image_url",
+                                    image_url = ImageUrl("data:image/png;base64,$imageBase64")
+                                )
+                            },
+                            text?.let { ContentPart.TextPart(type = "text", text = it) },
+                        )
+                    ),
+                ),
+                max_tokens = contextLength,
+                max_completion_tokens = contextLength,
+                temperature = temperature,
+                reasoning_effort = "low",
+                response_format = targetFormat
+            )
+
+            val response = api.chatCompletion(
+                authorization = "Bearer ${BotApp.getInstance().apiKey}",
+                request = request
+            )
+            return response.choices.firstOrNull()?.message?.content.toString()
+        } catch (e: Exception) {
+            FileLogger.e(TAG,"请求失败：${e.localizedMessage}")
+        } finally {
+
+        }
+        return null
     }
 
-    @Override
-    public boolean requestChatCompletions(NetAiAskAble message){
-        RequestBody requestBody = RequestBody.Companion.create(data.toString(),MediaType.parse("application/json;charset=utf-8"));
-        Log.d(TAG, "requestAsk: "+data);
-        Request request = new Request.Builder().post(requestBody).url(chatUrl)
-                .addHeader("Content-Type","application/json")
-                .addHeader("Authorization","Bearer " + BotApp.getInstance().getApiKey())
-                .addHeader("User-Agent","Android Application <Chttolly>")
-                .build();
-        okHttpClient.newCall(request).enqueue(message);
-        return true;
+    companion object {
+        private const val TAG = "OpenAiSession"
+
+        private const val ROLE_SYSTEM = "system"
+        private const val ROLE_ASSISTANT = "assistant"
+        private const val ROLE_USER = "user"
+        private const val ROLE_TOOL = "tool"
+
+        const val MODEL_GPT_3_5_TURBO: String = "gpt-3.5-turbo"
+        const val MODEL_GPT_4_TURBO: String = "gpt-4-turbo"
+        const val MODEL_GPT_4O_MINI: String = "gpt-4o-mini"
+        const val MODEL_GPT_4O: String = "gpt-4o"
+
+
+
+        private val dateFormat = SimpleDateFormat("yyyyMMdd", Locale.CHINA)
+        private val dateTimeFormat = SimpleDateFormat("yyyy年MM月dd日 HH:mm:ss", Locale.CHINA)
+        @JvmStatic
+        var instance: OpenAiSession? = null
+            get() {
+                if (field == null) {
+                    field = OpenAiSession(BotApp.getInstance().getChatUrl())
+                }
+                return field
+            }
+            private set
     }
 }
