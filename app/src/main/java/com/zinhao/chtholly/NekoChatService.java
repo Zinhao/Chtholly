@@ -295,12 +295,12 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
         if (event.getSource() != null && BuildConfig.DEBUG) {
             if (!event.getText().isEmpty() || event.getContentDescription() != null) {
                 String sourcePackageName = event.getSource().getPackageName().toString();
-                String logcat = "package:" + event.getPackageName()
+                String eventDetailInfo = "package:" + event.getPackageName()
                         + ", class:" + event.getClassName()
                         + ", text: " + event.getText()
                         + ", desc: " + event.getContentDescription()
                         + ",source:" + sourcePackageName;
-                addLogcat(logcat);
+//                addLogcat(eventDetailInfo);
             }
             saveTreeToJsonFile(event);
         }
@@ -384,7 +384,6 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
         if (source == null){
             return;
         }
-        addLogcat("handleQAs..."+waitQAs.size());
         if (!waitQAs.isEmpty()) {
             Command qa = waitQAs.get(0);
             if (System.currentTimeMillis() - qa.getQuestion().getTimeStamp() > 60*1000L) {
@@ -392,7 +391,6 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
             }
 
             if (!qa.isReplyReady()) {
-                addLogcat("handleQAs: wait answer ready:" + qa.getQuestion().getMessage());
                 return;
             }
             if (qa.sendSuccess() && qa.actionSuccess()) {
@@ -521,7 +519,6 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
             layoutTree.put("time", dateTimeFormat.format(System.currentTimeMillis()));
             //com.tencent.mobileqq:id/listView1
             logcatBinding.currentTree.setText(jsonFileName);
-            addLogcat("Generate Tree:"+ jsonFileName);
             LocalFileCache.getInstance().saveJSONObject(getApplicationContext(), layoutTree, jsonFileName);
         } catch (JSONException e) {
             throw new RuntimeException(e);

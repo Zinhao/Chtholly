@@ -2,6 +2,7 @@ package com.zinhao.chtholly.network;
 
 import android.util.Log;
 import com.google.android.material.timepicker.TimeFormat;
+import com.google.gson.Gson;
 import com.google.gson.JsonParser;
 import com.lark.oapi.Client;
 import com.lark.oapi.core.enums.AppType;
@@ -13,15 +14,20 @@ import com.lark.oapi.service.contact.v3.model.BatchGetIdUserReqBody;
 import com.lark.oapi.service.contact.v3.model.BatchGetIdUserResp;
 import com.lark.oapi.service.im.ImService;
 import com.lark.oapi.service.im.v1.model.*;
+import com.squareup.moshi.JsonAdapter;
+import com.squareup.moshi.Moshi;
+import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory;
 import com.zinhao.chtholly.BotApp;
 import com.zinhao.chtholly.NekoChatService;
 import com.zinhao.chtholly.entity.Message;
+import com.zinhao.chtholly.network.feishu.FeiShuTextMessage;
 import com.zinhao.chtholly.network.feishu.OpenIdResult;
 import com.zinhao.chtholly.utils.FileLogger;
 
 import org.json.JSONObject;
 
 import java.io.File;
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.HashMap;
@@ -75,7 +81,7 @@ public class FeiShuApi implements ChatApi{
                                 if(messageMap.containsKey(messageId)){
                                     FileLogger.INSTANCE.d(TAG,"repeat message:[ "+messageId + " ]: "+eventMessage.getContent());
                                 }else {
-                                    FileLogger.INSTANCE.d(TAG,"new message:[ "+messageId + " ]: "+eventMessage.getContent());
+                                    FileLogger.INSTANCE.d(TAG,"new message:[ "+messageId + " ]: ("+eventMessage.getMessageType() +") => "+ eventMessage.getContent());
                                     boolean isNearSend = false;
                                     try {
                                         String t = eventMessage.getCreateTime();
@@ -86,13 +92,9 @@ public class FeiShuApi implements ChatApi{
                                         isNearSend = true;
                                     }
                                     if(isNearSend){
-                                        Message m = new Message(
-                                                BotApp.getInstance().getAdminName(),
-                                                eventMessage.getContent(),
-                                                System.currentTimeMillis());
-                                        m.setEnableCommand(true);
-                                        NekoChatService.getInstance().onFindFeiShuMessage(m);
-                                        messageMap.put(messageId,eventMessage);
+                                        if(eventMessage.getMessageType().equals("text")){
+                                            handleTextMessage(eventMessage);
+                                        }
                                     }
                                 }
                             }
@@ -104,6 +106,35 @@ public class FeiShuApi implements ChatApi{
 
                 }
             }).build();
+
+    private final Moshi moshi = new Moshi.Builder().add(new KotlinJsonAdapterFactory()).build();
+    private final JsonAdapter<FeiShuTextMessage> textAdapter = moshi.adapter(FeiShuTextMessage.class);
+
+    private void handleTextMessage(EventMessage eventMessage) {
+        FeiShuTextMessage feiShuTextMessage = null;
+        try {
+            feiShuTextMessage = textAdapter.fromJson(eventMessage.getContent());
+        } catch (IOException e) {
+            FileLogger.INSTANCE.e(TAG,"handleTextMessage err::"+e.getMessage(),e);
+        }
+        String text;
+        if(feiShuTextMessage != null){
+            text = feiShuTextMessage.getText();
+        }else{
+            text = eventMessage.getContent();
+        }
+        Message feishuMessage = new Message(
+                BotApp.getInstance().getAdminName(),
+                text,
+                System.currentTimeMillis());
+        FileLogger.INSTANCE.d(TAG, "handle: "+eventMessage.getMessageType());
+        feishuMessage.setEnableCommand(true);
+        if(NekoChatService.getInstance()!=null){
+            NekoChatService.getInstance().onFindFeiShuMessage(feishuMessage);
+            messageMap.put(eventMessage.getMessageId(),eventMessage);
+        }
+
+    }
 
     private void sendWaitCode(String sendOpenId) throws Exception {
         String waitCode = UUID.randomUUID().toString().substring(0, 6).toUpperCase();
@@ -292,7 +323,7 @@ public class FeiShuApi implements ChatApi{
         }
 
         // 业务数据处理
-        FileLogger.INSTANCE.d(TAG,Jsons.DEFAULT.toJson(resp.getData()));
+        FileLogger.INSTANCE.d(TAG,"send => "+Jsons.DEFAULT.toJson(resp.getData()));
         return true;
     }
 
