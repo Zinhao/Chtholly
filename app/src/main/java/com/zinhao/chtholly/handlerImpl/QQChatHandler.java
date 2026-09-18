@@ -436,9 +436,6 @@ public class QQChatHandler extends BaseChatHandler {
                 if(targetChatTitle == null){
                     targetChatTitle = chatTitle;
                 }
-                if(NekoChatService.getInstance()!=null){
-                    NekoChatService.getInstance().addLogcat("current chat page:" + chatTitle);
-                }
             }
         }
     }
