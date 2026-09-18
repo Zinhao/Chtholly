@@ -26,6 +26,8 @@ public class Message {
     public boolean other = false;
     @Ignore
     private boolean enableCommand = false;
+    @Ignore
+    private boolean isAtMessage = false;
 
     public Message(String speaker, String message, long timeStamp) {
         this.message = message;
@@ -130,5 +132,13 @@ public class Message {
 
     public void setEnableCommand(boolean enableCommand) {
         this.enableCommand = enableCommand;
+    }
+
+    public boolean isAtMessage() {
+        return isAtMessage;
+    }
+
+    public void setAtMessage(boolean atMessage) {
+        isAtMessage = atMessage;
     }
 }

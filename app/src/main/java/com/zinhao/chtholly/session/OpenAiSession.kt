@@ -12,6 +12,8 @@ import com.zinhao.chtholly.entity.Message
 import com.zinhao.chtholly.entity.NekoReply
 import com.zinhao.chtholly.entity.NetAiAskAble
 import com.zinhao.chtholly.network.LoggingInterceptor
+import com.zinhao.chtholly.network.gemini.Content
+import com.zinhao.chtholly.network.gemini.Part
 import com.zinhao.chtholly.network.openai.*
 import com.zinhao.chtholly.session.RemoteChatApiSession.RemoteModel
 import com.zinhao.chtholly.utils.FileLogger
@@ -20,7 +22,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
-import org.checkerframework.checker.units.qual.s
 import org.json.JSONException
 import org.json.JSONObject
 import retrofit2.Retrofit
@@ -85,12 +86,11 @@ class OpenAiSession private constructor(private val chatUrl: String) : NekoSessi
         modelList.add(RemoteModel(qwen3p5_4b_uncensored))
         modelList.add(RemoteModel(qwen3p5_4b_nsfw_ara_i1))
         currentModel = modelList.get(0)
-//        loadChatHistory()
+        loadChatHistory()
         val botName = BotApp.getInstance().botName
         charaDesc = BotApp.getInstance().aiSoul.replace("\$name",botName)
         scope.launch {
             loadNekoSchem()
-
         }
     }
 
@@ -136,7 +136,6 @@ class OpenAiSession private constructor(private val chatUrl: String) : NekoSessi
     override fun loadChatHistory() {
         clearContext()
         BotApp.getInstance().getLastTenMessages(MessageDao.MessageGetAllListener { result ->
-            FileLogger.d(TAG, "loadChatHistory: "+result.size)
             if(result.isEmpty()){return@MessageGetAllListener}
             val intoContentMessage = arrayListOf<Message>()
             if(result.size <= 10){
@@ -144,7 +143,11 @@ class OpenAiSession private constructor(private val chatUrl: String) : NekoSessi
             }else{
                 intoContentMessage.addAll(result.subList(result.size-10, result.size-1))
             }
+            intoContentMessage.forEach { FileLogger.i(TAG, "loadChatHistory: ${it.speaker}: \"${it.message}\"") }
             chatList.addAll(intoContentMessage)
+            chatList.add(Message(null,
+                "现在时间:${dateTimeFormat.format(System.currentTimeMillis())}",
+                System.currentTimeMillis(),))
         })
     }
 
@@ -167,18 +170,77 @@ class OpenAiSession private constructor(private val chatUrl: String) : NekoSessi
         return modelList
     }
 
+    fun addContent(message: Message) {
+        chatList.add(message)
+    }
+
     fun addToolCalls(message: Choice.Message) {
 
     }
 
-    fun addToolCallResult(content: JSONObject?, callId: String?) {
+    fun addToolCallResult(content: JSONObject?, callId: String?) {}
 
-    }
+    private var lastMessageTime = System.currentTimeMillis()
+    private var lastPostTime = System.currentTimeMillis()
 
     @Throws(JSONException::class)
     override fun callApi(message: NetAiAskAble, add: Boolean): Boolean {
+        // 如果距离上一条用户消息超过10分钟，插入一条时间提示
+        if (isGapTooLong()) {
+            val timeMessage = buildTimeGapMessage()
+            chatList.add(timeMessage)
+        }
+
         chatList.add(message.question)
+
+        // 如果距离上次发送请求不足5秒，直接拒绝
+        if (isTooFrequent()) {
+            return false
+        }
         return requestChatCompletions(message)
+    }
+
+    /**
+     * 判断距离上一条用户消息是否超过10分钟
+     */
+    private fun isGapTooLong(): Boolean {
+        val tenMinutes = 10 * 60 * 1000L
+        return System.currentTimeMillis() - lastMessageTime > tenMinutes
+    }
+
+    /**
+     * 判断是否发送请求太频繁（5秒内）
+     */
+    private fun isTooFrequent(): Boolean {
+        val fiveSeconds = 5000L
+        return System.currentTimeMillis() - lastPostTime < fiveSeconds
+    }
+
+    /**
+     * 生成一条“时间间隔”提示消息，例如“过去了 1小时10分钟”
+     */
+    private fun buildTimeGapMessage(): Message {
+        val gapMillis = System.currentTimeMillis() - lastPostTime
+        val gapText = formatDuration(gapMillis)
+
+        lastMessageTime = System.currentTimeMillis()  // 更新时间戳
+
+        return Message(null, "过去了 $gapText", System.currentTimeMillis())
+    }
+
+    /**
+     * 把毫秒数格式化为“X小时X分钟”或“X分钟”
+     */
+    private fun formatDuration(millis: Long): String {
+        val totalMinutes = millis / 1000 / 60
+        val hours = totalMinutes / 60
+        val minutes = totalMinutes % 60
+
+        return when {
+            hours > 0 -> "${hours}小时${minutes}分钟"
+            minutes > 0 -> "${minutes}分钟"
+            else -> "不到1分钟"
+        }
     }
 
     override fun requestChatSummarize() {
@@ -191,8 +253,13 @@ class OpenAiSession private constructor(private val chatUrl: String) : NekoSessi
         sb.clear()
         sb.append(charaDesc).append("\n").append("\n")
         chatList.forEach {
-            FileLogger.i(TAG, "${it.speaker}: ${it.message}")
-            sb.append(it.speaker).append(": ").append("\"").append(it.message).append("\"").append("\n")
+            if(it.speaker!=null){
+                FileLogger.i(TAG, "${it.speaker?:""}: \"${it.message}\"")
+                sb.append(it.speaker).append(": ").append("\"").append(it.message).append("\"").append("\n")
+            }else{
+                FileLogger.i(TAG, "${it.message}")
+                sb.append(it.message).append("\n")
+            }
         }
         sb.append("\n")
         sb.append("接下来${BotApp.getInstance().botName}会说什么？")
@@ -201,13 +268,16 @@ class OpenAiSession private constructor(private val chatUrl: String) : NekoSessi
                 val nekoSchemStr = chatCompletion(
                     prompt = systemPrompt,
                     text = sb.toString(),
-                    model = currentModel.str
+                    model = currentModel.str,
+                    maxCompletionTokens = 80
                 )
                 val nekoReply = nekoReplyAdapter.fromJson(nekoSchemStr)
                 nekoReply?.let {
+                    lastNekoReply = nekoReply
                     FileLogger.d(TAG, "nekoReply: $nekoSchemStr")
                     message.saveToDatabase(it.replyMessage)
                     chatList.add(message.answer)
+                    message.isReplyReady = true
                     message.delayReplyCallback.onReplySuccess(message)
                 }
             }catch (e: Exception){
@@ -219,6 +289,7 @@ class OpenAiSession private constructor(private val chatUrl: String) : NekoSessi
         return true
     }
 
+    private val maxTotalToken = 4096
     private var nekoSchem: NekoSchem? = null
     private var resFormat: ResponseFormat? = null
     private suspend fun chatCompletion(
@@ -226,8 +297,8 @@ class OpenAiSession private constructor(private val chatUrl: String) : NekoSessi
         text: String? = null,
         prompt: String = "Describe this image in two sentences",
         model: String = modelList[0].str,
-        contextLength: Int = 4096,
-        temperature: Double = 0.1,
+        maxCompletionTokens: Int = 1024,
+        temperature: Double = 1.05,
         jsonSchema: String? = null):String?
     {
         var targetFormat: ResponseFormat? = null
@@ -279,17 +350,26 @@ class OpenAiSession private constructor(private val chatUrl: String) : NekoSessi
                         )
                     ),
                 ),
-                max_tokens = contextLength,
-                max_completion_tokens = contextLength,
+                max_completion_tokens = maxCompletionTokens,
+                reasoning_effort = "none",
                 temperature = temperature,
-                reasoning_effort = "low",
                 response_format = targetFormat
             )
-
+            lastPostTime = System.currentTimeMillis()
             val response = api.chatCompletion(
                 authorization = "Bearer ${BotApp.getInstance().apiKey}",
                 request = request
             )
+            val usage = response.usage
+
+            FileLogger.i(TAG, "prompt_tokens: ${usage.prompt_tokens}")
+            FileLogger.i(TAG, "completion_tokens: ${usage.completion_tokens}")
+            FileLogger.i(TAG, "total_tokens: ${usage.total_tokens}")
+
+            if(usage.total_tokens >= maxTotalToken && chatList.isNotEmpty()) {
+                chatList.removeAt(0)
+            }
+
             return response.choices.firstOrNull()?.message?.content.toString()
         } catch (e: Exception) {
             FileLogger.e(TAG,"请求失败：${e.localizedMessage}")
@@ -297,6 +377,14 @@ class OpenAiSession private constructor(private val chatUrl: String) : NekoSessi
 
         }
         return null
+    }
+
+    private var lastNekoReply: NekoReply? = null
+    fun wantToTalk(): Boolean{
+        if(lastNekoReply != null){
+            return lastNekoReply!!.willingnessToChat > 70
+        }
+        return false
     }
 
     companion object {

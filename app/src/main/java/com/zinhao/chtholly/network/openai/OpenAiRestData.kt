@@ -49,6 +49,7 @@ data class ChatResponse(
     val created: Long?,
     val model: String?,
     val choices: List<ChatChoice>,
+    val usage: Usage,
     val error: OpenAIError?
 )
 
@@ -79,4 +80,75 @@ sealed class ContentPart {
 data class ImageUrl(
     val url: String,
     val detail: String? = null  // "low" / "high" / "auto"
+)
+
+/**
+{
+    "prompt_tokens": 19,
+    "completion_tokens": 10,
+    "total_tokens": 29,
+    "prompt_tokens_details": {
+      "cached_tokens": 0,
+      "audio_tokens": 0
+    },
+    "completion_tokens_details": {
+      "reasoning_tokens": 0,
+      "audio_tokens": 0,
+      "accepted_prediction_tokens": 0,
+      "rejected_prediction_tokens": 0
+    }
+  }
+*/
+data class PromptTokensDetails(
+    val audio_tokens: Int?,
+    val cached_tokens: Int?
+)
+
+/**
+{
+    "prompt_tokens": 19,
+    "completion_tokens": 10,
+    "total_tokens": 29,
+    "prompt_tokens_details": {
+      "cached_tokens": 0,
+      "audio_tokens": 0
+    },
+    "completion_tokens_details": {
+      "reasoning_tokens": 0,
+      "audio_tokens": 0,
+      "accepted_prediction_tokens": 0,
+      "rejected_prediction_tokens": 0
+    }
+  }
+*/
+data class Usage(
+    val completion_tokens: Int,
+    val completion_tokens_details: CompletionTokensDetails?,
+    val prompt_tokens: Int,
+    val prompt_tokens_details: PromptTokensDetails?,
+    val total_tokens: Int
+)
+
+/**
+{
+    "prompt_tokens": 19,
+    "completion_tokens": 10,
+    "total_tokens": 29,
+    "prompt_tokens_details": {
+      "cached_tokens": 0,
+      "audio_tokens": 0
+    },
+    "completion_tokens_details": {
+      "reasoning_tokens": 0,
+      "audio_tokens": 0,
+      "accepted_prediction_tokens": 0,
+      "rejected_prediction_tokens": 0
+    }
+  }
+*/
+data class CompletionTokensDetails(
+    val accepted_prediction_tokens: Int?,
+    val audio_tokens: Int?,
+    val reasoning_tokens: Int?,
+    val rejected_prediction_tokens: Int?
 )

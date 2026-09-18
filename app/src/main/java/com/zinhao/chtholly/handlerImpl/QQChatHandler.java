@@ -19,6 +19,7 @@ import com.zinhao.chtholly.network.gemini.Part;
 import com.zinhao.chtholly.session.GeminiGateWayAgent;
 import com.zinhao.chtholly.session.GeminiSession;
 import com.zinhao.chtholly.session.NekoSession;
+import com.zinhao.chtholly.session.OpenAiSession;
 import com.zinhao.chtholly.utils.*;
 
 import java.util.*;
@@ -38,7 +39,9 @@ public class QQChatHandler extends BaseChatHandler {
     private final GeminiGateWayAgent gateWayAgent;
     private final Handler mHandler;
 
-    private int hp = 3;
+    private static final int MAX_HP = 4;
+    private int hp = MAX_HP;
+
 
     public QQChatHandler(Context context, MessageCallback messageCallback) {
         super(messageCallback);
@@ -57,7 +60,7 @@ public class QQChatHandler extends BaseChatHandler {
     }
 
     public void plusHp() {
-        if(hp < 5){
+        if(hp < MAX_HP){
             hp++;
         }
     }
@@ -90,7 +93,10 @@ public class QQChatHandler extends BaseChatHandler {
         if(command.getQuestion().getSpeaker() == null || command.getQuestion().getSpeaker().isEmpty()){
             return command.getAnswer().getMessage();
         }
-        return String.format("@%s %s", command.getQuestion().getSpeaker(), command.getAnswer().getMessage());
+        if(command.getQuestion().isAtMessage()){
+            return String.format("@%s %s", command.getQuestion().getSpeaker(), command.getAnswer().getMessage());
+        }
+        return command.getAnswer().getMessage();
     }
 
     public void findLastMessage(AccessibilityNodeInfo nodeInfo){
@@ -103,16 +109,16 @@ public class QQChatHandler extends BaseChatHandler {
         if(hitMessage == null){
             return;
         }
+
         if (hitMessage.speaker == null || hitMessage.message == null) {
             return;
         }
 
         if(!checkSameList.isEmpty()){
-            for(Message message : checkSameList){
-                if(message.message.equals(hitMessage.message)){
-                    Log.d(TAG, "same message:"+hitMessage.message +", size:"+checkSameList.size());
-                    return;
-                }
+            Message lastMessage = checkSameList.get(checkSameList.size()-1);
+            if(Objects.equals(lastMessage.speaker, hitMessage.speaker) &&  Objects.equals(lastMessage.message, hitMessage.message)){
+                Log.d(TAG, "same message:"+hitMessage.message +", size:"+checkSameList.size());
+                return;
             }
         }
 
@@ -129,8 +135,11 @@ public class QQChatHandler extends BaseChatHandler {
                         GeminiSession.ROLE_USER
                 );
                 ((GeminiSession) nekoSession).addContent(content);
+            }else if(nekoSession instanceof OpenAiSession){
+                ((OpenAiSession) nekoSession).addContent(hitMessage);
             }
         }else if (checkResult == CHECK_PASS){
+
             passMessage(hitMessage);
         }else if (checkResult == CHECK_WAIT){
             Log.d(TAG, "findLastMessage: CHECK_WAIT");
@@ -160,52 +169,99 @@ public class QQChatHandler extends BaseChatHandler {
     private static final int CHECK_PASS = 517;
     private static final int CHECK_FAILED = 518;
     private int messageCheckIn(Message hitMessage,String botName){
-        boolean pass = isAtName(hitMessage, botName);
         if(hitMessage.isOther()){
-            pass = true;
-        }
-        if (pass) {
-            // 检查@消息频率
-            if(hitMessage.message.contains("@")){
-                pass = hp > 0;
-            }
             checkSameList.add(hitMessage);
-            if(pass){
-                return CHECK_PASS;
+            atMeCount = 0;
+            return CHECK_PASS;
+        }
+        boolean isAtBot = isAtName(hitMessage, botName);
+        boolean isAt = hitMessage.message.contains("@");
+        boolean isAtOther = !isAtBot && isAt;
+        hitMessage.setAtMessage(isAt);
+        checkSameList.add(hitMessage);
+        if (isAtBot) {
+            if(BotApp.getInstance().getMode() == OpenAiSession.class){
+                return wantChat();
+            }else{
+                if(hp > 0){
+                    return CHECK_PASS;
+                }else {
+                    return CHECK_FAILED;
+                }
             }
         } else {
-            if(hitMessage.message.startsWith("@")){
+            if(isAtOther){
+                // 对其他人的谈话
                 Log.i(TAG, "@other person, return!");
-                checkSameList.add(hitMessage);
                 return CHECK_FAILED;
             }else {
-                AsyncHelper.INSTANCE.doAsyncPart(()->{
-                    Content c1;
-                    if(checkSameList.isEmpty()){
-                        c1 = new Content(Collections.singletonList(new Part("(EMPTY)", null,
-                                null, null)), GeminiSession.ROLE_USER);
-                    }else{
-                        c1 = new Content(Collections.singletonList(new Part(checkSameList.get(checkSameList.size()-1).message, null,
-                                null, null)), GeminiSession.ROLE_USER);
-                    }
-                    Content c2 = new Content(Collections.singletonList(new Part(hitMessage.message, null,
-                            null, null)), GeminiSession.ROLE_USER);
-
-                    checkSameList.add(hitMessage);
-
-                    boolean checkResult = gateWayAgent.needReply(Arrays.asList(c1,c2));
-                    Log.d(TAG, "messageCheckIn: gateWayAgent:"+checkResult);
-                    if(checkResult){
-                        mHandler.post(()->{
-                            passMessage(hitMessage);
-                        });
-                    }
-                });
-                return CHECK_WAIT;
+                // 公共谈话
+                if(BotApp.getInstance().getMode() == OpenAiSession.class){
+                    return wantChat();
+                }else {
+                    AsyncHelper.INSTANCE.doAsyncPart(()->{
+                        boolean checkResult = needReply(checkSameList,hitMessage);
+                        Log.d(TAG, "messageCheckIn: gateWayAgent:"+checkResult);
+                        if(checkResult){
+                            mHandler.post(()->{
+                                passMessage(hitMessage);
+                            });
+                        }
+                    });
+                    return CHECK_WAIT;
+                }
             }
+        }
+    }
 
+    private int atMeCount = 0;
+
+    private synchronized int wantChat(){
+        if(BotApp.getInstance().getMode() == OpenAiSession.class){
+            if(OpenAiSession.getInstance()!=null){
+                if(OpenAiSession.getInstance().wantToTalk()){
+                    FileLogger.INSTANCE.i(TAG,"聊天意愿高，HP="+hp);
+                    atMeCount = 0;
+                    return CHECK_PASS;
+                }else  {
+                    if(hp >= MAX_HP){
+                        FileLogger.INSTANCE.i(TAG,"聊天意愿低下....但HP="+hp);
+                        atMeCount = 0;
+                        return CHECK_PASS;
+                    }else {
+                        atMeCount ++;
+                        if(atMeCount >= 4){
+                            FileLogger.INSTANCE.i(TAG,"聊天意愿低下....但atMeCount="+atMeCount);
+                            atMeCount = 0;
+                            return CHECK_PASS;
+                        }else {
+                            FileLogger.INSTANCE.i(TAG,"聊天意愿低下....");
+                            return CHECK_FAILED;
+                        }
+
+                    }
+                }
+            }
         }
         return CHECK_FAILED;
+    }
+
+    private boolean needReply(final List<Message> checkSameList,Message hitMessage){
+        if(BotApp.getInstance().getMode() == GeminiSession.class){
+            Content c1;
+            if(checkSameList.isEmpty()){
+                c1 = new Content(Collections.singletonList(new Part("(EMPTY)", null,
+                        null, null)), GeminiSession.ROLE_USER);
+            }else{
+                c1 = new Content(Collections.singletonList(new Part(checkSameList.get(checkSameList.size()-1).message, null,
+                        null, null)), GeminiSession.ROLE_USER);
+            }
+            Content c2 = new Content(Collections.singletonList(new Part(hitMessage.message, null,
+                    null, null)), GeminiSession.ROLE_USER);
+
+            checkSameList.add(hitMessage);
+            return gateWayAgent.needReply(Arrays.asList(c1,c2));
+        }else return false;
     }
 
     @Override

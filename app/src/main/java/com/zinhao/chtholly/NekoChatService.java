@@ -171,6 +171,7 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
     private static final long HOUR_MILL = 60*MINUTE_MILL;
     private static final long BORING_ASK_TIME = 48 * HOUR_MILL;
     private static final int LOOP_INTERVAL = 500;
+    private static final int TICK_MINUTES_10 = 10*60*1000/500;
 
     private long timeTick = 0;
     private static final long AUTO_SHOW_BLACK_SCREEN_DELAY = 160;
@@ -178,7 +179,7 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
         @Override
         public void run() {
             timeTick++;
-            if(timeTick % 120 == 0){
+            if(timeTick % TICK_MINUTES_10/2 == 0){
                 qqChatHandler.plusHp();
             }
             if(timeTick > nextShowBlackScreen){
@@ -208,7 +209,7 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
                     }
                     AccessibilityNodeInfo root = getRootInActiveWindow();
                     if(root != null){
-                        addLogcat("timer tick...");
+//                        addLogcat("timer tick...");
                         handleQAs(root);
                         removeSuccessMessage();
                         root.recycle();

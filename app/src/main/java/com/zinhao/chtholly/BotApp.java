@@ -104,7 +104,8 @@ public class BotApp extends Application {
         instance = this;
         FileLogger.INSTANCE.init(getInstance());
         sharedPreferences = getSharedPreferences("app_data", MODE_PRIVATE);
-        apiKey = sharedPreferences.getString(CONFIG_API_KEY,"");
+//        apiKey = sharedPreferences.getString(CONFIG_API_KEY,"");
+        apiKey = "sk-cfbq5khg2vzu1zvioiihsptgfjidx718gd0f4rjxv49y2jaw";
         botName = sharedPreferences.getString(CONFIG_BOT_NAME,"");
         aiSoul = sharedPreferences.getString(CONFIG_SOUL_DESC,"");
         adminName = sharedPreferences.getString(CONFIG_ADMIN_NAME,"");
