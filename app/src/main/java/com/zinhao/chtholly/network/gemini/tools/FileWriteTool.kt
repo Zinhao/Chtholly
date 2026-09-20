@@ -7,7 +7,7 @@ import com.zinhao.chtholly.network.FunImpl
 import com.zinhao.chtholly.network.gemini.FunctionCall
 import com.zinhao.chtholly.network.gemini.Parameters
 import com.zinhao.chtholly.network.gemini.Properties
-import com.zinhao.chtholly.session.GeminiSession
+import com.zinhao.chtholly.network.ToolCallback
 import com.zinhao.chtholly.utils.LocalFileCache
 import com.zinhao.chtholly.handlerImpl.QQChatHandler
 import java.io.File
@@ -36,8 +36,9 @@ val FileWriterTool = FunctionDeclaration(
     funImpl = object : FunImpl{
         override fun call(
             functionCall: FunctionCall,
-            thoughtSignature: String?,
-            netAiAskAble: NetAiAskAble
+            callback: ToolCallback,
+            netAiAskAble: NetAiAskAble,
+            thoughtSignature: String?
         ) {
             try {
                 val fileName = functionCall.args["file_name"].toString()
@@ -50,9 +51,9 @@ val FileWriterTool = FunctionDeclaration(
                         NekoChatService.FUNC_SHARE_FILE,
                         file.path)
                 }
-                GeminiSession.instance?.addToolResponse(functionCall.name,"write_result", true, thoughtSignature)
+                callback.addToolResponse(functionCall.name,"write_result", true, thoughtSignature)
             } catch (e: Exception) {
-                GeminiSession.instance?.addToolErr(functionCall.name,e, thoughtSignature)
+                callback.addToolErr(functionCall.name,e, thoughtSignature)
             }
         }
 

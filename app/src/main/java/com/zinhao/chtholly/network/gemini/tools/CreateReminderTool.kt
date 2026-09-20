@@ -5,7 +5,7 @@ import com.zinhao.chtholly.network.FunctionDeclaration
 import com.zinhao.chtholly.network.gemini.FunctionCall
 import com.zinhao.chtholly.network.gemini.Parameters
 import com.zinhao.chtholly.network.gemini.Properties
-import com.zinhao.chtholly.session.GeminiSession
+import com.zinhao.chtholly.network.ToolCallback
 import com.zinhao.chtholly.utils.ReminderManager
 
 val CreateReminder = FunctionDeclaration(
@@ -32,8 +32,9 @@ val CreateReminder = FunctionDeclaration(
     funImpl = object : FunImpl {
         override fun call(
             functionCall: FunctionCall,
-            thoughtSignature: String?,
-            netAiAskAble: NetAiAskAble
+            callback: ToolCallback,
+            netAiAskAble: NetAiAskAble,
+            thoughtSignature: String?
         ) {
             try {
                 val title = functionCall.args["title"].toString()
@@ -45,14 +46,14 @@ val CreateReminder = FunctionDeclaration(
 
                 val successMessage = "Successfully set reminder: '$title' at $startTime"
 
-                GeminiSession.instance?.addToolResponse(
+                callback.addToolResponse(
                     functionCall.name,
                     "create_result",
                     successMessage,
                     thoughtSignature
                 )
             } catch (e: Exception) {
-                GeminiSession.instance?.addToolErr(functionCall.name, e, thoughtSignature)
+                callback.addToolErr(functionCall.name, e, thoughtSignature)
             }
         }
     }
@@ -78,8 +79,9 @@ val GetReminders = FunctionDeclaration(
     funImpl = object : FunImpl {
         override fun call(
             functionCall: FunctionCall,
-            thoughtSignature: String?,
-            netAiAskAble: NetAiAskAble
+            callback: ToolCallback,
+            netAiAskAble: NetAiAskAble,
+            thoughtSignature: String?
         ) {
             try {
                 val from = functionCall.args["from_datetime"]?.toString()
@@ -88,14 +90,14 @@ val GetReminders = FunctionDeclaration(
                 // 模拟从数据库获取提醒列表
                 val reminders = ReminderManager.getReminders(from,to)
 
-                GeminiSession.instance?.addToolResponse(
+                callback.addToolResponse(
                     functionCall.name,
                     "reminders_list",
                     reminders,
                     thoughtSignature
                 )
             } catch (e: Exception) {
-                GeminiSession.instance?.addToolErr(functionCall.name, e, thoughtSignature)
+                callback.addToolErr(functionCall.name, e, thoughtSignature)
             }
         }
     }

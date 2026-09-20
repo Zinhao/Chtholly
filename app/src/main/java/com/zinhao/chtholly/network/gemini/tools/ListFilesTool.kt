@@ -11,7 +11,7 @@ import com.zinhao.chtholly.network.FunImpl
 import com.zinhao.chtholly.network.gemini.FunctionCall
 import com.zinhao.chtholly.network.gemini.Parameters
 import com.zinhao.chtholly.network.gemini.Properties
-import com.zinhao.chtholly.session.GeminiSession
+import com.zinhao.chtholly.network.ToolCallback
 import com.zinhao.chtholly.utils.LocalFileCache
 import org.json.JSONArray
 import org.json.JSONObject
@@ -38,8 +38,9 @@ val ListFilesTool = FunctionDeclaration(
     funImpl = object : FunImpl{
         override fun call(
             functionCall: FunctionCall,
-            thoughtSignature: String?,
-            netAiAskAble: NetAiAskAble
+            callback: ToolCallback,
+            netAiAskAble: NetAiAskAble,
+            thoughtSignature: String?
         ) {
             try {
                 val dirPath = functionCall.args["dir_path"].toString()
@@ -58,9 +59,9 @@ val ListFilesTool = FunctionDeclaration(
                     val jsonObject = JSONObject(strFileInfo)
                     fileArray.put(jsonObject)
                 }
-                GeminiSession.instance?.addToolResponse(functionCall.name,"list_dir_result",fileArray.toString(),thoughtSignature)
+                callback.addToolResponse(functionCall.name,"list_dir_result",fileArray.toString(),thoughtSignature)
             } catch (e: Exception) {
-                GeminiSession.instance?.addToolErr(functionCall.name,e, thoughtSignature)
+                callback.addToolErr(functionCall.name,e, thoughtSignature)
             }
         }
     }

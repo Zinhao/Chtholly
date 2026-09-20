@@ -5,7 +5,7 @@ import com.zinhao.chtholly.network.FunImpl
 import com.zinhao.chtholly.network.FunctionDeclaration
 import com.zinhao.chtholly.network.gemini.FunctionCall
 import com.zinhao.chtholly.network.gemini.Parameters
-import com.zinhao.chtholly.session.GeminiSession
+import com.zinhao.chtholly.network.ToolCallback
 import org.json.JSONObject
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -23,15 +23,16 @@ val GetSystemTime = FunctionDeclaration(
     funImpl = object : FunImpl {
         override fun call(
             functionCall: FunctionCall,
-            thoughtSignature: String?,
-            netAiAskAble: NetAiAskAble
+            callback: ToolCallback,
+            netAiAskAble: NetAiAskAble,
+            thoughtSignature: String?
         ) {
             try {
                 // 定义与 ReminderManager 一致的时间格式
                 val sdf = SimpleDateFormat("yyyyMMdd'T'HHmm", Locale.getDefault())
                 val currentTime = sdf.format(Date())
 
-                // 获取星期几，方便 Agent 处理“周五”之类的请求
+                // 获取星期几，方便 Agent 处理"周五"之类的请求
                 val dayOfWeek = SimpleDateFormat("EEEE", Locale.ENGLISH).format(Date())
 
                 val result = JSONObject().apply {
@@ -40,14 +41,14 @@ val GetSystemTime = FunctionDeclaration(
                     put("timezone", TimeZone.getDefault().id)
                 }
 
-                GeminiSession.instance?.addToolResponse(
+                callback.addToolResponse(
                     functionCall.name,
                     "time_result",
                     result.toString(),
                     thoughtSignature
                 )
             } catch (e: Exception) {
-                GeminiSession.instance?.addToolErr(functionCall.name, e, thoughtSignature)
+                callback.addToolErr(functionCall.name, e, thoughtSignature)
             }
         }
     }

@@ -6,7 +6,7 @@ import com.zinhao.chtholly.network.FunImpl
 import com.zinhao.chtholly.network.gemini.FunctionCall
 import com.zinhao.chtholly.network.gemini.Parameters
 import com.zinhao.chtholly.network.gemini.Properties
-import com.zinhao.chtholly.session.GeminiSession
+import com.zinhao.chtholly.network.ToolCallback
 import com.zinhao.chtholly.handlerImpl.QQChatHandler
 
 val MutedUserTool = FunctionDeclaration(
@@ -27,8 +27,9 @@ val MutedUserTool = FunctionDeclaration(
     funImpl = object : FunImpl {
         override fun call(
             functionCall: FunctionCall,
-            thoughtSignature: String?,
-            netAiAskAble: NetAiAskAble
+            callback: ToolCallback,
+            netAiAskAble: NetAiAskAble,
+            thoughtSignature: String?
         ) {
             try {
                 val blockName = functionCall.args["muted_user_name"].toString()
@@ -36,14 +37,14 @@ val MutedUserTool = FunctionDeclaration(
                     netAiAskAble.blockUserSpeak(blockName)
                 }
                 // 反馈给 Gemini 发送指令已执行
-                GeminiSession.instance?.addToolResponse(
+                callback.addToolResponse(
                     functionCall.name,
                     "muted_result",
                     "${blockName} have been muted for 10 minutes.",
                     thoughtSignature
                 )
             } catch (e: Exception) {
-                GeminiSession.instance?.addToolErr(functionCall.name, e, thoughtSignature)
+                callback.addToolErr(functionCall.name, e, thoughtSignature)
             }
         }
     }

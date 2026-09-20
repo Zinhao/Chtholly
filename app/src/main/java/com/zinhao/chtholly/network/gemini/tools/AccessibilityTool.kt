@@ -8,10 +8,10 @@ import com.zinhao.chtholly.NekoChatService
 import com.zinhao.chtholly.entity.NetAiAskAble
 import com.zinhao.chtholly.network.FunctionDeclaration
 import com.zinhao.chtholly.network.FunImpl
+import com.zinhao.chtholly.network.ToolCallback
 import com.zinhao.chtholly.network.gemini.FunctionCall
 import com.zinhao.chtholly.network.gemini.Parameters
 import com.zinhao.chtholly.network.gemini.Properties
-import com.zinhao.chtholly.session.GeminiSession
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -27,8 +27,9 @@ val GetViewNode = FunctionDeclaration(
     funImpl = object : FunImpl {
         override fun call(
             functionCall: FunctionCall,
-            thoughtSignature: String?,
-            netAiAskAble: NetAiAskAble
+            callback: ToolCallback,
+            netAiAskAble: NetAiAskAble,
+            thoughtSignature: String?
         ) {
             try {
                 val rootNode = NekoChatService.getInstance().rootInActiveWindow
@@ -37,14 +38,14 @@ val GetViewNode = FunctionDeclaration(
                 // 递归遍历并扁平化节点树，只保留有意义的节点
                 flattenNodes(rootNode, nodeList, "")
 
-                GeminiSession.instance?.addToolResponse(
+                callback.addToolResponse(
                     functionCall.name,
                     "view_nodes_result",
                     nodeList.toString(),
                     thoughtSignature
                 )
             } catch (e: Exception) {
-                GeminiSession.instance?.addToolErr(functionCall.name, e, thoughtSignature)
+                callback.addToolErr(functionCall.name, e, thoughtSignature)
             }
         }
 
@@ -97,8 +98,9 @@ val DoStepOnNode = FunctionDeclaration(
     funImpl = object : FunImpl {
         override fun call(
             functionCall: FunctionCall,
-            thoughtSignature: String?,
-            netAiAskAble: NetAiAskAble
+            callback: ToolCallback,
+            netAiAskAble: NetAiAskAble,
+            thoughtSignature: String?
         ) {
             try {
                 val action = functionCall.args["action"].toString().uppercase()
@@ -135,14 +137,14 @@ val DoStepOnNode = FunctionDeclaration(
                     }
                 }
 
-                GeminiSession.instance?.addToolResponse(
+                callback.addToolResponse(
                     functionCall.name,
                     "action_result",
                     "Action $action executed: $success",
                     thoughtSignature
                 )
             } catch (e: Exception) {
-                GeminiSession.instance?.addToolErr(functionCall.name, e, thoughtSignature)
+                callback.addToolErr(functionCall.name, e, thoughtSignature)
             }
         }
 

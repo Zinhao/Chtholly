@@ -12,6 +12,7 @@ import com.zinhao.chtholly.entity.NetAiAskAble
 import com.zinhao.chtholly.network.GEMINI_TOOLS
 import com.zinhao.chtholly.network.LoggingInterceptor
 import com.zinhao.chtholly.network.Tool
+import com.zinhao.chtholly.network.ToolCallback
 import com.zinhao.chtholly.network.gemini.*
 import com.zinhao.chtholly.session.RemoteChatApiSession.RemoteModel
 import com.zinhao.chtholly.utils.AsyncHelper
@@ -27,7 +28,7 @@ import java.util.*
 import java.util.concurrent.TimeUnit
 
 class GeminiSession private constructor(private var chatApi: String) : NekoSession(),
-    RemoteChatApiSession {
+    RemoteChatApiSession, ToolCallback {
     private var data: PostRequest
     private val tools: MutableList<Tool>  = arrayListOf()
     private var systemInstruction: SystemInstruction
@@ -375,7 +376,7 @@ class GeminiSession private constructor(private var chatApi: String) : NekoSessi
         return true
     }
 
-    fun addToolResponse(name:String, key: String, result: Any, thoughtSignature: String?) {
+    override fun addToolResponse(name:String, key: String, result: Any, thoughtSignature: String?) {
         addContent(
             Content(
                 listOf(
@@ -389,7 +390,7 @@ class GeminiSession private constructor(private var chatApi: String) : NekoSessi
         )
     }
 
-    fun addToolErr(name:String, e: Exception, thoughtSignature: String?) {
+    override fun addToolErr(name:String, e: Exception, thoughtSignature: String?) {
         addContent(
             Content(
                 listOf(

@@ -5,7 +5,7 @@ import com.zinhao.chtholly.network.FunImpl
 import com.zinhao.chtholly.network.gemini.FunctionCall
 import com.zinhao.chtholly.network.gemini.Parameters
 import com.zinhao.chtholly.network.gemini.Properties
-import com.zinhao.chtholly.session.GeminiSession
+import com.zinhao.chtholly.network.ToolCallback
 import com.zinhao.chtholly.utils.LocalFileCache
 import java.io.File
 
@@ -27,8 +27,9 @@ val FileReaderTool = FunctionDeclaration(
     funImpl = object : FunImpl{
         override fun call(
             functionCall: FunctionCall,
-            thoughtSignature: String?,
-            netAiAskAble: NetAiAskAble
+            callback: ToolCallback,
+            netAiAskAble: NetAiAskAble,
+            thoughtSignature: String?
         ) {
             try {
                 if (!functionCall.args.contains("file_path")) {
@@ -38,9 +39,9 @@ val FileReaderTool = FunctionDeclaration(
                 val targetFile =
                     File(LocalFileCache.getInstance().getWorkSpaceDir(), filePath)
                 val readFileResult = LocalFileCache.getInstance().readTextSync(targetFile)
-                GeminiSession.instance?.addToolResponse(functionCall.name,"file_content",readFileResult,thoughtSignature)
+                callback.addToolResponse(functionCall.name,"file_content",readFileResult,thoughtSignature)
             } catch (e: Exception) {
-                GeminiSession.instance?.addToolErr(functionCall.name,e, thoughtSignature)
+                callback.addToolErr(functionCall.name,e, thoughtSignature)
             }
         }
 

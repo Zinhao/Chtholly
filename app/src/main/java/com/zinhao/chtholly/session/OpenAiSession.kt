@@ -7,11 +7,14 @@ import com.squareup.moshi.adapter
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import com.zinhao.chtholly.BotApp
 import com.zinhao.chtholly.db.MessageDao
-import com.zinhao.chtholly.entity.Choice
 import com.zinhao.chtholly.entity.Message
 import com.zinhao.chtholly.entity.NekoReply
 import com.zinhao.chtholly.entity.NetAiAskAble
 import com.zinhao.chtholly.network.LoggingInterceptor
+import com.zinhao.chtholly.network.ToolCallback
+import com.zinhao.chtholly.network.dispatchToolCall
+import com.zinhao.chtholly.network.gemini.FunctionCall
+import com.zinhao.chtholly.network.gemini.tools.MutedUserTool
 import com.zinhao.chtholly.network.openai.*
 import com.zinhao.chtholly.network.OPENAI_TOOLS
 import com.zinhao.chtholly.session.RemoteChatApiSession.RemoteModel
@@ -21,7 +24,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
-import org.checkerframework.checker.units.qual.s
 import org.json.JSONException
 import org.json.JSONObject
 import retrofit2.Retrofit
@@ -31,7 +33,7 @@ import java.text.SimpleDateFormat
 import java.util.*
 import java.util.concurrent.TimeUnit
 
-class OpenAiSession private constructor(private val chatUrl: String) : NekoSession(), RemoteChatApiSession {
+class OpenAiSession private constructor(private val chatUrl: String) : NekoSession(), RemoteChatApiSession, ToolCallback {
     private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
     private val okHttpClient: OkHttpClient =OkHttpClient.Builder()
         .callTimeout(100, TimeUnit.SECONDS)
@@ -198,12 +200,39 @@ class OpenAiSession private constructor(private val chatUrl: String) : NekoSessi
         roleMessageList.add(message)
     }
 
-    fun addToolCalls(message: Choice.Message) {
+    // Tool call state
+    private val pendingToolResults = mutableListOf<ChatMessage>()
+    private val pendingToolCallIdMap = mutableMapOf<String, String>()
 
+    override fun addToolResponse(name: String, key: String, result: Any, thoughtSignature: String?) {
+        pendingToolResults.add(
+            ChatMessage(
+                role = ROLE_TOOL,
+                content = listOf(ContentPart.TextPart(type = "text", text = result.toString())),
+                tool_call_id = pendingToolCallIdMap[name]
+            )
+        )
     }
 
-    fun addToolCallResult(content: JSONObject?, callId: String?) {
+    override fun addToolErr(name: String, e: Exception, thoughtSignature: String?) {
+        pendingToolResults.add(
+            ChatMessage(
+                role = ROLE_TOOL,
+                content = listOf(ContentPart.TextPart(type = "text", text = "Error: ${e.message}")),
+                tool_call_id = pendingToolCallIdMap[name]
+            )
+        )
+    }
 
+    private fun parseToolArgs(arguments: String): Map<String, Any> {
+        return try {
+            val json = JSONObject(arguments)
+            val map = mutableMapOf<String, Any>()
+            json.keys().forEach { key -> map[key] = json.get(key) }
+            map
+        } catch (e: Exception) {
+            emptyMap()
+        }
     }
 
     private var lastMessageTime = System.currentTimeMillis()
@@ -297,15 +326,53 @@ class OpenAiSession private constructor(private val chatUrl: String) : NekoSessi
                 )
             ),
         ))
+
         scope.launch {
             try {
-                val chatMessageResult = chatCompletion(
+                var chatMessageResult = chatCompletion(
                     prompt = systemPrompt,
                     chatMessageList = contextMessageList,
                     model = currentModel.str,
                     maxCompletionTokens = 4096,
                     responseFormat = noneResponseFormat,
                 )
+
+                // Tool call loop
+                while (chatMessageResult != null && !chatMessageResult.tool_calls.isNullOrEmpty()) {
+                    // Append assistant's tool_calls message to context
+                    contextMessageList.add(chatMessageResult)
+
+                    // Dispatch each tool call
+                    pendingToolResults.clear()
+                    pendingToolCallIdMap.clear()
+
+                    for (toolCall in chatMessageResult.tool_calls) {
+                        val argsMap = parseToolArgs(toolCall.function.arguments)
+                        val functionCall = FunctionCall(toolCall.function.name, argsMap)
+                        pendingToolCallIdMap[toolCall.function.name] = toolCall.id
+
+                        if (!message.question.isEnableCommand && toolCall.function.name != MutedUserTool.name) {
+                            addToolErr(toolCall.function.name, Exception("Insufficient permissions"))
+                        } else {
+                            FileLogger.i(TAG, "${toolCall.function.name}: ${toolCall.function.arguments}")
+                            dispatchToolCall(toolCall.function.name, functionCall, this@OpenAiSession, message)
+                        }
+                    }
+
+                    // Append all tool results to context
+                    contextMessageList.addAll(pendingToolResults)
+
+                    // Re-call API with tool results
+                    chatMessageResult = chatCompletion(
+                        prompt = systemPrompt,
+                        chatMessageList = contextMessageList,
+                        model = currentModel.str,
+                        maxCompletionTokens = 4096,
+                        responseFormat = noneResponseFormat,
+                    )
+                }
+
+                // Normal text response
                 chatMessageResult?.let {
                     val text = if(it.content is ContentPart.TextPart){
                         it.content.text

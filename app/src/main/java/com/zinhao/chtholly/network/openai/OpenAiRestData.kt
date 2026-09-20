@@ -36,11 +36,22 @@ data class ToolProperty(
     val enum: List<String>? = null
 )
 
+data class ToolCall(
+    val id: String,
+    val type: String = "function",
+    val function: ToolCallFunction
+)
+
+data class ToolCallFunction(
+    val name: String,
+    val arguments: String
+)
+
 data class ChatMessage(
-    val role: String,     // system / user / assistant
+    val role: String,     // system / user / assistant / tool
     val content: Any?,  // String 或 List<ContentPart>
-//    val tool_calls: List<ToolCall>? = null,
-//    val tool_call_id: String? = null
+    val tool_calls: List<ToolCall>? = null,
+    val tool_call_id: String? = null
 )
 
 data class ChatResponse(

@@ -19,6 +19,7 @@ import com.zinhao.chtholly.network.gemini.tools.GetViewNode
 import com.zinhao.chtholly.network.gemini.tools.ListFilesTool
 import com.zinhao.chtholly.network.gemini.tools.MutedUserTool
 import com.zinhao.chtholly.network.gemini.tools.SendFileTool
+import com.zinhao.chtholly.network.dispatchToolCall
 import com.zinhao.chtholly.session.GeminiSession.Companion.instance
 import com.zinhao.chtholly.utils.AsyncHelper
 import com.zinhao.chtholly.utils.FileLogger
@@ -217,35 +218,7 @@ class GeminiAIAskAble : NetAiAskAble {
             instance?.addToolErr(name, Exception("Insufficient permissions"),thoughtSignature)
             return
         }
-        when (name) {
-            FileWriterTool.name -> {
-                FileWriterTool.funImpl?.call(this,thoughtSignature,this@GeminiAIAskAble)
-            }
-            ListFilesTool.name -> {
-                ListFilesTool.funImpl?.call(this,thoughtSignature,this@GeminiAIAskAble)
-            }
-            FileReaderTool.name -> {
-                FileReaderTool.funImpl?.call(this,thoughtSignature,this@GeminiAIAskAble)
-            }
-            AppendTextTool.name->{
-                AppendTextTool.funImpl?.call(this,thoughtSignature,this@GeminiAIAskAble)
-            }
-            SendFileTool.name->{
-                SendFileTool.funImpl?.call(this,thoughtSignature,this@GeminiAIAskAble)
-            }
-            GetViewNode.name->{
-                GetViewNode.funImpl?.call(this,thoughtSignature,this@GeminiAIAskAble)
-            }
-            DoStepOnNode.name ->{
-                DoStepOnNode.funImpl?.call(this,thoughtSignature,this@GeminiAIAskAble)
-            }
-            MutedUserTool.name -> {
-                MutedUserTool.funImpl?.call(this,thoughtSignature,this@GeminiAIAskAble)
-            }
-            CreateReminder.name->{CreateReminder.funImpl?.call(this,thoughtSignature,this@GeminiAIAskAble)}
-            GetReminders.name->{GetReminders.funImpl?.call(this,thoughtSignature,this@GeminiAIAskAble)}
-            GetSystemTime.name->{GetSystemTime.funImpl?.call(this,thoughtSignature,this@GeminiAIAskAble)}
-        }
+        dispatchToolCall(name, this, instance!!, this@GeminiAIAskAble, thoughtSignature)
     }
 
     companion object {

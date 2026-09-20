@@ -6,7 +6,7 @@ import com.zinhao.chtholly.network.FunImpl
 import com.zinhao.chtholly.network.gemini.FunctionCall
 import com.zinhao.chtholly.network.gemini.Parameters
 import com.zinhao.chtholly.network.gemini.Properties
-import com.zinhao.chtholly.session.GeminiSession
+import com.zinhao.chtholly.network.ToolCallback
 import com.zinhao.chtholly.utils.LocalFileCache
 import org.json.JSONObject
 import java.io.File
@@ -35,8 +35,9 @@ val AppendTextTool = FunctionDeclaration(
     funImpl = object : FunImpl {
         override fun call(
             functionCall: FunctionCall,
-            thoughtSignature: String?,
-            netAiAskAble: NetAiAskAble
+            callback: ToolCallback,
+            netAiAskAble: NetAiAskAble,
+            thoughtSignature: String?
         ) {
             try {
                 val filePath = functionCall.args["file_path"].toString()
@@ -54,14 +55,14 @@ val AppendTextTool = FunctionDeclaration(
                     put("bytes_appended", content.length)
                 }
 
-                GeminiSession.instance?.addToolResponse(
+                callback.addToolResponse(
                     functionCall.name,
                     "append_text_result",
                     result.toString(),
                     thoughtSignature
                 )
             } catch (e: Exception) {
-                GeminiSession.instance?.addToolErr(functionCall.name, e, thoughtSignature)
+                callback.addToolErr(functionCall.name, e, thoughtSignature)
             }
         }
     }

@@ -47,8 +47,9 @@ val PrintInfo = FunctionDeclaration(
     funImpl = object : FunImpl{
         override fun call(
             functionCall: FunctionCall,
-            thoughtSignature: String?,
-            netAiAskAble: NetAiAskAble
+            callback: ToolCallback,
+            netAiAskAble: NetAiAskAble,
+            thoughtSignature: String?
         ) {
 
         }
@@ -124,6 +125,33 @@ data class Tool(
     val functionDeclarations: List<FunctionDeclaration>
 )
 
+interface ToolCallback {
+    fun addToolResponse(name: String, key: String, result: Any, thoughtSignature: String? = null)
+    fun addToolErr(name: String, e: Exception, thoughtSignature: String? = null)
+}
+
 interface FunImpl{
-    fun call(functionCall: FunctionCall,thoughtSignature: String?,netAiAskAble: NetAiAskAble)
+    fun call(functionCall: FunctionCall, callback: ToolCallback, netAiAskAble: NetAiAskAble, thoughtSignature: String? = null)
+}
+
+fun dispatchToolCall(
+    name: String,
+    functionCall: FunctionCall,
+    callback: ToolCallback,
+    netAiAskAble: NetAiAskAble,
+    thoughtSignature: String? = null
+) {
+    when (name) {
+        FileWriterTool.name -> FileWriterTool.funImpl?.call(functionCall, callback, netAiAskAble, thoughtSignature)
+        ListFilesTool.name -> ListFilesTool.funImpl?.call(functionCall, callback, netAiAskAble, thoughtSignature)
+        FileReaderTool.name -> FileReaderTool.funImpl?.call(functionCall, callback, netAiAskAble, thoughtSignature)
+        AppendTextTool.name -> AppendTextTool.funImpl?.call(functionCall, callback, netAiAskAble, thoughtSignature)
+        SendFileTool.name -> SendFileTool.funImpl?.call(functionCall, callback, netAiAskAble, thoughtSignature)
+        GetViewNode.name -> GetViewNode.funImpl?.call(functionCall, callback, netAiAskAble, thoughtSignature)
+        DoStepOnNode.name -> DoStepOnNode.funImpl?.call(functionCall, callback, netAiAskAble, thoughtSignature)
+        MutedUserTool.name -> MutedUserTool.funImpl?.call(functionCall, callback, netAiAskAble, thoughtSignature)
+        CreateReminder.name -> CreateReminder.funImpl?.call(functionCall, callback, netAiAskAble, thoughtSignature)
+        GetReminders.name -> GetReminders.funImpl?.call(functionCall, callback, netAiAskAble, thoughtSignature)
+        GetSystemTime.name -> GetSystemTime.funImpl?.call(functionCall, callback, netAiAskAble, thoughtSignature)
+    }
 }
