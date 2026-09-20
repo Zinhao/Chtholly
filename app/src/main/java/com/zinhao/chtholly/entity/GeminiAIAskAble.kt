@@ -7,6 +7,7 @@ import com.squareup.moshi.adapter
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import com.zinhao.chtholly.network.gemini.FunctionCall
 import com.zinhao.chtholly.network.gemini.GeminiResponse
+import com.zinhao.chtholly.network.gemini.InteractionResponse
 import com.zinhao.chtholly.network.gemini.tools.AppendTextTool
 import com.zinhao.chtholly.network.gemini.tools.CreateReminder
 import com.zinhao.chtholly.network.gemini.tools.DoStepOnNode
@@ -58,12 +59,133 @@ class GeminiAIAskAble : NetAiAskAble {
         if (delayReplyCallback != null) delayReplyCallback.onReplySuccess(this)
     }
 
+    fun handleNetworkError(error: Throwable) {
+        getAnswer().setMessage(
+            String.format(
+                Locale.CHINA,
+                "\uD83D\uDE44发生错误了:%s %s",
+                error.message,
+                error.cause
+            )
+        )
+        answerFinish()
+        delayReplyCallback?.onReplySuccess(this)
+    }
 
-    //* 模型停止生成令牌的原因。如果模型达到自然停止点或提供的停止序列，则这将stop；
-    //* 如果达到请求中指定的最大令牌数，则将length；
-    //* 如果由于内容过滤器中的标志而省略内容，则为 content_filter；
-    //* 如果模型达到 tool_calls，则为 tool_calls称为工具。
-    // 智能机器人
+    fun handleApiError(code: Int, message: String) {
+        answer.speaker = "ServerError [$code]"
+        answer.message = message
+        answerFinish()
+        delayReplyCallback?.onReplySuccess(this)
+    }
+
+    /**
+     * 处理已解析的 GeminiResponse — 可由 Retrofit 回调直接调用，
+     * 也可由原始 OkHttp onResponse 在 JSON 解析后委托调用。
+     *
+     * 模型停止生成令牌的原因:
+     * - stop: 达到自然停止点
+     * - length: 达到最大 token 数
+     * - content_filter: 内容过滤器触发
+     * - tool_calls / function_call: 模型请求调用工具
+     */
+    fun handleGeminiResponse(geminiResponse: GeminiResponse?) {
+        try {
+            val candidate = geminiResponse?.candidates?.firstOrNull()
+            candidate?.let {
+                if (candidate.finishReason.lowercase() == "length") {
+                    //自动总结
+                    instance?.requestChatSummarize()
+                    answerFinish()
+                } else if (candidate.finishReason.lowercase() == "stop") {
+                    instance!!.addContent(candidate.content)
+                    answerTextBuilder.clear()
+                    var functionCounter = 0
+                    AsyncHelper.doAsyncPart {
+                        candidate.content.parts?.forEach { part ->
+                            if (part.functionCall != null) {
+                                functionCounter++
+                            }
+                            part.functionCall?.callToolFunction(part.thoughtSignature)
+                            part.text?.let { text ->
+                                answerTextBuilder.append(text)
+                            }
+                        }
+                        if (functionCounter == 0) {
+                            saveToDatabase(answerTextBuilder.toString())
+                            answerFinish()
+                            delayReplyCallback?.onReplySuccess(this)
+                        }else{
+                            instance?.callApi(this,false)
+                        }
+                    }
+                }else if(candidate.finishReason.uppercase() == "MALFORMED_RESPONSE") {
+                    //retry
+                    if(retryCount < 3){
+                        retryCount++
+                        instance?.callApi(this,false)
+                    }
+                }
+            }
+        } catch (e: JSONException) {
+            Log.e("GeminiAIAskAble error", e.message, e)
+        }
+    }
+
+    /**
+     * Handle an InteractionResponse from the Interactions API.
+     * The response contains a list of steps: model_output, function_call, etc.
+     */
+    fun handleInteractionResponse(interactionResponse: InteractionResponse?) {
+        try {
+            val steps = interactionResponse?.steps
+            if (steps.isNullOrEmpty()) {
+                FileLogger.w(TAG, "handleInteractionResponse: empty steps")
+                answerFinish()
+                delayReplyCallback?.onReplySuccess(this)
+                return
+            }
+
+            answerTextBuilder.clear()
+            var functionCounter = 0
+
+            AsyncHelper.doAsyncPart {
+                for (step in steps) {
+                    when (step.type) {
+                        "model_output" -> {
+                            step.content?.forEach { content ->
+                                content.text?.let { text ->
+                                    answerTextBuilder.append(text)
+                                }
+                            }
+                        }
+                        "function_call" -> {
+                            functionCounter++
+                            val name = step.name
+                            val args = step.arguments
+                            if (name != null) {
+                                val functionCall = FunctionCall(name, args ?: emptyMap())
+                                functionCall.callToolFunction(step.thoughtSignature)
+                            } else {
+                                FileLogger.w(TAG, "function_call step with null name")
+                            }
+                        }
+                    }
+                }
+
+                if (functionCounter == 0) {
+                    saveToDatabase(answerTextBuilder.toString())
+                    answerFinish()
+                    delayReplyCallback?.onReplySuccess(this)
+                } else {
+                    instance?.callApi(this, false)
+                }
+            }
+        } catch (e: JSONException) {
+            Log.e("GeminiAIAskAble error", e.message, e)
+        }
+    }
+
     @OptIn(ExperimentalStdlibApi::class)
     @Throws(IOException::class)
     override fun onResponse(call: Call, response: Response) {
@@ -72,51 +194,13 @@ class GeminiAIAskAble : NetAiAskAble {
             if (body != null) {
                 try {
                     val geminiAnswerResult = geminiResponseAdapter.fromJson(body.string())
-                    val candidate = geminiAnswerResult?.candidates?.firstOrNull()
-                    candidate?.let {
-                        if (candidate.finishReason.lowercase() == "length") {
-                            //自动总结
-                            instance?.requestChatSummarize()
-                            answerFinish()
-                        } else if (candidate.finishReason.lowercase() == "stop") {
-                            instance!!.addContent(candidate.content)
-                            answerTextBuilder.clear()
-                            var functionCounter = 0
-                            AsyncHelper.doAsyncPart {
-                                candidate.content.parts?.forEach { part ->
-                                    if (part.functionCall != null) {
-                                        functionCounter++
-                                    }
-                                    part.functionCall?.callToolFunction(part.thoughtSignature)
-                                    part.text?.let { text ->
-                                        answerTextBuilder.append(text)
-                                    }
-                                }
-                                if (functionCounter == 0) {
-                                    saveToDatabase(answerTextBuilder.toString())
-                                    answerFinish()
-                                    delayReplyCallback?.onReplySuccess(this)
-                                }else{
-                                    instance?.callApi(this,false)
-                                }
-                            }
-                        }else if(candidate.finishReason.uppercase() == "MALFORMED_RESPONSE") {
-                            //retry
-                            if(retryCount < 3){
-                                retryCount++
-                                instance?.callApi(this,false)
-                            }
-                        }
-                    }
+                    handleGeminiResponse(geminiAnswerResult)
                 } catch (e: JSONException) {
-                    Log.e("GeminiAIAskAble error", e.message,e)
+                    Log.e("GeminiAIAskAble error", e.message, e)
                 }
             }
         } else {
-            answer.speaker = "ServerError [${response.code}]"
-            answer.message = response.message
-            answerFinish()
-            delayReplyCallback?.onReplySuccess(this)
+            handleApiError(response.code, response.message)
         }
         response.close()
     }
@@ -129,17 +213,10 @@ class GeminiAIAskAble : NetAiAskAble {
 
     fun FunctionCall.callToolFunction(thoughtSignature: String?) {
         FileLogger.i(TAG, "callToolFunction called:$name, arg:$args")
-        // 根目录下有哪些文件@冰糖
-        // test_share_file.txt 的内容是什么？@冰糖
-        // 创建一个新文件，把“20260417，今天天气多云，看起来随时可能下雨”记录下来@冰糖
-        // 在 test_share_file.txt 添加一行：今天天气多云，随时都可能下雨
-        // @冰糖 把test_share_file.txt的内容写入到一个新的文件，新文件名称为new_file_test.txt
-        // 打开应用Chtholly
         if(!question.isEnableCommand && name!=MutedUserTool.name){
             instance?.addToolErr(name, Exception("Insufficient permissions"),thoughtSignature)
             return
         }
-        // 读取 diary_0415.txt 的内容
         when (name) {
             FileWriterTool.name -> {
                 FileWriterTool.funImpl?.call(this,thoughtSignature,this@GeminiAIAskAble)
@@ -178,6 +255,8 @@ class GeminiAIAskAble : NetAiAskAble {
         val geminiResponseAdapter: JsonAdapter<GeminiResponse> =
             moshi.adapter<GeminiResponse>()
 
-
+        @OptIn(ExperimentalStdlibApi::class)
+        val interactionResponseAdapter: JsonAdapter<InteractionResponse> =
+            moshi.adapter<InteractionResponse>()
     }
 }

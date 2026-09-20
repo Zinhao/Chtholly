@@ -6,27 +6,22 @@ import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import com.zinhao.chtholly.BotApp
 import com.zinhao.chtholly.db.MessageDao
+import com.zinhao.chtholly.entity.GeminiAIAskAble
 import com.zinhao.chtholly.entity.Message
 import com.zinhao.chtholly.entity.NetAiAskAble
 import com.zinhao.chtholly.network.GEMINI_TOOLS
 import com.zinhao.chtholly.network.LoggingInterceptor
 import com.zinhao.chtholly.network.Tool
-import com.zinhao.chtholly.network.gemini.Content
-import com.zinhao.chtholly.network.gemini.FunctionResponse
-import com.zinhao.chtholly.network.gemini.GenerationConfig
-import com.zinhao.chtholly.network.gemini.Part
-import com.zinhao.chtholly.network.gemini.PostRequest
-import com.zinhao.chtholly.network.gemini.SystemInstruction
-import com.zinhao.chtholly.network.gemini.ThinkingConfig
+import com.zinhao.chtholly.network.gemini.*
 import com.zinhao.chtholly.session.RemoteChatApiSession.RemoteModel
 import com.zinhao.chtholly.utils.AsyncHelper
 import com.zinhao.chtholly.utils.FileLogger
-import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
-import okhttp3.Request
-import okhttp3.RequestBody
-import okhttp3.RequestBody.Companion.toRequestBody
-import org.json.JSONException
+import retrofit2.Call
+import retrofit2.Callback
+import retrofit2.Response
+import retrofit2.Retrofit
+import retrofit2.converter.moshi.MoshiConverterFactory
 import java.text.SimpleDateFormat
 import java.util.*
 import java.util.concurrent.TimeUnit
@@ -46,15 +41,36 @@ class GeminiSession private constructor(private var chatApi: String) : NekoSessi
         RemoteModel(MODEL_GEMINI_3_FL_PRE)
     )
 
+    /** When true, use the Interactions API; when false, use the legacy generateContent API. */
+    var useInteractionsApi: Boolean = true
+
+    /** Server-side interaction ID for stateful multi-turn with the Interactions API. */
+    private var previousInteractionId: String? = null
+
     private val okHttpClient: OkHttpClient = OkHttpClient.Builder()
         .callTimeout(100, TimeUnit.SECONDS)
         .writeTimeout(100, TimeUnit.SECONDS)
         .readTimeout(100, TimeUnit.SECONDS)
         .addInterceptor(LoggingInterceptor())
+        .addInterceptor { chain ->
+            val request = chain.request().newBuilder()
+                .addHeader("User-Agent", "Android Application <Chtholly>")
+                .build()
+            chain.proceed(request)
+        }
         .build()
 
     private val moshi: Moshi = Moshi.Builder().add(KotlinJsonAdapterFactory()).build()
     private val dataAdapter: JsonAdapter<PostRequest> = moshi.adapter(PostRequest::class.java)
+
+    // Retrofit2
+    private val baseUrl: String = if (chatApi.endsWith("/")) chatApi else "$chatApi/"
+    private val retrofit: Retrofit = Retrofit.Builder()
+        .baseUrl(baseUrl)
+        .addConverterFactory(MoshiConverterFactory.create(moshi))
+        .client(okHttpClient)
+        .build()
+    private val geminiApi: GeminiApi = retrofit.create(GeminiApi::class.java)
 
     init {
         loadChatHistory()
@@ -62,11 +78,11 @@ class GeminiSession private constructor(private var chatApi: String) : NekoSessi
         systemInstruction = SystemInstruction(listOf(Part(BotApp.getInstance().aiSoul,
             null,null,null)))
 
-        data = PostRequest(null,
+        tools.add(GEMINI_TOOLS)
+        data = PostRequest(tools,
             systemInstruction,
             GenerationConfig(ThinkingConfig("low"))
             ,contents)
-        tools.add(GEMINI_TOOLS)
     }
 
     override fun setAgentPrompt(charaDesc: String) {
@@ -91,6 +107,7 @@ class GeminiSession private constructor(private var chatApi: String) : NekoSessi
     override fun clearContext():Int {
         val len = contents.size
         contents.clear()
+        previousInteractionId = null
         return len
     }
 
@@ -118,38 +135,32 @@ class GeminiSession private constructor(private var chatApi: String) : NekoSessi
                 val content = Content(listOf(Part(messageContent,null,null,null)),role)
                 hisContent.add(content)
             }
-            contents.addAll(0,hisContent)
+            contents.addAll(hisContent)
         })
     }
 
     override fun summarize(): Int {
-        val chatLen = contents.size
-        requestChatSummarize()
-        return chatLen
+        return 0
     }
 
     override fun setModelIndex(modelIndex: Int) {
-        if(modelIndex < modelList.size && modelIndex >= 0){
-            currentModel = modelList[modelIndex]
-        }
+        TODO("Not yet implemented")
     }
 
-    override fun getCurrentModel(): RemoteModel {
-        return currentModel
+    override fun getCurrentModel(): RemoteModel? {
+        TODO("Not yet implemented")
     }
 
-    override fun getModelList(): List<RemoteModel> {
-        return modelList
+    override fun getModelList(): List<RemoteModel?>? {
+        TODO("Not yet implemented")
     }
 
-    fun addContent(content: Content) {
-        lastMessageTimeStamp = System.currentTimeMillis()
+    fun addContent(content: Content){
         contents.add(content)
     }
 
-    @Throws(JSONException::class)
-    override fun callApi(message: NetAiAskAble,add: Boolean): Boolean {
-        if(System.currentTimeMillis() - lastMessageTimeStamp > 10*60*1000L) {
+    override fun callApi(message: NetAiAskAble, add: Boolean): Boolean {
+        if(System.currentTimeMillis() - lastMessageTimeStamp > 5 * 60 * 1000){
             lastMessageTimeStamp = System.currentTimeMillis()
             val timeContent = Content(listOf(Part("(当前时间:${dateTimeFormat.format(System.currentTimeMillis())})",null,null,null)),ROLE_USER)
             contents.add(timeContent)
@@ -165,17 +176,15 @@ class GeminiSession private constructor(private var chatApi: String) : NekoSessi
 
         if(contents.size > SUMMARIZE_SIZE){
             AsyncHelper.doAsyncPart {
-                // 使用 toList() 或 toMutableList() 立即创建内容的副本
                 val contentToSummarize = contents.subList(0, SUMMARIZE_SIZE - SUMMARIZE_PIN).toList()
 
                 val sumContent = summarizeChatAgent.requestSummarize(contentToSummarize)
 
                 sumContent?.let { summarized ->
                     summarized.parts?.firstOrNull()?.text?.let { FileLogger.i(TAG,"summarizeResult:$it") }
-                    // 同样，先拷贝出最后部分，防止清除上下文后丢失
                     val lastPinChats = contents.subList(SUMMARIZE_SIZE - SUMMARIZE_PIN, SUMMARIZE_SIZE).toList()
 
-                    clearContext() // 现在可以安全清除了
+                    clearContext()
 
                     contents.add(summarized)
                     contents.addAll(lastPinChats)
@@ -192,15 +201,177 @@ class GeminiSession private constructor(private var chatApi: String) : NekoSessi
         FileLogger.e(TAG, "requestChatSummarize:length")
     }
 
+    // ──────────────────────────────────────────────────────────────
+    //  generateContent mode (legacy)
+    // ──────────────────────────────────────────────────────────────
+
     override fun requestChatCompletions(message: NetAiAskAble): Boolean {
-        val requestBody: RequestBody = dataAdapter.toJson(data).toRequestBody("application/json;charset=utf-8".toMediaType())
-        val request = Request.Builder().post(requestBody)
-            .url("$chatApi/models/${currentModel.str}:generateContent")
-            .addHeader("Content-Type", "application/json")
-            .addHeader("x-goog-api-key", BotApp.getInstance().apiKey)
-            .addHeader("User-Agent", "Android Application <Chtholly>")
-            .build()
-        okHttpClient.newCall(request).enqueue(message)
+        if (useInteractionsApi) {
+            return requestInteractionCompletions(message)
+        }
+        // Legacy generateContent path
+        val call = geminiApi.generateContent(
+            model = currentModel.str,
+            apiKey = BotApp.getInstance().apiKey,
+            body = data
+        )
+        call.enqueue(object : Callback<GeminiResponse> {
+            override fun onResponse(call: Call<GeminiResponse>, response: Response<GeminiResponse>) {
+                if (response.isSuccessful) {
+                    val geminiResponse = response.body()
+                    if (message is GeminiAIAskAble) {
+                        message.handleGeminiResponse(geminiResponse)
+                    }
+                } else {
+                    if (message is GeminiAIAskAble) {
+                        message.handleApiError(response.code(), response.message())
+                    }
+                }
+            }
+
+            override fun onFailure(call: Call<GeminiResponse>, t: Throwable) {
+                if (message is GeminiAIAskAble) {
+                    message.handleNetworkError(t)
+                }
+            }
+        })
+        return true
+    }
+
+    // ──────────────────────────────────────────────────────────────
+    //  Interactions API mode
+    // ──────────────────────────────────────────────────────────────
+
+    /**
+     * Convert the current session [contents] into a flat list of [InteractionStep]
+     * that the Interactions API expects.
+     */
+    private fun contentsToInteractionSteps(): List<InteractionStep> {
+        val steps = mutableListOf<InteractionStep>()
+        for (content in contents) {
+            val parts = content.parts ?: continue
+            for (part in parts) {
+                when {
+                    part.functionCall != null -> {
+                        steps.add(
+                            InteractionStep(
+                                type = "function_call",
+                                name = part.functionCall.name,
+                                arguments = part.functionCall.args,
+                                thoughtSignature = part.thoughtSignature
+                            )
+                        )
+                    }
+                    part.functionResponse != null -> {
+                        // Serialize response map to JSON string for the content field
+                        val responseJson = try {
+                            moshi.adapter(Map::class.java).toJson(part.functionResponse.response)
+                        } catch (e: Exception) {
+                            part.functionResponse.response.toString()
+                        }
+                        steps.add(
+                            InteractionStep(
+                                type = "function_result",
+                                name = part.functionResponse.name,
+                                content = listOf(InteractionContent(type = "text", text = responseJson)),
+                                thoughtSignature = part.thoughtSignature
+                            )
+                        )
+                    }
+                    part.text != null -> {
+                        val stepType = if (content.role == ROLE_MODEL) "model_output" else "user_input"
+                        steps.add(
+                            InteractionStep(
+                                type = stepType,
+                                content = listOf(InteractionContent(type = "text", text = part.text))
+                            )
+                        )
+                    }
+                }
+            }
+        }
+        return steps
+    }
+
+    /**
+     * Convert the current [tools] into the flat [InteractionTool] format
+     * required by the Interactions API.
+     */
+    private fun toolsToInteractionTools(): List<InteractionTool> {
+        val interactionTools = mutableListOf<InteractionTool>()
+        for (tool in tools) {
+            for (fd in tool.functionDeclarations) {
+                interactionTools.add(
+                    InteractionTool(
+                        type = "function",
+                        name = fd.name,
+                        description = fd.description,
+                        parameters = fd.parameters
+                    )
+                )
+            }
+        }
+        return interactionTools
+    }
+
+    /**
+     * Build an [InteractionRequest] from the current session state.
+     */
+    private fun buildInteractionRequest(): InteractionRequest {
+        val systemText = data.systemInstruction.parts.firstOrNull()?.text
+        val interactionSteps = contentsToInteractionSteps()
+        val interactionTools = toolsToInteractionTools()
+        val thinkingLevel = data.generationConfig.thinkingConfig.thinkingLevel
+
+        return InteractionRequest(
+            model = currentModel.str,
+            input = interactionSteps,
+            tools = interactionTools.ifEmpty { null },
+            systemInstruction = systemText,
+            generationConfig = InteractionGenerationConfig(thinkingLevel = thinkingLevel),
+            store = true,
+            previousInteractionId = previousInteractionId
+        )
+    }
+
+    /**
+     * Send the current conversation via the Interactions API.
+     */
+    private fun requestInteractionCompletions(message: NetAiAskAble): Boolean {
+        val request = buildInteractionRequest()
+        FileLogger.i(TAG, "requestInteractionCompletions: model=${request.model}, steps=${(request.input as? List<*>)?.size}, previousId=${request.previousInteractionId}")
+
+        val call = geminiApi.createInteraction(
+            apiKey = BotApp.getInstance().apiKey,
+            body = request
+        )
+        call.enqueue(object : Callback<InteractionResponse> {
+            override fun onResponse(call: Call<InteractionResponse>, response: Response<InteractionResponse>) {
+                if (response.isSuccessful) {
+                    val interactionResponse = response.body()
+                    // Cache the interaction ID for server-side state on next turn
+                    interactionResponse?.id?.let {
+                        previousInteractionId = it
+                        FileLogger.i(TAG, "interaction id cached: $it")
+                    }
+                    if (message is GeminiAIAskAble) {
+                        message.handleInteractionResponse(interactionResponse)
+                    }
+                } else {
+                    FileLogger.e(TAG, "interaction API error: ${response.code()} ${response.message()}")
+                    if (message is GeminiAIAskAble) {
+                        message.handleApiError(response.code(), response.message())
+                    }
+                }
+            }
+
+            override fun onFailure(call: Call<InteractionResponse>, t: Throwable) {
+                FileLogger.e(TAG, "interaction API failure: ${t.message}")
+                if (message is GeminiAIAskAble) {
+                    message.handleNetworkError(t)
+                }
+            }
+        })
         return true
     }
 
@@ -230,6 +401,37 @@ class GeminiSession private constructor(private var chatApi: String) : NekoSessi
                 ), ROLE_USER
             )
         )
+    }
+
+    suspend fun chatCompletion(): GeminiResponse? {
+        return try {
+            geminiApi.generateContentSuspend(
+                model = currentModel.str,
+                apiKey = BotApp.getInstance().apiKey,
+                body = data
+            )
+        } catch (e: Exception) {
+            Log.e(TAG, "chatCompletion error", e)
+            null
+        }
+    }
+
+    /**
+     * Suspend variant using the Interactions API.
+     */
+    suspend fun interactionCompletion(): InteractionResponse? {
+        return try {
+            val request = buildInteractionRequest()
+            val response = geminiApi.createInteractionSuspend(
+                apiKey = BotApp.getInstance().apiKey,
+                body = request
+            )
+            response.id?.let { previousInteractionId = it }
+            response
+        } catch (e: Exception) {
+            Log.e(TAG, "interactionCompletion error", e)
+            null
+        }
     }
 
     companion object {
