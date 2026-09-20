@@ -94,6 +94,7 @@ public class BotApp extends Application {
             if(openAiSession!=null){
                 openAiSession.setRoleplayMode(roleplay);
             }
+            return openAiSession;
         }else if(mode == GeminiSession.class){
             return  GeminiSession.getInstance();
         }

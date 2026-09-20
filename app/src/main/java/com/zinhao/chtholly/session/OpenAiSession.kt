@@ -21,6 +21,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
+import org.checkerframework.checker.units.qual.s
 import org.json.JSONException
 import org.json.JSONObject
 import retrofit2.Retrofit
@@ -193,6 +194,7 @@ class OpenAiSession private constructor(private val chatUrl: String) : NekoSessi
     }
 
     fun addContent(message: Message) {
+
         roleMessageList.add(message)
     }
 
@@ -209,19 +211,14 @@ class OpenAiSession private constructor(private val chatUrl: String) : NekoSessi
 
     @Throws(JSONException::class)
     override fun callApi(message: NetAiAskAble, add: Boolean): Boolean {
-        // 如果距离上一条用户消息超过10分钟，插入一条时间提示
-        if (isGapTooLong()) {
-            val timeMessage = buildTimeGapMessage()
-            roleMessageList.add(timeMessage)
-        }
-
-        roleMessageList.add(message.question)
-
-        // 如果距离上次发送请求不足5秒，直接拒绝
         if (isTooFrequent()) {
             return false
         }
-        return rolePlayChatCompletions(message)
+        return if(roleplayMode){
+            rolePlayChatCompletions(message)
+        }else{
+            defaultChatCompletions(message)
+        }
     }
 
     /**
@@ -290,21 +287,55 @@ class OpenAiSession private constructor(private val chatUrl: String) : NekoSessi
         return sb.toString()
     }
 
+    private fun defaultChatCompletions(message: NetAiAskAble): Boolean {
+        contextMessageList.add(ChatMessage(
+            role = "user",
+            content = listOf(
+                ContentPart.TextPart(
+                    type = "text",
+                    text = message.question.message,
+                )
+            ),
+        ))
+        scope.launch {
+            try {
+                val chatMessageResult = chatCompletion(
+                    prompt = systemPrompt,
+                    chatMessageList = contextMessageList,
+                    model = currentModel.str,
+                    maxCompletionTokens = 4096,
+                    responseFormat = noneResponseFormat,
+                )
+                chatMessageResult?.let {
+                    val text = if(it.content is ContentPart.TextPart){
+                        it.content.text
+                    } else{
+                        it.content.toString()
+                    }
+                    message.saveToDatabase(text)
+                    contextMessageList.add(it)
+                    message.isReplyReady = true
+                    message.delayReplyCallback.onReplySuccess(message)
+                }
+            }catch (e: Exception){
+                FileLogger.e(TAG,e.localizedMessage?:e.javaClass.name,e)
+            }finally {
+
+            }
+        }
+        return true
+    }
+
 
     override fun rolePlayChatCompletions(message: NetAiAskAble): Boolean {
-        val prompt = if(this@OpenAiSession.roleplayMode){
-            rolePlayPrompt
-        }else{
-            systemPrompt
+        // 如果距离上一条用户消息超过10分钟，插入一条时间提示
+        if (isGapTooLong()) {
+            val timeMessage = buildTimeGapMessage()
+            roleMessageList.add(timeMessage)
         }
+        roleMessageList.add(message.question)
 
-        val responseFormat = if(roleplayMode){
-            rolePlayResponseFormat
-        }else{
-            noneResponseFormat
-        }
-
-        val chatMessageList = if(roleplayMode){
+        val chatMessageList =
             listOf(ChatMessage(
                 role = "user",
                 content = listOf(
@@ -314,27 +345,27 @@ class OpenAiSession private constructor(private val chatUrl: String) : NekoSessi
                     )
                 ),
             ))
-        }else{
-            contextMessageList
-        }
 
         scope.launch {
             try {
-                val nekoSchemStr = chatCompletion(
-                    prompt = prompt,
+                val chatMessageResult = chatCompletion(
+                    prompt = rolePlayPrompt,
                     chatMessageList = chatMessageList,
                     model = currentModel.str,
                     maxCompletionTokens = 80,
-                    responseFormat = responseFormat,
+                    responseFormat = rolePlayResponseFormat,
                 )
-                val nekoReply = nekoReplyAdapter.fromJson(nekoSchemStr)
-                nekoReply?.let {
-                    lastNekoReply = nekoReply
-                    FileLogger.d(TAG, "nekoReply: $nekoSchemStr")
-                    message.saveToDatabase(it.replyMessage)
-                    roleMessageList.add(message.answer)
-                    message.isReplyReady = true
-                    message.delayReplyCallback.onReplySuccess(message)
+                if(roleplayMode){
+                    val nekoSchemStr = chatMessageResult!!.content.toString()
+                    val nekoReply = nekoReplyAdapter.fromJson(nekoSchemStr)
+                    nekoReply?.let {
+                        lastNekoReply = nekoReply
+                        FileLogger.d(TAG, "nekoReply: $nekoSchemStr")
+                        message.saveToDatabase(it.replyMessage)
+                        roleMessageList.add(message.answer)
+                        message.isReplyReady = true
+                        message.delayReplyCallback.onReplySuccess(message)
+                    }
                 }
             }catch (e: Exception){
                 FileLogger.e(TAG,e.localizedMessage?:e.javaClass.name,e)
@@ -354,7 +385,7 @@ class OpenAiSession private constructor(private val chatUrl: String) : NekoSessi
         model: String = modelList[0].str,
         maxCompletionTokens: Int = 1024,
         temperature: Double = 1.05,
-        responseFormat: ResponseFormat? = null):String?
+        responseFormat: ResponseFormat? = null): ChatMessage?
     {
 
         val messages = arrayListOf<ChatMessage>()
@@ -405,7 +436,7 @@ class OpenAiSession private constructor(private val chatUrl: String) : NekoSessi
                 roleMessageList.removeAt(0)
             }
 
-            return response.choices.firstOrNull()?.message?.content.toString()
+            return response.choices.firstOrNull()?.message
         } catch (e: Exception) {
             FileLogger.e(TAG,"请求失败：${e.localizedMessage}")
         } finally {
@@ -443,7 +474,8 @@ class OpenAiSession private constructor(private val chatUrl: String) : NekoSessi
         var instance: OpenAiSession? = null
             get() {
                 if (field == null) {
-                    field = OpenAiSession(BotApp.getInstance().getChatUrl())
+                    field = OpenAiSession(BotApp.getInstance().chatUrl)
+                    field?.roleplayMode = BotApp.getInstance().isRoleplay
                 }
                 return field
             }

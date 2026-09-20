@@ -152,3 +152,23 @@ data class CompletionTokensDetails(
     val reasoning_tokens: Int?,
     val rejected_prediction_tokens: Int?
 )
+// Streaming response data classes
+data class StreamChunk(
+    val id: String?,
+    val `object`: String?,
+    val created: Long?,
+    val model: String?,
+    val choices: List<StreamChoice>?,
+    val usage: Usage?
+)
+
+data class StreamChoice(
+    val index: Int,
+    val delta: StreamDelta?,
+    val finish_reason: String?
+)
+
+data class StreamDelta(
+    val role: String?,
+    val content: String?
+)
