@@ -6,7 +6,7 @@ import org.json.JSONException;
 import java.util.List;
 
 public interface RemoteChatApiSession {
-    boolean requestChatCompletions(NetAiAskAble message);
+    boolean rolePlayChatCompletions(NetAiAskAble message);
     void requestChatSummarize();
 
     boolean callApi(NetAiAskAble message,boolean add) throws JSONException;

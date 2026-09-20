@@ -36,6 +36,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _currentSoul = MutableLiveData<String>()
     val currentSoul: LiveData<String> = _currentSoul
 
+    // 角色扮演
+    private val _roleplay = MutableLiveData<Boolean>(true)
+    val roleplay: LiveData<Boolean> = _roleplay
+
+    fun setRolePlay(rolePlay: Boolean) {
+        _roleplay.value = rolePlay
+        BotApp.getInstance().isRoleplay = rolePlay
+    }
+
     // Toast 消息
     private val _toastMessage = MutableLiveData<String?>()
     val toastMessage: LiveData<String?> = _toastMessage
@@ -47,6 +56,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _apiKey.value = BotApp.getInstance().apiKey ?: ""
         _botName.value = BotApp.getInstance().botName ?: ""
         _adminName.value = BotApp.getInstance().adminName ?: ""
+        _roleplay.value = BotApp.getInstance().isRoleplay
     }
 
     // ==================== 数据绑定方法 ====================

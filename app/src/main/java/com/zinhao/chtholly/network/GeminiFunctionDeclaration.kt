@@ -5,6 +5,10 @@ import com.zinhao.chtholly.network.gemini.FunctionCall
 import com.zinhao.chtholly.network.gemini.Parameters
 import com.zinhao.chtholly.network.gemini.Properties
 import com.zinhao.chtholly.network.gemini.tools.*
+import com.zinhao.chtholly.network.openai.FunctionDefinition
+import com.zinhao.chtholly.network.openai.Tool as OpenAiTool
+import com.zinhao.chtholly.network.openai.ToolParameters
+import com.zinhao.chtholly.network.openai.ToolProperty
 
 
 val PrintInfo = FunctionDeclaration(
@@ -63,6 +67,48 @@ val GEMINI_TOOLS = Tool(
         CreateReminder,GetReminders,GetSystemTime
     )
 )
+
+/**
+ * 将 Gemini 的 [FunctionDeclaration] 转换为 OpenAI 兼容的 [OpenAiTool].
+ */
+fun FunctionDeclaration.toOpenAiTool(): OpenAiTool {
+    val toolProperties = parameters.properties.mapValues { (_, prop) ->
+        ToolProperty(
+            type = prop.type,
+            description = prop.description,
+            enum = prop.enum
+        )
+    }
+    return OpenAiTool(
+        function = FunctionDefinition(
+            name = name,
+            description = description,
+            parameters = ToolParameters(
+                type = parameters.type,
+                properties = toolProperties,
+                required = parameters.required.ifEmpty { null }
+            )
+        )
+    )
+}
+
+/**
+ * OpenAI 格式的工具列表，与 [GEMINI_TOOLS] 包含相同的工具定义.
+ */
+val OPENAI_TOOLS: List<OpenAiTool> = listOf(
+    // 文件读写
+    ListFilesTool,
+    FileWriterTool,
+    FileReaderTool,
+    AppendTextTool,
+    SendFileTool,
+    // 禁言
+    MutedUserTool,
+    // 提醒工具
+    CreateReminder,
+    GetReminders,
+    GetSystemTime
+).map { it.toOpenAiTool() }
 
 data class FileInfo(val name: String, val isFile: Boolean,val size: Long,val time: Long)
 

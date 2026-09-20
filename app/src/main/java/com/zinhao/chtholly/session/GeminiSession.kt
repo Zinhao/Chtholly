@@ -189,10 +189,10 @@ class GeminiSession private constructor(private var chatApi: String) : NekoSessi
                     contents.add(summarized)
                     contents.addAll(lastPinChats)
                 }
-                requestChatCompletions(message)
+                rolePlayChatCompletions(message)
             }
         }else{
-            requestChatCompletions(message)
+            rolePlayChatCompletions(message)
         }
         return true
     }
@@ -205,7 +205,7 @@ class GeminiSession private constructor(private var chatApi: String) : NekoSessi
     //  generateContent mode (legacy)
     // ──────────────────────────────────────────────────────────────
 
-    override fun requestChatCompletions(message: NetAiAskAble): Boolean {
+    override fun rolePlayChatCompletions(message: NetAiAskAble): Boolean {
         if (useInteractionsApi) {
             return requestInteractionCompletions(message)
         }

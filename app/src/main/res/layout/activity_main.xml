@@ -14,7 +14,6 @@
                   android:orientation="vertical">
 
 
-        <!-- 左侧按钮组 -->
         <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
             <Button
                     android:id="@+id/button2"
@@ -32,13 +31,21 @@
                     android:layout_marginEnd="8dp"/>
         </LinearLayout>
 
-        <Button
-                android:id="@+id/button7"
-                android:layout_width="160dp"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:text="Setup"
-                />
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+            <Button
+                    android:id="@+id/button7"
+                    android:layout_width="160dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:text="Setup"
+            />
+            <CheckBox
+                    android:id="@+id/cbRolePlay"
+                    android:layout_width="wrap_content"
+                      android:layout_height="match_parent"
+                      android:layout_marginStart="30dp"
+                      android:text="roleplay mode"/>
+        </LinearLayout>
         <Button
                 android:id="@+id/button5"
                 android:layout_width="160dp"

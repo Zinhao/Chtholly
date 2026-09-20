@@ -57,7 +57,9 @@ public class OpenAiAskAble extends NetAiAskAble{
     //* 如果由于内容过滤器中的标志而省略内容，则为 content_filter；
     //* 如果模型达到 tool_calls，则为 tool_calls称为工具。
     @Override
-    public void onResponse(@NotNull Call call, @NotNull Response response) throws IOException {}
+    public void onResponse(@NotNull Call call, @NotNull Response response) throws IOException {
+
+    }
 
     @Override
     public void doToolCall(Choice nekoReply) {

@@ -11,12 +11,12 @@ package com.zinhao.chtholly.network.openai
 }
  */
 data class ResponseFormat(
-    val json_schema: JsonSchema,
-    val type: String
+    val json_schema: JsonSchema? = null,
+    val type: String?
 )
 
 data class JsonSchema(
     val name: String,
-    val schema: NekoSchem,
+    val schema: Schem,
     val strict: Boolean
 )

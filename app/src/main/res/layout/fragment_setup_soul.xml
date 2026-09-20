@@ -78,10 +78,9 @@
 
         <com.google.android.material.textfield.TextInputLayout
             android:id="@+id/soulInputDescLayout"
-            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
             android:layout_width="match_parent"
             android:layout_height="200dp"
-            android:visibility="gone"
+            android:visibility="visible"
             android:hint="性格描述"
             android:layout_marginBottom="16dp">
 
@@ -89,7 +88,7 @@
                 android:id="@+id/etSoulDesc"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
-                android:inputType="textUri"/>
+                android:inputType="textMultiLine"/>
         </com.google.android.material.textfield.TextInputLayout>
 
         <!-- 提示信息 -->

@@ -69,6 +69,10 @@ class MainActivity : AppCompatActivity() {
                 viewModel.consumeToastMessage()
             }
         }
+
+        viewModel.roleplay.observe(this) { play ->
+            binding.cbRolePlay.isChecked = play
+        }
     }
 
     override fun onResume() {
@@ -102,6 +106,10 @@ class MainActivity : AppCompatActivity() {
 
         binding.btFeiShuCode.setOnClickListener {
             startActivity(Intent(this, FeishuCodeActivity::class.java))
+        }
+
+        binding.cbRolePlay.setOnCheckedChangeListener { button, bool ->
+            viewModel.setRolePlay(bool)
         }
     }
 }

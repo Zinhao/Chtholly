@@ -12,9 +12,8 @@ import com.zinhao.chtholly.entity.Message
 import com.zinhao.chtholly.entity.NekoReply
 import com.zinhao.chtholly.entity.NetAiAskAble
 import com.zinhao.chtholly.network.LoggingInterceptor
-import com.zinhao.chtholly.network.gemini.Content
-import com.zinhao.chtholly.network.gemini.Part
 import com.zinhao.chtholly.network.openai.*
+import com.zinhao.chtholly.network.OPENAI_TOOLS
 import com.zinhao.chtholly.session.RemoteChatApiSession.RemoteModel
 import com.zinhao.chtholly.utils.FileLogger
 import kotlinx.coroutines.CoroutineScope
@@ -42,11 +41,15 @@ class OpenAiSession private constructor(private val chatUrl: String) : NekoSessi
 
     private var currentModel: RemoteModel
     private val modelList: MutableList<RemoteModel> = ArrayList<RemoteModel>()
-    private val systemPrompt = "根据场景对话 补充人物对话与聊天意愿数值"
+    private var systemPrompt = ""
     private val summarizePrompt = "使用不超过50字总结场景对话"
     private var charaDesc = ""
 
-    private val chatList = ArrayList<Message>()
+    private val rolePlayPrompt = "根据场景对话 补充人物对话与聊天意愿数值"
+    var roleplayMode = true
+
+    private val roleMessageList = ArrayList<Message>()
+    private val contextMessageList = ArrayList<ChatMessage>()
 
 
     val moshi = Moshi.Builder()
@@ -54,8 +57,8 @@ class OpenAiSession private constructor(private val chatUrl: String) : NekoSessi
         .build()
 
     @OptIn(ExperimentalStdlibApi::class)
-    val nekoSchemAdapter: JsonAdapter<NekoSchem> =
-        moshi.adapter<NekoSchem>()
+    val schemAdapter: JsonAdapter<Schem> =
+        moshi.adapter<Schem>()
 
     @OptIn(ExperimentalStdlibApi::class)
     val nekoReplyAdapter: JsonAdapter<NekoReply> =
@@ -88,20 +91,34 @@ class OpenAiSession private constructor(private val chatUrl: String) : NekoSessi
         currentModel = modelList.get(0)
         loadChatHistory()
         val botName = BotApp.getInstance().botName
+
         charaDesc = BotApp.getInstance().aiSoul.replace("\$name",botName)
+
         scope.launch {
-            loadNekoSchem()
+            rolePlayResponseFormat = loadResponseFormat("neko_schem.json")
+            rolePlayResponseFormat?.let { rp ->
+                rp.json_schema?.schema?.properties?.let {
+                    it.replyMessage.description = "${BotApp.getInstance().botName}将要说的话，不要描写动作，仅话语"
+                    it.willingnessToChat!!.description =
+                        "聊天意愿数值，这个数值决定${BotApp.getInstance().botName}" +
+                                "后续继续聊天，取值范围 1 到 100，数值越高表示越愿意聊天"
+                }
+            }
         }
     }
 
-    fun loadNekoSchem(){
-        readTextFromAssetsSimplified(BotApp.getInstance(),"neko_schem.json")?.let {
-            nekoSchem = nekoSchemAdapter.fromJson(it)
-            resFormat = ResponseFormat(
-                JsonSchema("chat_reply", nekoSchem!!, true),
+    private var rolePlayResponseFormat: ResponseFormat? = null
+    private val noneResponseFormat: ResponseFormat? = null
+    fun loadResponseFormat(path: String):ResponseFormat {
+        val schemString = readTextFromAssetsSimplified(BotApp.getInstance(),path)
+        schemString?.let {
+            val schemObject = schemAdapter.fromJson(it)
+            return ResponseFormat(
+                JsonSchema("chat_reply", schemObject!!, true),
                 "json_schema"
             )
         }
+        throw IOException()
     }
 
     /**
@@ -116,20 +133,25 @@ class OpenAiSession private constructor(private val chatUrl: String) : NekoSessi
         }
     }
 
+
     override fun setAgentPrompt(charaDesc: String) {
-        val botName = BotApp.getInstance().botName
-        this.charaDesc = charaDesc.replace("\$name",botName)
+        if(roleplayMode){
+            val botName = BotApp.getInstance().botName
+            this.charaDesc = charaDesc.replace("\$name",botName)
+        }else{
+            systemPrompt = charaDesc
+        }
     }
 
     override fun getAgentPrompt(): String { return charaDesc }
 
     override fun getContextChat(): String {
-        return chatList.toString()
+        return roleMessageList.toString()
     }
 
     override fun clearContext(): Int {
-        val len = chatList.size
-        chatList.clear()
+        val len = roleMessageList.size
+        roleMessageList.clear()
         return len
     }
 
@@ -144,8 +166,8 @@ class OpenAiSession private constructor(private val chatUrl: String) : NekoSessi
                 intoContentMessage.addAll(result.subList(result.size-10, result.size-1))
             }
             intoContentMessage.forEach { FileLogger.i(TAG, "loadChatHistory: ${it.speaker}: \"${it.message}\"") }
-            chatList.addAll(intoContentMessage)
-            chatList.add(Message(null,
+            roleMessageList.addAll(intoContentMessage)
+            roleMessageList.add(Message(null,
                 "现在时间:${dateTimeFormat.format(System.currentTimeMillis())}",
                 System.currentTimeMillis(),))
         })
@@ -171,14 +193,16 @@ class OpenAiSession private constructor(private val chatUrl: String) : NekoSessi
     }
 
     fun addContent(message: Message) {
-        chatList.add(message)
+        roleMessageList.add(message)
     }
 
     fun addToolCalls(message: Choice.Message) {
 
     }
 
-    fun addToolCallResult(content: JSONObject?, callId: String?) {}
+    fun addToolCallResult(content: JSONObject?, callId: String?) {
+
+    }
 
     private var lastMessageTime = System.currentTimeMillis()
     private var lastPostTime = System.currentTimeMillis()
@@ -188,16 +212,16 @@ class OpenAiSession private constructor(private val chatUrl: String) : NekoSessi
         // 如果距离上一条用户消息超过10分钟，插入一条时间提示
         if (isGapTooLong()) {
             val timeMessage = buildTimeGapMessage()
-            chatList.add(timeMessage)
+            roleMessageList.add(timeMessage)
         }
 
-        chatList.add(message.question)
+        roleMessageList.add(message.question)
 
         // 如果距离上次发送请求不足5秒，直接拒绝
         if (isTooFrequent()) {
             return false
         }
-        return requestChatCompletions(message)
+        return rolePlayChatCompletions(message)
     }
 
     /**
@@ -249,10 +273,10 @@ class OpenAiSession private constructor(private val chatUrl: String) : NekoSessi
 
     private val sb = StringBuilder()
 
-    override fun requestChatCompletions(message: NetAiAskAble): Boolean {
+    private fun warpRolePlayPrompt(): String{
         sb.clear()
         sb.append(charaDesc).append("\n").append("\n")
-        chatList.forEach {
+        roleMessageList.forEach {
             if(it.speaker!=null){
                 FileLogger.i(TAG, "${it.speaker?:""}: \"${it.message}\"")
                 sb.append(it.speaker).append(": ").append("\"").append(it.message).append("\"").append("\n")
@@ -263,20 +287,52 @@ class OpenAiSession private constructor(private val chatUrl: String) : NekoSessi
         }
         sb.append("\n")
         sb.append("接下来${BotApp.getInstance().botName}会说什么？")
+        return sb.toString()
+    }
+
+
+    override fun rolePlayChatCompletions(message: NetAiAskAble): Boolean {
+        val prompt = if(this@OpenAiSession.roleplayMode){
+            rolePlayPrompt
+        }else{
+            systemPrompt
+        }
+
+        val responseFormat = if(roleplayMode){
+            rolePlayResponseFormat
+        }else{
+            noneResponseFormat
+        }
+
+        val chatMessageList = if(roleplayMode){
+            listOf(ChatMessage(
+                role = "user",
+                content = listOf(
+                    ContentPart.TextPart(
+                        type = "text",
+                        text = warpRolePlayPrompt(),
+                    )
+                ),
+            ))
+        }else{
+            contextMessageList
+        }
+
         scope.launch {
             try {
                 val nekoSchemStr = chatCompletion(
-                    prompt = systemPrompt,
-                    text = sb.toString(),
+                    prompt = prompt,
+                    chatMessageList = chatMessageList,
                     model = currentModel.str,
-                    maxCompletionTokens = 80
+                    maxCompletionTokens = 80,
+                    responseFormat = responseFormat,
                 )
                 val nekoReply = nekoReplyAdapter.fromJson(nekoSchemStr)
                 nekoReply?.let {
                     lastNekoReply = nekoReply
                     FileLogger.d(TAG, "nekoReply: $nekoSchemStr")
                     message.saveToDatabase(it.replyMessage)
-                    chatList.add(message.answer)
+                    roleMessageList.add(message.answer)
                     message.isReplyReady = true
                     message.delayReplyCallback.onReplySuccess(message)
                 }
@@ -290,70 +346,49 @@ class OpenAiSession private constructor(private val chatUrl: String) : NekoSessi
     }
 
     private val maxTotalToken = 4096
-    private var nekoSchem: NekoSchem? = null
-    private var resFormat: ResponseFormat? = null
+
     private suspend fun chatCompletion(
         imageBase64: String? = null,
-        text: String? = null,
+        chatMessageList: List<ChatMessage>,
         prompt: String = "Describe this image in two sentences",
         model: String = modelList[0].str,
         maxCompletionTokens: Int = 1024,
         temperature: Double = 1.05,
-        jsonSchema: String? = null):String?
+        responseFormat: ResponseFormat? = null):String?
     {
-        var targetFormat: ResponseFormat? = null
-        if(jsonSchema != null){
-            val schem = nekoSchemAdapter.fromJson(jsonSchema)
-            val newFormat = ResponseFormat(
-                JsonSchema("chat_reply", schem!!, true),
-                "json_schema"
-            )
-            targetFormat = newFormat
-        }else{
-            if(resFormat == null){
-                loadNekoSchem()
-            }
-            targetFormat = resFormat
-        }
-        targetFormat?.let { tf ->
-            tf.json_schema.schema.properties?.let {
-                it.replyMessage.description = "${BotApp.getInstance().botName}将要说的话，不要描写动作，仅话语"
-                it.willingnessToChat!!.description =
-                    "聊天意愿数值，这个数值决定${BotApp.getInstance().botName}" +
-                            "后续继续聊天，取值范围 1 到 100，数值越高表示越愿意聊天"
-            }
 
+        val messages = arrayListOf<ChatMessage>()
+        messages.add(ChatMessage(
+            role = "system",
+            content = listOf(
+                ContentPart.TextPart(
+                    type = "text",
+                    text = prompt
+                )
+            )
+        ))
+        messages.addAll(chatMessageList)
+        imageBase64?.let {
+            messages.add(ChatMessage(
+                role = "user",
+                content = listOf(
+                    ContentPart.ImagePart(
+                        type = "image_url",
+                        image_url = ImageUrl("data:image/png;base64,$imageBase64")
+                    )
+                )
+            ))
         }
+
         try {
             val request = ChatRequest(
                 model = model,
-                messages = listOf(
-                    ChatMessage(
-                        role = "developer",
-                        content = listOf(
-                            ContentPart.TextPart(
-                                type = "text",
-                                text = prompt
-                            )
-                        )
-                    ),
-                    ChatMessage(
-                        role = "user",
-                        content = listOfNotNull(
-                            imageBase64?.let {
-                                ContentPart.ImagePart(
-                                    type = "image_url",
-                                    image_url = ImageUrl("data:image/png;base64,$imageBase64")
-                                )
-                            },
-                            text?.let { ContentPart.TextPart(type = "text", text = it) },
-                        )
-                    ),
-                ),
+                messages = messages,
                 max_completion_tokens = maxCompletionTokens,
                 reasoning_effort = "none",
                 temperature = temperature,
-                response_format = targetFormat
+                response_format = responseFormat,
+                tools = if (responseFormat == null) OPENAI_TOOLS else null
             )
             lastPostTime = System.currentTimeMillis()
             val response = api.chatCompletion(
@@ -366,8 +401,8 @@ class OpenAiSession private constructor(private val chatUrl: String) : NekoSessi
             FileLogger.i(TAG, "completion_tokens: ${usage.completion_tokens}")
             FileLogger.i(TAG, "total_tokens: ${usage.total_tokens}")
 
-            if(usage.total_tokens >= maxTotalToken && chatList.isNotEmpty()) {
-                chatList.removeAt(0)
+            if(usage.total_tokens >= maxTotalToken && roleMessageList.isNotEmpty()) {
+                roleMessageList.removeAt(0)
             }
 
             return response.choices.firstOrNull()?.message?.content.toString()

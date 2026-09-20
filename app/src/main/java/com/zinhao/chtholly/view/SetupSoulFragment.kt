@@ -73,7 +73,6 @@ class SetupSoulFragment : Fragment() {
                 }else{
                     if (preset.desc.isNotEmpty()) {
                         binding.tvSoulDesc.text = preset.desc
-                        binding.etAtName.setText(preset.name)
                         viewModel.updateBotDescription(preset.desc)
                     }
                     viewModel.selectNewSoul(false)

@@ -33,6 +33,7 @@ public class BotApp extends Application {
 
     public static final String CONFIG_TTS_URL = "tts_url";
     public static final String CONFIG_IS_FIRST_RUN = "is_first_run";
+    public static final String CONFIG_ROLEPLAY = "roleplay";
 
     public static final String CONFIG_WITH_SPEAKER = "with_speaker";
 
@@ -50,6 +51,7 @@ public class BotApp extends Application {
     private boolean withSpeaker = true;
 
     private String chatUrl;
+    private boolean roleplay = true;
     private AICharacter currentCharacter;
     private String ttsUrl;
 
@@ -88,7 +90,10 @@ public class BotApp extends Application {
     private Class<?> mode = NekoSession.class;
     public NekoSession getSession() {
         if(mode == OpenAiSession.class){
-            return OpenAiSession.getInstance();
+            OpenAiSession openAiSession = OpenAiSession.getInstance();
+            if(openAiSession!=null){
+                openAiSession.setRoleplayMode(roleplay);
+            }
         }else if(mode == GeminiSession.class){
             return  GeminiSession.getInstance();
         }
@@ -114,6 +119,7 @@ public class BotApp extends Application {
         ttsUrl = sharedPreferences.getString(CONFIG_TTS_URL, HostConsts.LOCAL_HOST);
         withSpeaker = sharedPreferences.getBoolean(CONFIG_WITH_SPEAKER, true);
         isFirstRun = sharedPreferences.getBoolean(CONFIG_IS_FIRST_RUN,true);
+        roleplay = sharedPreferences.getBoolean(CONFIG_ROLEPLAY,true);
         //飞书配置
         feishuAppId = sharedPreferences.getString(CONFIG_FEISHU_APP_ID,"");
         feishuAppSecret = sharedPreferences.getString(CONFIG_FEISHU_APP_SECRET,"");
@@ -243,6 +249,21 @@ public class BotApp extends Application {
 
     public void setChatUrl(String chatUrl) {
         this.chatUrl = chatUrl;
+    }
+
+    public void setRoleplay(boolean roleplay) {
+        this.roleplay = roleplay;
+        sharedPreferences.edit().putBoolean(CONFIG_ROLEPLAY,roleplay).apply();
+        if(mode == OpenAiSession.class){
+            NekoSession session = getSession();
+            if(session instanceof OpenAiSession){
+                ((OpenAiSession) session).setRoleplayMode(roleplay);
+            }
+        }
+    }
+
+    public boolean isRoleplay() {
+        return roleplay;
     }
 
     public void insert(Message message){

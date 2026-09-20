@@ -1,15 +1,15 @@
 package com.zinhao.chtholly.network.openai
 
 
-data class NekoSchem(
+data class Schem(
     val type: String,
-    val properties: Properties? = null,
+    val properties: RolePlayProperties? = null,
     val required: List<String>? = null,
     val additionalProperties: Boolean? = null,
 )
 
 
-data class Properties(
+data class RolePlayProperties(
     val willingnessToChat: IntArg? = null,
     val replyMessage: StringArgs,
 )
