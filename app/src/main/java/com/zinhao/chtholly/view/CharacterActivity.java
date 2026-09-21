@@ -121,7 +121,7 @@ public class CharacterActivity extends AppCompatActivity implements CharacterAda
                 StringBuilder stringBuilder = new StringBuilder();
                 String line = null;
                 while ((line = reader.readLine())!=null){
-                    stringBuilder.append(line);
+                    stringBuilder.append(line).append("\r\n");
                 }
                 inputStream.close();
                 return stringBuilder.toString();
