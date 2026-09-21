@@ -106,7 +106,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) , 
 
         val mainAskable = createAskable(newMessage)
         // Set stream callback for OpenAI session
-        if (mainAskable is NetAiAskAble) {
+        if (mainAskable is NetAiAskAble && !BotApp.getInstance().isRoleplay) {
             FileLogger.d(TAG,"setStreamCallback")
             mainAskable.setStreamCallback(StreamingCallback())
         }

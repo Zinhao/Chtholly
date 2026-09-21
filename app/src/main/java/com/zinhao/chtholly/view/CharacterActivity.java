@@ -76,12 +76,12 @@ public class CharacterActivity extends AppCompatActivity implements CharacterAda
         super.onActivityResult(requestCode, resultCode, data);
         if(requestCode == 1 && resultCode == RESULT_OK){
             if (data != null) {
-                String jsonArrayStr = readTextFormIntent(data);
-                if(jsonArrayStr.isEmpty()){
+                String rawText = readTextFormIntent(data);
+                if(rawText.isEmpty()){
                     throw new RuntimeException("text is empty");
                 }
                 try {
-                    JSONArray array = new JSONArray(jsonArrayStr);
+                    JSONArray array = new JSONArray(rawText);
                     for (int i = 0; i < array.length(); i++) {
                         JSONObject jsonObject = array.getJSONObject(i);
                         String desc = jsonObject.getString("desc");
@@ -92,7 +92,10 @@ public class CharacterActivity extends AppCompatActivity implements CharacterAda
                     }
                     binding.recyclerView.getAdapter().notifyDataSetChanged();
                 } catch (JSONException e) {
-                    throw new RuntimeException(e);
+                    AICharacter character = new AICharacter("未命名",rawText);
+                    BotApp.getInstance().insert(character);
+                    listData.add(character);
+                    binding.recyclerView.getAdapter().notifyDataSetChanged();
                 }
 
             }
