@@ -21,19 +21,18 @@
     </com.google.android.material.textfield.TextInputLayout>
     <com.google.android.material.textfield.TextInputLayout
             android:layout_width="0dp"
-            android:layout_height="wrap_content"
+            android:layout_height="0dp"
             android:id="@+id/textInputDesc"
             app:layout_constraintTop_toBottomOf="@+id/textInputLayout4"
             android:layout_marginTop="16dp"
             app:layout_constraintStart_toStartOf="@+id/textInputLayout4"
-            app:layout_constraintEnd_toEndOf="@+id/textInputLayout4">
+            app:layout_constraintEnd_toEndOf="@+id/textInputLayout4"
+            app:layout_constraintBottom_toTopOf="@+id/button3" android:layout_marginBottom="16dp">
 
         <com.google.android.material.textfield.TextInputEditText
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:maxLines="30"
-                android:lines="5"
-                android:gravity="top"
+                android:layout_height="match_parent"
+                android:inputType="textMultiLine"
                 android:hint="desc"/>
     </com.google.android.material.textfield.TextInputLayout>
     <Button
@@ -46,6 +45,7 @@
             android:text="在desc中，使用 $name 指代bot name。"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content" android:id="@+id/textView4"
+            app:layout_constraintStart_toStartOf="@+id/textInputDesc"
             app:layout_constraintTop_toBottomOf="@+id/textInputDesc"
-            app:layout_constraintStart_toStartOf="@+id/textInputDesc" android:layout_marginTop="8dp"/>
+            android:layout_marginTop="32dp"/>
 </androidx.constraintlayout.widget.ConstraintLayout>

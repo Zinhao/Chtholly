@@ -4,6 +4,7 @@ import androidx.room.Dao;
 import androidx.room.Delete;
 import androidx.room.Insert;
 import androidx.room.Query;
+import androidx.room.Update;
 import com.zinhao.chtholly.entity.AICharacter;
 
 import java.util.List;
@@ -30,6 +31,9 @@ public interface AICharacterDao {
 
     @Query("UPDATE aicharacter SET roleplay = :roleplay WHERE id = :id")
     void updateRoleplay(long id, boolean roleplay);
+
+    @Update
+    void update(AICharacter character);
 
     interface AICharacterGetAllListener{
         void onSuccess(List<AICharacter> result);

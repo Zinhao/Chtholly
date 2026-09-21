@@ -8,38 +8,45 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import android.os.Bundle;
+import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.DividerItemDecoration;
 import androidx.recyclerview.widget.LinearLayoutManager;
 
 import com.zinhao.chtholly.R;
-import com.zinhao.chtholly.db.AICharacterDao;
 import com.zinhao.chtholly.BotApp;
 import com.zinhao.chtholly.view.adapter.CharacterAdapter;
 import com.zinhao.chtholly.databinding.ActivityCharacterBinding;
 import com.zinhao.chtholly.entity.AICharacter;
+import com.zinhao.chtholly.viewmodel.CharacterViewModel;
 
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.*;
+import java.util.ArrayList;
 import java.util.List;
 
 public class CharacterActivity extends AppCompatActivity implements CharacterAdapter.ItemClickListener {
     private ActivityCharacterBinding binding;
     private List<AICharacter> listData;
     private CharacterAdapter adapter;
+    private CharacterViewModel viewModel;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         binding = ActivityCharacterBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
         setTitle("Character Choose");
+
+        viewModel = new ViewModelProvider(this).get(CharacterViewModel.class);
+
         binding.floatingActionButton2.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
-                intent.setType("*/*");//设置类型，我这里是任意类型，任意后缀的可以这样写。
+                intent.setType("*/*");
                 intent.addCategory(Intent.CATEGORY_OPENABLE);
                 startActivityForResult(intent, 1);
             }
@@ -48,36 +55,35 @@ public class CharacterActivity extends AppCompatActivity implements CharacterAda
             @Override
             public void onClick(View v) {
                 Intent addIntent = new Intent(v.getContext(), AddCharacterActivity.class);
-                startActivityForResult(addIntent,2);
+                startActivityForResult(addIntent, 2);
             }
         });
-        BotApp.getInstance().loadAICharacter(new AICharacterDao.AICharacterGetAllListener() {
-            @Override
-            public void onSuccess(List<AICharacter> result) {
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        listData = result;
-                        adapter = new CharacterAdapter(listData);
-                        adapter.setItemClickListener(CharacterActivity.this);
-                        binding.recyclerView.setAdapter(adapter);
-                        binding.recyclerView.addItemDecoration(new DividerItemDecoration(CharacterActivity.this,DividerItemDecoration.VERTICAL));
-                        binding.recyclerView.setLayoutManager(new LinearLayoutManager(CharacterActivity.this));
 
-                    }
-                });
+        listData = new ArrayList<>();
+        adapter = new CharacterAdapter(listData);
+        adapter.setItemClickListener(this);
+        binding.recyclerView.setAdapter(adapter);
+        binding.recyclerView.addItemDecoration(new DividerItemDecoration(this, DividerItemDecoration.VERTICAL));
+        binding.recyclerView.setLayoutManager(new LinearLayoutManager(this));
+
+        viewModel.getCharacterList().observe(this, characters -> {
+            if (characters != null) {
+                listData.clear();
+                listData.addAll(characters);
+                adapter.notifyDataSetChanged();
             }
         });
+
+        viewModel.loadCharacters();
     }
-
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, @Nullable @org.jetbrains.annotations.Nullable Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-        if(requestCode == 1 && resultCode == RESULT_OK){
+        if (requestCode == 1 && resultCode == RESULT_OK) {
             if (data != null) {
                 String rawText = readTextFormIntent(data);
-                if(rawText.isEmpty()){
+                if (rawText.isEmpty()) {
                     throw new RuntimeException("text is empty");
                 }
                 try {
@@ -86,41 +92,41 @@ public class CharacterActivity extends AppCompatActivity implements CharacterAda
                         JSONObject jsonObject = array.getJSONObject(i);
                         String desc = jsonObject.getString("desc");
                         String name = jsonObject.getString("name");
-                        AICharacter character = new AICharacter(name,desc);
-                        BotApp.getInstance().insert(character);
-                        listData.add(character);
+                        AICharacter character = new AICharacter(name, desc);
+                        viewModel.addCharacter(character);
                     }
-                    binding.recyclerView.getAdapter().notifyDataSetChanged();
                 } catch (JSONException e) {
-                    AICharacter character = new AICharacter("未命名",rawText);
-                    BotApp.getInstance().insert(character);
-                    listData.add(character);
-                    binding.recyclerView.getAdapter().notifyDataSetChanged();
+                    AICharacter character = new AICharacter("未命名", rawText);
+                    viewModel.addCharacter(character);
                 }
-
             }
         }
-        if(requestCode == 2 && resultCode == RESULT_OK){
-            if(data!=null) {
+        if (requestCode == 2 && resultCode == RESULT_OK) {
+            if (data != null) {
                 String name = data.getStringExtra("name");
                 String desc = data.getStringExtra("desc");
-                AICharacter character = new AICharacter(name, desc);
-                BotApp.getInstance().insert(character);
-                listData.add(character);
-                binding.recyclerView.getAdapter().notifyItemInserted(listData.size());
+                long editId = data.getLongExtra("edit_id", -1);
+                if (editId != -1) {
+                    AICharacter character = new AICharacter(name, desc);
+                    character.setId(editId);
+                    viewModel.updateCharacter(character);
+                } else {
+                    AICharacter character = new AICharacter(name, desc);
+                    viewModel.addCharacter(character);
+                }
             }
         }
     }
 
     private String readTextFormIntent(Intent data) {
         Uri uri = data.getData();
-        if(uri!=null){
+        if (uri != null) {
             try {
                 InputStream inputStream = getContentResolver().openInputStream(uri);
                 BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
                 StringBuilder stringBuilder = new StringBuilder();
                 String line = null;
-                while ((line = reader.readLine())!=null){
+                while ((line = reader.readLine()) != null) {
                     stringBuilder.append(line).append("\r\n");
                 }
                 inputStream.close();
@@ -130,7 +136,6 @@ public class CharacterActivity extends AppCompatActivity implements CharacterAda
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
-
         }
         return "[]";
     }
@@ -146,10 +151,21 @@ public class CharacterActivity extends AppCompatActivity implements CharacterAda
                 dialog.dismiss();
             }
         });
+        builder.setNeutralButton("edit", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                Intent editIntent = new Intent(CharacterActivity.this, AddCharacterActivity.class);
+                editIntent.putExtra("edit_id", character.getId());
+                editIntent.putExtra("edit_name", character.getName());
+                editIntent.putExtra("edit_desc", character.getDesc());
+                startActivityForResult(editIntent, 2);
+                dialog.dismiss();
+            }
+        });
         builder.setPositiveButton("ok", new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int which) {
-                BotApp.getInstance().switchAISoul(character);
+                viewModel.switchCharacter(character);
                 dialog.dismiss();
             }
         });
@@ -160,7 +176,7 @@ public class CharacterActivity extends AppCompatActivity implements CharacterAda
     public void onLongClick(AICharacter character) {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setTitle(character.getName());
-        builder.setMessage("确定删除"+character.getName()+"吗?");
+        builder.setMessage("确定删除" + character.getName() + "吗?");
         builder.setNegativeButton("cancel", new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int which) {
@@ -170,8 +186,7 @@ public class CharacterActivity extends AppCompatActivity implements CharacterAda
         builder.setPositiveButton("ok", new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int which) {
-                BotApp.getInstance().delete(character);
-                adapter.removeItem(character);
+                viewModel.deleteCharacter(character);
                 dialog.dismiss();
             }
         });
