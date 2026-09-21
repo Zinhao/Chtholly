@@ -81,6 +81,10 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) , 
         _autoCompleteArr.value = map.toList()
     }
 
+    fun deleteAllMessages() {
+        BotApp.getInstance().messageDao.
+    }
+
 
     fun addBotMessage(message: Message) {
         val messageList = _messages.value?.toMutableList()?: return

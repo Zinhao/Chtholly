@@ -16,7 +16,7 @@ import com.zinhao.chtholly.session.GeminiSession;
 import java.util.List;
 
 public abstract class BaseChatHandler {
-    public final static String TAG = "BaseChatHandler";
+    public final static String TAG = BaseChatHandler.class.getSimpleName();
     public static final String UNKNOWN_PAGE = "unknown page";
     protected abstract boolean isAtName(Message message,String name);
     protected MessageCallback messageCallback;

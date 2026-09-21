@@ -246,10 +246,11 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
         if (Settings.canDrawOverlays(this)) {
             // 有权限
             addFloatToWindow();
-            logcatBinding.getRoot().setVisibility(View.GONE);
-            helperBinding.getRoot().setVisibility(View.GONE);
-            floatBlackScreenBinding.getRoot().setVisibility(View.GONE);
         }
+        logcatBinding.getRoot().setVisibility(View.GONE);
+        helperBinding.getRoot().setVisibility(View.GONE);
+        floatBlackScreenBinding.getRoot().setVisibility(View.GONE);
+
         bindClickListener();
         controllerViewToMinSize();
 

@@ -15,13 +15,12 @@ import com.zinhao.chtholly.utils.LocalFileCache
 import com.zinhao.chtholly.utils.MessageCallback
 import java.util.Locale
 
-class QQV13690Impl(context: Context, messageCallback: MessageCallback) : QQChatHandler(context, messageCallback) {
+class QQV16070Impl(context: Context, messageCallback: MessageCallback) : QQChatHandler(context, messageCallback) {
     var lastItemCount = 0
     var titleNode: AccessibilityNodeInfo? = null
 
     var doubleClickWaitFillMessage: Message? = null
     override fun handle(event: AccessibilityEvent?) {
-        FileLogger.d(TAG, "handle")
         if (event == null){
             FileLogger.d(TAG, "handle: null event received")
             return
@@ -234,11 +233,11 @@ class QQV13690Impl(context: Context, messageCallback: MessageCallback) : QQChatH
         if(root == null){
             return UNKNOWN_PAGE
         }
-        if(hasAllId(root, chatMessageItemRootId,chatTitleId,":id/mgo")){
+        if(hasAllId(root, chatMessageItemRootId,chatTitleId,":id/pry")){
             return CHAT_GROUP
-        }else if(hasAllId(root,":id/1ko",":id/root",":id/a46",":id/ec3",":id/y_h")){
+        }else if(hasAllId(root,":id/ba1",":id/root",":id/a46",":id/ec3",":id/3zg")){
             return MESSAGE_PAGE
-        }else if(hasAllId(root,":id/20r",":id/j64",":id/pdl")){
+        }else if(hasAllId(root,":id/3cb",":id/j64",":id/dmj")){
             return CHAT_PERSON
         }
         return UNKNOWN_PAGE
@@ -249,7 +248,7 @@ class QQV13690Impl(context: Context, messageCallback: MessageCallback) : QQChatH
     }
 
     override fun getChatTitleId(): String {
-        return "$PACKAGE_NAME:id/20r"
+        return "$PACKAGE_NAME:id/3cb"
     }
 
     override fun getInputId(): String {

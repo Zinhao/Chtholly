@@ -14,6 +14,8 @@ object QQHandlerCompat {
         }else if(versionCode == 13690){
             // 9.2.80
             QQV13690Impl(context, callback)
+        }else if(versionCode == 16070){
+            QQV16070Impl(context, callback)
         }else{
             QQChatHandler(context,callback)
         }

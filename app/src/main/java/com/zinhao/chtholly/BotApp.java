@@ -276,6 +276,10 @@ public class BotApp extends Application {
         });
     }
 
+    public MessageDao getMessageDao() {
+        return messageDao;
+    }
+
     public void loadMessage(MessageDao.MessageGetAllListener listener){
         AsyncHelper.INSTANCE.doAsyncPart(new Runnable() {
             @Override
