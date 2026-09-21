@@ -605,27 +605,138 @@ class OpenAiSession private constructor(private val chatUrl: String) : NekoSessi
             val streamAdapter = moshi.adapter(StreamChunk::class.java)
             message.streamCallback?.onStreamStart(message)
 
+            // Tool call accumulators: index -> (id, name, arguments)
+            val toolCallAccumulators = mutableMapOf<Int, Triple<StringBuilder, StringBuilder, StringBuilder>>()
+
             for (line in channel) {
                 val data = line.removePrefix("data: ").trim()
                 if (data == "[DONE]") break
                 try {
                     val chunk = streamAdapter.fromJson(data)
-                    chunk?.choices?.firstOrNull()?.delta?.let { delta ->
-                        delta.content?.let { content ->
-                            accumulated.append(content)
-                            message.streamCallback?.onStreamChunk(message, accumulated.toString())
+                    val choice = chunk?.choices?.firstOrNull()
+                    val delta = choice?.delta
+
+                    // Handle text content
+                    delta?.content?.let { content ->
+                        accumulated.append(content)
+                        message.streamCallback?.onStreamChunk(message, accumulated.toString())
+                    }
+
+                    // Handle tool calls
+                    delta?.tool_calls?.forEach { tc ->
+                        val idx = tc.index ?: 0
+                        val acc = toolCallAccumulators.getOrPut(idx) {
+                            Triple(StringBuilder(), StringBuilder(), StringBuilder())
                         }
+                        tc.id?.let { acc.first.append(it) }
+                        tc.function?.name?.let { acc.second.append(it) }
+                        tc.function?.arguments?.let { acc.third.append(it) }
                     }
                 } catch (e: Exception) {
                     FileLogger.e(TAG, "Stream parse error: ${e.message}")
                 }
             }
-            accumulated.toString().let {
-                if(it.isNotBlank()){
-                    contextMessageList.add(it.toChatMessage(ROLE_ASSISTANT))
+
+            // After stream: if tool calls were received, execute them
+            if (toolCallAccumulators.isNotEmpty()) {
+                // Save any text content that preceded the tool calls
+                if (accumulated.isNotBlank()) {
+                    contextMessageList.add(accumulated.toString().toChatMessage(ROLE_ASSISTANT))
                 }
+
+                // Build ToolCall list from accumulators
+                val toolCalls = toolCallAccumulators.entries.sortedBy { it.key }.map { (_, acc) ->
+                    ToolCall(
+                        id = acc.first.toString(),
+                        function = ToolCallFunction(
+                            name = acc.second.toString(),
+                            arguments = acc.third.toString()
+                        )
+                    )
+                }
+
+                // Add assistant message with tool_calls to context
+                contextMessageList.add(ChatMessage(
+                    role = ROLE_ASSISTANT,
+                    content = null,
+                    tool_calls = toolCalls
+                ))
+
+                // Dispatch each tool call
+                pendingToolResults.clear()
+                pendingToolCallIdMap.clear()
+                for (toolCall in toolCalls) {
+                    val argsMap = parseToolArgs(toolCall.function.arguments)
+                    val functionCall = FunctionCall(toolCall.function.name, argsMap)
+                    pendingToolCallIdMap[toolCall.function.name] = toolCall.id
+
+                    if (!message.question.isEnableCommand && toolCall.function.name != MutedUserTool.name) {
+                        addToolErr(toolCall.function.name, Exception("Insufficient permissions"))
+                    } else {
+                        FileLogger.i(TAG, "Stream tool call: ${toolCall.function.name}: ${toolCall.function.arguments}")
+                        dispatchToolCall(toolCall.function.name, functionCall, this@OpenAiSession, message)
+                    }
+                }
+
+                // Append tool results to context
+                contextMessageList.addAll(pendingToolResults)
+
+                // Re-call API (non-streaming for the follow-up to handle nested tool calls)
+                val followUpResult = chatCompletion(
+                    prompt = prompt,
+                    chatMessageList = contextMessageList,
+                    model = model,
+                    maxCompletionTokens = maxCompletionTokens,
+                    responseFormat = responseFormat,
+                )
+
+                // Handle follow-up response (may contain more tool calls)
+                var current = followUpResult
+                while (current != null && !current.tool_calls.isNullOrEmpty()) {
+                    contextMessageList.add(current)
+                    pendingToolResults.clear()
+                    pendingToolCallIdMap.clear()
+                    for (tc in current.tool_calls!!) {
+                        val argsMap = parseToolArgs(tc.function.arguments)
+                        val functionCall = FunctionCall(tc.function.name, argsMap)
+                        pendingToolCallIdMap[tc.function.name] = tc.id
+                        if (!message.question.isEnableCommand && tc.function.name != MutedUserTool.name) {
+                            addToolErr(tc.function.name, Exception("Insufficient permissions"))
+                        } else {
+                            dispatchToolCall(tc.function.name, functionCall, this@OpenAiSession, message)
+                        }
+                    }
+                    contextMessageList.addAll(pendingToolResults)
+                    current = chatCompletion(
+                        prompt = prompt,
+                        chatMessageList = contextMessageList,
+                        model = model,
+                        maxCompletionTokens = maxCompletionTokens,
+                        responseFormat = responseFormat,
+                    )
+                }
+
+                // Final text response from tool call follow-up
+                current?.let {
+                    val text = if (it.content is ContentPart.TextPart) {
+                        it.content.text
+                    } else {
+                        it.content.toString()
+                    }
+                    message.saveToDatabase(text)
+                    contextMessageList.add(it)
+                    message.streamCallback?.onStreamChunk(message, text)
+                }
+                message.streamCallback?.onStreamComplete(message)
+            } else {
+                // No tool calls — normal text response
+                accumulated.toString().let {
+                    if (it.isNotBlank()) {
+                        contextMessageList.add(it.toChatMessage(ROLE_ASSISTANT))
+                    }
+                }
+                message.streamCallback?.onStreamComplete(message)
             }
-            message.streamCallback?.onStreamComplete(message)
         } catch (e: Exception) {
             FileLogger.e(TAG, "Stream request failed: ${e.javaClass.simpleName}: ${e.message}")
             message.streamCallback?.onStreamError(message, e)

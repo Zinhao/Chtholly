@@ -10,6 +10,7 @@ public class AICharacter {
     public String name;
     public String desc;
     public boolean roleplay = true;
+    public boolean builtin = false;
 
     public AICharacter(String name, String desc) {
         this.name = name;
@@ -46,5 +47,13 @@ public class AICharacter {
 
     public void setRoleplay(boolean roleplay) {
         this.roleplay = roleplay;
+    }
+
+    public boolean isBuiltin() {
+        return builtin;
+    }
+
+    public void setBuiltin(boolean builtin) {
+        this.builtin = builtin;
     }
 }

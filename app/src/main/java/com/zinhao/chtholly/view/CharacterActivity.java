@@ -151,17 +151,19 @@ public class CharacterActivity extends AppCompatActivity implements CharacterAda
                 dialog.dismiss();
             }
         });
-        builder.setNeutralButton("edit", new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface dialog, int which) {
-                Intent editIntent = new Intent(CharacterActivity.this, AddCharacterActivity.class);
-                editIntent.putExtra("edit_id", character.getId());
-                editIntent.putExtra("edit_name", character.getName());
-                editIntent.putExtra("edit_desc", character.getDesc());
-                startActivityForResult(editIntent, 2);
-                dialog.dismiss();
-            }
-        });
+        if (!character.isBuiltin()) {
+            builder.setNeutralButton("edit", new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(DialogInterface dialog, int which) {
+                    Intent editIntent = new Intent(CharacterActivity.this, AddCharacterActivity.class);
+                    editIntent.putExtra("edit_id", character.getId());
+                    editIntent.putExtra("edit_name", character.getName());
+                    editIntent.putExtra("edit_desc", character.getDesc());
+                    startActivityForResult(editIntent, 2);
+                    dialog.dismiss();
+                }
+            });
+        }
         builder.setPositiveButton("ok", new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int which) {
@@ -174,6 +176,14 @@ public class CharacterActivity extends AppCompatActivity implements CharacterAda
 
     @Override
     public void onLongClick(AICharacter character) {
+        if (character.isBuiltin()) {
+            new AlertDialog.Builder(this)
+                .setTitle(character.getName())
+                .setMessage("内置角色不可删除")
+                .setPositiveButton("ok", null)
+                .create().show();
+            return;
+        }
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setTitle(character.getName());
         builder.setMessage("确定删除" + character.getName() + "吗?");

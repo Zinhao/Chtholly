@@ -33,6 +33,7 @@ class CharacterViewModel(application: Application) : AndroidViewModel(applicatio
     }
 
     fun deleteCharacter(character: AICharacter) {
+        if (character.isBuiltin) return
         BotApp.getInstance().delete(character)
         _characterList.value?.let { current ->
             _characterList.postValue(current.filter { it.id != character.id })

@@ -181,8 +181,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun doFirstRun(context: Context) {
-        BotApp.getInstance().insert(AICharacter("猫娘", context.getString(R.string.neko_chara_short)))
-        BotApp.getInstance().insert(AICharacter("VTuber", context.getString(R.string.v_tuber_desc)))
         BotApp.getInstance().isFirstRun = false
         saveConfig()
     }

@@ -29,6 +29,9 @@ public interface AICharacterDao {
     @Query("SELECT * FROM aicharacter where aicharacter.id = :id")
     AICharacter getAICharacterById(long id);
 
+    @Query("SELECT * FROM aicharacter WHERE builtin = 1 LIMIT 1")
+    AICharacter getBuiltinCharacter();
+
     @Query("UPDATE aicharacter SET roleplay = :roleplay WHERE id = :id")
     void updateRoleplay(long id, boolean roleplay);
 

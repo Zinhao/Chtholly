@@ -14,7 +14,7 @@ import com.zinhao.chtholly.entity.ChatSession;
 import com.zinhao.chtholly.entity.Message;
 import org.jetbrains.annotations.NotNull;
 
-@Database(entities = {Message.class, AICharacter.class, ChatSession.class}, version = 4, autoMigrations = {
+@Database(entities = {Message.class, AICharacter.class, ChatSession.class}, version = 5, autoMigrations = {
         @AutoMigration(
                 from = 1,
                 to = 2,
@@ -82,4 +82,11 @@ public abstract class AppDatabase extends RoomDatabase {
             }
         };
     }
+
+    public static final Migration MIGRATION_4_5 = new Migration(4, 5) {
+        @Override
+        public void migrate(@NonNull @NotNull SupportSQLiteDatabase database) {
+            database.execSQL("ALTER TABLE `AICharacter` ADD COLUMN `builtin` INTEGER NOT NULL DEFAULT 0");
+        }
+    };
 }

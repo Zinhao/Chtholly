@@ -134,7 +134,7 @@ public class BotApp extends Application {
 
 
         AppDatabase database = Room.databaseBuilder(this, AppDatabase.class, "app_data")
-                .addMigrations(AppDatabase.MIGRATION_2_3, AppDatabase.createMigration3_4(this))
+                .addMigrations(AppDatabase.MIGRATION_2_3, AppDatabase.createMigration3_4(this), AppDatabase.MIGRATION_4_5)
                 .build();
         messageDao = database.messageDao();
         aiCharacterDao = database.characterDao();
@@ -313,6 +313,9 @@ public class BotApp extends Application {
         AsyncHelper.INSTANCE.doAsyncPart(new Runnable() {
             @Override
             public void run() {
+                // 确保内置助手角色存在
+                ensureBuiltinCharacterExists();
+
                 // Try to load from SP saved id
                 long savedCharacterId = sharedPreferences.getLong(CONFIG_CURRENT_CHARACTER_ID, -1);
                 AICharacter loaded = null;
@@ -345,6 +348,39 @@ public class BotApp extends Application {
                 restoreCurrentSession();
             }
         });
+    }
+
+    private void ensureBuiltinCharacterExists() {
+        AICharacter existing = aiCharacterDao.getBuiltinCharacter();
+        if (existing == null) {
+            String prompt = readAssetFile("default_assistant_prompt.txt");
+            if (prompt != null && !prompt.isEmpty()) {
+                AICharacter builtin = new AICharacter("助手", prompt);
+                builtin.setBuiltin(true);
+                builtin.setRoleplay(false);
+                long id = aiCharacterDao.insert(builtin);
+                builtin.setId(id);
+                FileLogger.INSTANCE.i("BotApp", "Created builtin assistant character: id=" + id);
+            }
+        }
+    }
+
+    private String readAssetFile(String fileName) {
+        try {
+            java.io.InputStream is = getAssets().open(fileName);
+            java.io.BufferedReader reader = new java.io.BufferedReader(new java.io.InputStreamReader(is));
+            StringBuilder sb = new StringBuilder();
+            String line;
+            while ((line = reader.readLine()) != null) {
+                sb.append(line).append("\n");
+            }
+            reader.close();
+            is.close();
+            return sb.toString().trim();
+        } catch (java.io.IOException e) {
+            FileLogger.INSTANCE.e("BotApp", "Failed to read asset: " + fileName, e);
+            return null;
+        }
     }
 
     private void restoreCurrentSession() {

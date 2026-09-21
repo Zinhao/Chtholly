@@ -191,5 +191,18 @@ data class StreamChoice(
 
 data class StreamDelta(
     val role: String?,
-    val content: String?
+    val content: String?,
+    val tool_calls: List<StreamToolCall>?
+)
+
+data class StreamToolCall(
+    val index: Int?,
+    val id: String?,
+    val type: String?,
+    val function: StreamToolCallFunction?
+)
+
+data class StreamToolCallFunction(
+    val name: String?,
+    val arguments: String?
 )
