@@ -27,7 +27,7 @@ import java.text.SimpleDateFormat
 import java.util.*
 import java.util.concurrent.TimeUnit
 
-class GeminiSession private constructor(private var chatApi: String) : NekoSession(),
+class GeminiSession private constructor(chatApi: String) : NekoSession(),
     RemoteChatApiSession, ToolCallback {
     private var data: PostRequest
     private val tools: MutableList<Tool>  = arrayListOf()

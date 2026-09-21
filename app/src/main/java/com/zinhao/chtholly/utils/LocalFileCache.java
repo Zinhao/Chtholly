@@ -8,6 +8,7 @@ import org.json.JSONObject;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.util.Objects;
 
 public class LocalFileCache{
     private static final String TAG = "LocalFileCache";
@@ -123,7 +124,7 @@ public class LocalFileCache{
     }
 
     /**
-     * 从内部私有目录读取JSONObject
+     * 从内部私有目录读取 JSONObject
      */
     public void readJSONObject(Context context, String name, AsyncHttpClient.JSONObjectCallback callback) {
         File file = new File(context.getCacheDir(), name);
@@ -135,7 +136,6 @@ public class LocalFileCache{
                     JSONObject jsonObject = new JSONObject(result);
                     callback.onCompleted(null, new LocalResponse(200), jsonObject);
                 } catch (Exception e) {
-                    e.printStackTrace();
                     callback.onCompleted(e, new LocalResponse(404), null);
                 }
             }

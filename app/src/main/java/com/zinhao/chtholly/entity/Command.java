@@ -617,10 +617,11 @@ public abstract class Command{
         String apiKey = BotApp.getInstance().getApiKey();
         String apiKeySub = apiKey.substring(Math.max(apiKey.length()-5,0));
         stringBuilder.append("ApiKey:").append("sk-***********").append(apiKeySub).append("\n");
-        if(NekoChatService.getInstance()!=null){
-
+        NekoSession nekoSession = BotApp.getInstance().getSession();
+        if(nekoSession instanceof RemoteChatApiSession){
+            String modelId = ((RemoteChatApiSession) nekoSession).getCurrentModel().getStr();
+            stringBuilder.append("Model:").append(modelId);
         }
-
         return  stringBuilder;
     }
 

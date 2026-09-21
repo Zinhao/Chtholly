@@ -3,19 +3,21 @@ package com.zinhao.chtholly.session;
 import com.koushikdutta.async.http.AsyncHttpClient;
 import com.koushikdutta.async.http.AsyncHttpResponse;
 import com.zinhao.chtholly.BotApp;
-import com.zinhao.chtholly.NekoChatService;
 import com.zinhao.chtholly.entity.Command;
 import com.zinhao.chtholly.entity.NekoAskAble;
+import com.zinhao.chtholly.utils.FileLogger;
 import com.zinhao.chtholly.utils.LocalFileCache;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.File;
+import java.util.Objects;
 
 import static com.zinhao.chtholly.entity.NekoAskAble.*;
 
 public class NekoSession{
+    private static final String TAG = "NekoSession";
     private JSONObject keywordAnswerMap;
     private static NekoSession instance;
     public static NekoSession getInstance() {
@@ -29,7 +31,9 @@ public class NekoSession{
         LocalFileCache.getInstance().readJSONObject(BotApp.context(), "keyword_map.json", new AsyncHttpClient.JSONObjectCallback() {
             @Override
             public void onCompleted(Exception e, AsyncHttpResponse asyncHttpResponse, JSONObject jsonObject) {
-                if(e==null || jsonObject == null){
+                if(e!=null || jsonObject == null){
+                    assert e != null;
+                    FileLogger.INSTANCE.e(TAG, Objects.requireNonNull(e.getMessage()),e);
                     return;
                 }
                 keywordAnswerMap = jsonObject;
@@ -37,7 +41,7 @@ public class NekoSession{
         });
     }
 
-    private static String[] LOVE_MOE = new String[]{"୧⍢⃝୨",
+    private static final String[] LOVE_MOE = new String[]{"୧⍢⃝୨",
             "٩(๛ ˘ ³˘)۶❤",
             "✧(≖ ◡ ≖✿)",
             "(・ω< )★",
@@ -141,8 +145,6 @@ public class NekoSession{
         }
 
         if(nekoAskAble.getQuestion().message.contains("忘记")){
-            //写入json
-//            BotApp.getInstance().getNekoSession().write();\ --D./
             nekoAskAble.getAnswer().setMessage(NOT_FORGET + randomFaceEmo());
             return true;
         }
@@ -173,13 +175,13 @@ public class NekoSession{
         }
 
         if(BotApp.getInstance().getMode() == NekoSession.class){
-            miaomiaojiao(nekoAskAble);
+            miaowing(nekoAskAble);
             return true;
         }
         return false;
     }
 
-    public void miaomiaojiao(Command qaMessage){
+    public void miaowing(Command qaMessage){
         StringBuilder builder = new StringBuilder();
         int random1 = (int) (Math.random()*2+1);
         int random2 = (int) (Math.random()*3);
