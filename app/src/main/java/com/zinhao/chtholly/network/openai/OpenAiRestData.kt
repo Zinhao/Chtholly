@@ -163,6 +163,16 @@ data class CompletionTokensDetails(
     val reasoning_tokens: Int?,
     val rejected_prediction_tokens: Int?
 )
+
+//data: {"id":"chatcmpl-k9muxp9t9a9s0jpn6dej7",
+// "object":"chat.completion.chunk",
+// "created":1789957451,
+// "model":"qwen3.5-4b-uncensored-hauhaucs-aggressive",
+// "system_fingerprint":"qwen3.5-4b-uncensored-hauhaucs-aggressive",
+// "choices":[{"index":0,
+// "delta":{"content":"“"},
+// "logprobs":null,
+// "finish_reason":null}]}
 // Streaming response data classes
 data class StreamChunk(
     val id: String?,

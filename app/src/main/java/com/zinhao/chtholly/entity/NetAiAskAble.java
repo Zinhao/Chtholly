@@ -89,4 +89,21 @@ public class NetAiAskAble extends NekoAskAble implements Callback{
     public interface DelayReplyCallback {
         void onReplySuccess(NetAiAskAble message);
     }
+
+    protected StreamCallback streamCallback;
+
+    public void setStreamCallback(StreamCallback callback) {
+        this.streamCallback = callback;
+    }
+
+    public StreamCallback getStreamCallback() {
+        return streamCallback;
+    }
+
+    public interface StreamCallback {
+        void onStreamStart(NetAiAskAble message);
+        void onStreamChunk(NetAiAskAble message, String chunk);
+        void onStreamComplete(NetAiAskAble message);
+        void onStreamError(NetAiAskAble message, Exception e);
+    }
 }

@@ -65,6 +65,8 @@ class ChatActivity : AppCompatActivity() {
         binding.recyclerView.setAdapter(adapter)
     }
 
+    private var streamingPosition: Int = -1
+
     private fun setupObservers() {
         // 观察消息列表变化
         viewModel.messages.observe(this, { messages ->
@@ -89,6 +91,32 @@ class ChatActivity : AppCompatActivity() {
             binding.etInput.setOnItemClickListener { parent, _, position, _ ->
                 val selected = parent.getItemAtPosition(position) as Pair<*, *>
                 binding.etInput.setText("/${selected.first.toString()}")
+            }
+        })
+
+        // Observe streaming state
+        viewModel.isStreaming.observe(this, { isStreaming ->
+            binding.btnSend.setEnabled(!isStreaming)
+        })
+
+        viewModel.streamingMessage.observe(this, { message ->
+            if (message != null) {
+                // Add streaming message to list if not already present
+                val currentList = viewModel.messages.value?.toMutableList() ?: return@observe
+                if (streamingPosition == -1) {
+                    currentList.add(message)
+                    streamingPosition = currentList.size - 1
+                    adapter?.submitList(currentList) {
+                        binding.recyclerView.smoothScrollToPosition(streamingPosition)
+                    }
+                } else {
+                    // Update existing streaming message directly on ViewHolder
+                    adapter?.updateStreamingText(binding.recyclerView, streamingPosition, message.message)
+                    binding.recyclerView.scrollToPosition(streamingPosition)
+                }
+            } else {
+                // Streaming complete, reset position
+                streamingPosition = -1
             }
         })
     }

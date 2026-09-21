@@ -30,7 +30,15 @@ public class LoggingInterceptor implements Interceptor {
         // 继续发送请求
         Response response = chain.proceed(request);
 
-        // 读取响应体
+        // 流式请求不读取body，直接返回原始response保留流式特性
+        String streamingHeader = request.header("X-Streaming");
+        if ("true".equals(streamingHeader)) {
+            FileLogger.INSTANCE.i(TAG,"Received streaming response from URL: " + response.request().url());
+            FileLogger.INSTANCE.i(TAG,"Response code: " + response.code());
+            return response;
+        }
+
+        // 非流式请求：读取响应体
         ResponseBody responseBody = response.body();
         assert responseBody != null;
         String responseBodyString = responseBody.string(); // 读取响应体

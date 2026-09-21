@@ -1,6 +1,7 @@
 package com.zinhao.chtholly.network.openai
 
 import okhttp3.ResponseBody
+import retrofit2.Call
 import retrofit2.http.Body
 import retrofit2.http.Header
 import retrofit2.http.POST
@@ -16,9 +17,10 @@ interface OpenAiApi {
 
     @Streaming
     @POST("v1/chat/completions")
-    suspend fun chatCompletionStream(
+    fun chatCompletionStream(
         @Header("Authorization") authorization: String,
         @Header("Content-Type") contentType: String = "application/json; charset=utf-8",
+        @Header("X-Streaming") streaming: String = "true",
         @Body request: ChatRequest
-    ): ResponseBody
+    ): Call<ResponseBody>
 }

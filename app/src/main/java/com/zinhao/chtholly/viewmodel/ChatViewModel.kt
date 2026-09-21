@@ -10,12 +10,13 @@ import com.zinhao.chtholly.db.MessageDao
 import com.zinhao.chtholly.entity.*
 import com.zinhao.chtholly.session.GeminiSession
 import com.zinhao.chtholly.session.OpenAiSession
+import com.zinhao.chtholly.utils.FileLogger
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 
 class ChatViewModel(application: Application) : AndroidViewModel(application) , NetAiAskAble.DelayReplyCallback {
-
+    private val TAG = ChatViewModel::class.java.simpleName
     // 消息列表
     private val _messages = MutableLiveData<List<Message>>(emptyList())
     val messages: LiveData<List<Message>> = _messages
@@ -27,6 +28,47 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) , 
     private val _autoCompleteArr = MutableLiveData<List<Pair<String, String>>>(emptyList())
     val autoCompleteArr: LiveData<List<Pair<String, String>>> = _autoCompleteArr
 
+    // Streaming state
+    private val _streamingMessage = MutableLiveData<Message?>()
+    val streamingMessage: LiveData<Message?> = _streamingMessage
+
+    private val _isStreaming = MutableLiveData<Boolean>(false)
+    val isStreaming: LiveData<Boolean> = _isStreaming
+
+    private var currentStreamMessage: Message? = null
+
+    private inner class StreamingCallback : NetAiAskAble.StreamCallback {
+        override fun onStreamStart(message: NetAiAskAble) {
+            _isStreaming.postValue(true)
+            val tempMessage = Message(BotApp.getInstance().botName, "", System.currentTimeMillis())
+            currentStreamMessage = tempMessage
+            _streamingMessage.postValue(tempMessage)
+        }
+
+        override fun onStreamChunk(message: NetAiAskAble, chunk: String) {
+            currentStreamMessage?.let {
+                it.message = chunk
+                _streamingMessage.postValue(it)
+            }
+        }
+
+        override fun onStreamComplete(message: NetAiAskAble) {
+            _isStreaming.postValue(false)
+            currentStreamMessage?.let {
+                addBotMessage(it)
+                BotApp.getInstance().insert(it)
+            }
+            currentStreamMessage = null
+            _streamingMessage.postValue(null)
+        }
+
+        override fun onStreamError(message: NetAiAskAble, e: Exception) {
+            _isStreaming.postValue(false)
+            currentStreamMessage = null
+            _streamingMessage.postValue(null)
+        }
+    }
+
     /**
      * 加载消息列表
      */
@@ -36,9 +78,6 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) , 
             _isMessageDialogReady.postValue(false)
         })
         val map = Command.getMethodDescMap(Command::class.java)
-//        for (entry in map) {
-//            Log.d("TAG", entry.key + " " + entry.value)
-//        }
         _autoCompleteArr.value = map.toList()
     }
 
@@ -58,6 +97,11 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) , 
         _messages.value = messageList
 
         val mainAskable = createAskable(newMessage)
+        // Set stream callback for OpenAI session
+        if (mainAskable is NetAiAskAble) {
+            FileLogger.d(TAG,"setStreamCallback")
+            mainAskable.setStreamCallback(StreamingCallback())
+        }
         BotApp.getInstance().insert(newMessage)
         viewModelScope.launch(Dispatchers.IO) {
             mainAskable.handle()

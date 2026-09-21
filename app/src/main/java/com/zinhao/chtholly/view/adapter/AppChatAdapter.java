@@ -59,6 +59,25 @@ public class AppChatAdapter extends ListAdapter<Message, AppChatAdapter.MessageV
         }
     }
 
+    public void updateStreamingMessage(int position, String partialText) {
+        if (position >= 0 && position < getItemCount()) {
+            Message message = getItem(position);
+            message.setMessage(partialText);
+            notifyItemChanged(position);
+        }
+    }
+
+    public void updateStreamingText(RecyclerView recyclerView, int position, String text) {
+        if (position >= 0 && position < getItemCount()) {
+            Message message = getItem(position);
+            message.setMessage(text);
+            RecyclerView.ViewHolder holder = recyclerView.findViewHolderForAdapterPosition(position);
+            if (holder instanceof MessageViewHolder) {
+                ((MessageViewHolder) holder).tvMessage.setText(text);
+            }
+        }
+    }
+
     static class MessageViewHolder extends RecyclerView.ViewHolder {
         private final TextView tvMessage;
         private final TextView tvTime;

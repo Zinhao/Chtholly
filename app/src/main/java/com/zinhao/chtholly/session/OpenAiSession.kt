@@ -22,15 +22,21 @@ import com.zinhao.chtholly.utils.FileLogger
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
+import okhttp3.ResponseBody
 import org.json.JSONException
 import org.json.JSONObject
+import retrofit2.Call
+import retrofit2.Callback
+import retrofit2.Response
 import retrofit2.Retrofit
 import retrofit2.converter.moshi.MoshiConverterFactory
 import java.io.IOException
 import java.text.SimpleDateFormat
 import java.util.*
+import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 
 class OpenAiSession private constructor(private val chatUrl: String) : NekoSession(), RemoteChatApiSession, ToolCallback {
@@ -67,11 +73,13 @@ class OpenAiSession private constructor(private val chatUrl: String) : NekoSessi
     val nekoReplyAdapter: JsonAdapter<NekoReply> =
         moshi.adapter<NekoReply>()
 
-    val retrofit = Retrofit.Builder()
+    val retrofit: Retrofit = Retrofit.Builder()
         .baseUrl(chatUrl) // LM Studio / OpenAI 兼容
         .addConverterFactory(MoshiConverterFactory.create(moshi))
+        .callbackExecutor(Executors.newSingleThreadExecutor())
         .client(okHttpClient)
         .build()
+
 
     val api = retrofit.create(OpenAiApi::class.java)
 
@@ -86,10 +94,10 @@ class OpenAiSession private constructor(private val chatUrl: String) : NekoSessi
     private val mimo2p5pro = "mimo-v2.5-pro"
 
     init {
+        modelList.add(RemoteModel(qwen3p5_4b_uncensored))
         modelList.add(RemoteModel(mimo2p5))
         modelList.add(RemoteModel(mimo2p5pro))
 //        modelList.add(RemoteModel(qwen3p5_9b_uncensored))
-        modelList.add(RemoteModel(qwen3p5_4b_uncensored))
         modelList.add(RemoteModel(qwen3p5_4b_nsfw_ara_i1))
         currentModel = modelList.get(0)
         loadChatHistory()
@@ -236,7 +244,7 @@ class OpenAiSession private constructor(private val chatUrl: String) : NekoSessi
     }
 
     private var lastMessageTime = System.currentTimeMillis()
-    private var lastPostTime = System.currentTimeMillis()
+    private var lastPostTime = 0L
 
     @Throws(JSONException::class)
     override fun callApi(message: NetAiAskAble, add: Boolean): Boolean {
@@ -262,8 +270,7 @@ class OpenAiSession private constructor(private val chatUrl: String) : NekoSessi
      * 判断是否发送请求太频繁（5秒内）
      */
     private fun isTooFrequent(): Boolean {
-        val fiveSeconds = 5000L
-        return System.currentTimeMillis() - lastPostTime < fiveSeconds
+        return System.currentTimeMillis() - lastPostTime < 2000L
     }
 
     /**
@@ -329,6 +336,19 @@ class OpenAiSession private constructor(private val chatUrl: String) : NekoSessi
 
         scope.launch {
             try {
+                // Use streaming if callback is set
+                if (message.streamCallback != null) {
+                    chatCompletionStream(
+                        message = message,
+                        chatMessageList = contextMessageList,
+                        prompt = systemPrompt,
+                        model = currentModel.str,
+                        maxCompletionTokens = 4096,
+                        responseFormat = noneResponseFormat,
+                    )
+                    return@launch
+                }
+
                 var chatMessageResult = chatCompletion(
                     prompt = systemPrompt,
                     chatMessageList = contextMessageList,
@@ -510,6 +530,102 @@ class OpenAiSession private constructor(private val chatUrl: String) : NekoSessi
 
         }
         return null
+    }
+
+    private suspend fun chatCompletionStream(
+        message: NetAiAskAble,
+        chatMessageList: List<ChatMessage>,
+        prompt: String = "Describe this image in two sentences",
+        model: String = modelList[0].str,
+        maxCompletionTokens: Int = 1024,
+        temperature: Double = 1.05,
+        responseFormat: ResponseFormat? = null
+    ) {
+        val messages = arrayListOf<ChatMessage>()
+        messages.add(ChatMessage(
+            role = "system",
+            content = listOf(ContentPart.TextPart(type = "text", text = prompt))
+        ))
+        messages.addAll(chatMessageList)
+        val chatRequest = ChatRequest(
+            model = model,
+            messages = messages,
+            max_completion_tokens = maxCompletionTokens,
+            reasoning_effort = "none",
+            temperature = temperature,
+            stream = true,
+            response_format = responseFormat,
+            tools = if (responseFormat == null) OPENAI_TOOLS else null
+        )
+
+        try {
+
+            lastPostTime = System.currentTimeMillis()
+
+            val channel = Channel<String>(Channel.BUFFERED)
+            val call = api.chatCompletionStream(
+                authorization = "Bearer ${BotApp.getInstance().apiKey}",
+                request = chatRequest
+            )
+            call.enqueue(object : Callback<ResponseBody> {
+                override fun onResponse(
+                    call: Call<ResponseBody>,
+                    response: Response<ResponseBody>
+                ) {
+                    try {
+                        if (!response.isSuccessful) {
+                            channel.close(IOException("HTTP ${response.code()}"))
+                            return
+                        }
+                        val body = response.body() ?: run {
+                            channel.close(IOException("Empty body"))
+                            return
+                        }
+                        val source = body.source()
+                        while (!source.exhausted()) {
+                            val line = source.readUtf8Line() ?: break
+                            if (line.startsWith("data: ")) {
+                                channel.trySend(line)
+                            }
+                        }
+                        channel.close()
+                    } catch (e: Exception) {
+                        FileLogger.e(TAG, e.message.toString(),e)
+                        channel.close(e)
+                    }
+                }
+
+                override fun onFailure(call: Call<ResponseBody>, t: Throwable) {
+                    FileLogger.e(TAG, "Stream onFailure: ${t.javaClass.simpleName}: ${t.message}")
+                    channel.close(t as? Exception ?: IOException(t.message))
+                }
+            })
+
+            val accumulated = StringBuilder()
+            val streamAdapter = moshi.adapter(StreamChunk::class.java)
+            message.streamCallback?.onStreamStart(message)
+
+            for (line in channel) {
+                val data = line.removePrefix("data: ").trim()
+                if (data == "[DONE]") break
+                try {
+                    val chunk = streamAdapter.fromJson(data)
+                    chunk?.choices?.firstOrNull()?.delta?.let { delta ->
+                        delta.content?.let { content ->
+                            accumulated.append(content)
+                            message.streamCallback?.onStreamChunk(message, accumulated.toString())
+                        }
+                    }
+                } catch (e: Exception) {
+                    FileLogger.e(TAG, "Stream parse error: ${e.message}")
+                }
+            }
+
+            message.streamCallback?.onStreamComplete(message)
+        } catch (e: Exception) {
+            FileLogger.e(TAG, "Stream request failed: ${e.javaClass.simpleName}: ${e.message}")
+            message.streamCallback?.onStreamError(message, e)
+        }
     }
 
     private var lastNekoReply: NekoReply? = null
