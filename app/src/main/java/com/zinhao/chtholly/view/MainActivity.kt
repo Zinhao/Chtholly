@@ -78,6 +78,7 @@ class MainActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         viewModel.refreshCurrentChara()
+        viewModel.refreshRoleplay()
         viewModel.checkAccessibilityStatus(this)
     }
 

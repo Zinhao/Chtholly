@@ -1,5 +1,7 @@
 package com.zinhao.chtholly.db;
 
+import android.content.Context;
+
 import androidx.annotation.NonNull;
 import androidx.room.AutoMigration;
 import androidx.room.Database;
@@ -12,7 +14,7 @@ import com.zinhao.chtholly.entity.ChatSession;
 import com.zinhao.chtholly.entity.Message;
 import org.jetbrains.annotations.NotNull;
 
-@Database(entities = {Message.class, AICharacter.class, ChatSession.class}, version = 3, autoMigrations = {
+@Database(entities = {Message.class, AICharacter.class, ChatSession.class}, version = 4, autoMigrations = {
         @AutoMigration(
                 from = 1,
                 to = 2,
@@ -68,4 +70,16 @@ public abstract class AppDatabase extends RoomDatabase {
             database.execSQL("CREATE INDEX IF NOT EXISTS `index_Message_sessionId` ON `Message` (`sessionId`)");
         }
     };
+
+    public static Migration createMigration3_4(Context context) {
+        boolean globalRoleplay = context.getSharedPreferences("app_data", Context.MODE_PRIVATE)
+                .getBoolean("roleplay", true);
+        int defaultVal = globalRoleplay ? 1 : 0;
+        return new Migration(3, 4) {
+            @Override
+            public void migrate(@NonNull @NotNull SupportSQLiteDatabase database) {
+                database.execSQL("ALTER TABLE `AICharacter` ADD COLUMN `roleplay` INTEGER NOT NULL DEFAULT " + defaultVal);
+            }
+        };
+    }
 }

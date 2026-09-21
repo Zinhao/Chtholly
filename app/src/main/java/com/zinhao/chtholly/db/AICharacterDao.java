@@ -28,6 +28,9 @@ public interface AICharacterDao {
     @Query("SELECT * FROM aicharacter where aicharacter.id = :id")
     AICharacter getAICharacterById(long id);
 
+    @Query("UPDATE aicharacter SET roleplay = :roleplay WHERE id = :id")
+    void updateRoleplay(long id, boolean roleplay);
+
     interface AICharacterGetAllListener{
         void onSuccess(List<AICharacter> result);
     }

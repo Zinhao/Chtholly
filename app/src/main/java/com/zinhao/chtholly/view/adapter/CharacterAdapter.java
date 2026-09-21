@@ -3,13 +3,16 @@ package com.zinhao.chtholly.view.adapter;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.CheckBox;
 import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.zinhao.chtholly.BotApp;
 import com.zinhao.chtholly.R;
 import com.zinhao.chtholly.databinding.CharacterItemBinding;
 import com.zinhao.chtholly.entity.AICharacter;
+import com.zinhao.chtholly.utils.AsyncHelper;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
@@ -37,8 +40,22 @@ public class CharacterAdapter extends RecyclerView.Adapter<RecyclerView.ViewHold
     public void onBindViewHolder(@NonNull @NotNull RecyclerView.ViewHolder viewHolder, int i) {
         final AICharacter aiCharacter = data.get(i);
         if(viewHolder instanceof CharacterViewHolder){
-            ((CharacterViewHolder) viewHolder).tvDesc.setText(aiCharacter.getDesc());
-            ((CharacterViewHolder) viewHolder).tvTitle.setText(aiCharacter.getName());
+            CharacterViewHolder holder = (CharacterViewHolder) viewHolder;
+            holder.tvDesc.setText(aiCharacter.getDesc());
+            holder.tvTitle.setText(aiCharacter.getName());
+            holder.cbRoleplay.setChecked(aiCharacter.isRoleplay());
+            holder.cbRoleplay.setOnClickListener(v -> {
+                boolean isChecked = holder.cbRoleplay.isChecked();
+                aiCharacter.setRoleplay(isChecked);
+                long charId = aiCharacter.getId();
+                AsyncHelper.INSTANCE.doAsyncPart(() -> {
+                    BotApp.getInstance().getCharacterDao().updateRoleplay(charId, isChecked);
+                });
+                AICharacter current = BotApp.getInstance().getCurrentCharacter();
+                if (current != null && current.getId() == aiCharacter.getId()) {
+                    BotApp.getInstance().setRoleplay(isChecked);
+                }
+            });
             viewHolder.itemView.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
@@ -71,10 +88,12 @@ public class CharacterAdapter extends RecyclerView.Adapter<RecyclerView.ViewHold
     static class CharacterViewHolder extends RecyclerView.ViewHolder{
         TextView tvTitle;
         TextView tvDesc;
+        CheckBox cbRoleplay;
         public CharacterViewHolder(@NonNull @NotNull View itemView) {
             super(itemView);
             tvTitle = itemView.findViewById(R.id.textView2);
             tvDesc = itemView.findViewById(R.id.textView3);
+            cbRoleplay = itemView.findViewById(R.id.cbRoleplay);
         }
     }
 

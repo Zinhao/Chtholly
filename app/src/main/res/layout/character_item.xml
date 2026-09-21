@@ -32,6 +32,17 @@
                     android:layout_marginRight="12dp"
                     android:layout_height="wrap_content" android:id="@+id/textView3" android:layout_marginTop="12dp"
                     android:layout_below="@+id/textView2"/>
+            <CheckBox
+                    android:id="@+id/cbRoleplay"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_below="@+id/textView3"
+                    android:layout_marginLeft="12dp"
+                    android:layout_marginTop="4dp"
+                    android:layout_marginBottom="8dp"
+                    android:text="roleplay"
+                    android:textSize="13sp"
+                    android:focusable="true" />
         </RelativeLayout>
     </androidx.cardview.widget.CardView>
 </androidx.constraintlayout.widget.ConstraintLayout>

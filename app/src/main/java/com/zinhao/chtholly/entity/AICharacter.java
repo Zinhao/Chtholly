@@ -9,6 +9,7 @@ public class AICharacter {
     public long id;
     public String name;
     public String desc;
+    public boolean roleplay = true;
 
     public AICharacter(String name, String desc) {
         this.name = name;
@@ -37,5 +38,13 @@ public class AICharacter {
 
     public void setDesc(String desc) {
         this.desc = desc;
+    }
+
+    public boolean isRoleplay() {
+        return roleplay;
+    }
+
+    public void setRoleplay(boolean roleplay) {
+        this.roleplay = roleplay;
     }
 }

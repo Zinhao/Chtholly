@@ -45,6 +45,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         BotApp.getInstance().isRoleplay = rolePlay
     }
 
+    fun refreshRoleplay() {
+        _roleplay.value = BotApp.getInstance().isRoleplay
+    }
+
     // Toast 消息
     private val _toastMessage = MutableLiveData<String?>()
     val toastMessage: LiveData<String?> = _toastMessage

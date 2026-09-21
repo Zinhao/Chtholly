@@ -53,7 +53,6 @@ public class BotApp extends Application {
     private boolean withSpeaker = true;
 
     private String chatUrl;
-    private boolean roleplay = true;
     private AICharacter currentCharacter;
     private String ttsUrl;
 
@@ -96,7 +95,7 @@ public class BotApp extends Application {
         if(mode == OpenAiSession.class){
             OpenAiSession openAiSession = OpenAiSession.getInstance();
             if(openAiSession!=null){
-                openAiSession.setRoleplayMode(roleplay);
+                openAiSession.setRoleplayMode(isRoleplay());
             }
             return openAiSession;
         }else if(mode == GeminiSession.class){
@@ -126,7 +125,6 @@ public class BotApp extends Application {
         ttsUrl = sharedPreferences.getString(CONFIG_TTS_URL, HostConsts.LOCAL_HOST);
         withSpeaker = sharedPreferences.getBoolean(CONFIG_WITH_SPEAKER, true);
         isFirstRun = sharedPreferences.getBoolean(CONFIG_IS_FIRST_RUN,true);
-        roleplay = sharedPreferences.getBoolean(CONFIG_ROLEPLAY,true);
         //飞书配置
         feishuAppId = sharedPreferences.getString(CONFIG_FEISHU_APP_ID,"");
         feishuAppSecret = sharedPreferences.getString(CONFIG_FEISHU_APP_SECRET,"");
@@ -136,7 +134,7 @@ public class BotApp extends Application {
 
 
         AppDatabase database = Room.databaseBuilder(this, AppDatabase.class, "app_data")
-                .addMigrations(AppDatabase.MIGRATION_2_3)
+                .addMigrations(AppDatabase.MIGRATION_2_3, AppDatabase.createMigration3_4(this))
                 .build();
         messageDao = database.messageDao();
         aiCharacterDao = database.characterDao();
@@ -268,23 +266,30 @@ public class BotApp extends Application {
     }
 
     public void setRoleplay(boolean roleplay) {
-        this.roleplay = roleplay;
-        sharedPreferences.edit().putBoolean(CONFIG_ROLEPLAY,roleplay).apply();
-        if(mode == OpenAiSession.class){
+        if (currentCharacter != null) {
+            currentCharacter.setRoleplay(roleplay);
+            AsyncHelper.INSTANCE.doAsyncPart(() -> {
+                aiCharacterDao.updateRoleplay(currentCharacter.getId(), roleplay);
+            });
+        }
+        if (mode == OpenAiSession.class) {
             NekoSession session = getApiSession();
-            if(session instanceof OpenAiSession){
+            if (session instanceof OpenAiSession) {
                 ((OpenAiSession) session).setRoleplayMode(roleplay);
             }
-            if(session instanceof RemoteChatApiSession){
-                if(currentCharacter!=null){
-                    ((RemoteChatApiSession) session).setAgentPrompt(currentCharacter.desc);
+            if (session instanceof RemoteChatApiSession) {
+                if (currentCharacter != null) {
+                    ((RemoteChatApiSession) session).setAgentPrompt(currentCharacter.getDesc());
                 }
             }
         }
     }
 
     public boolean isRoleplay() {
-        return roleplay;
+        if (currentCharacter != null) {
+            return currentCharacter.isRoleplay();
+        }
+        return true;
     }
 
     public long getCurrentSessionId() {
@@ -297,6 +302,10 @@ public class BotApp extends Application {
 
     public ChatSessionDao getChatSessionDao() {
         return chatSessionDao;
+    }
+
+    public AICharacterDao getCharacterDao() {
+        return aiCharacterDao;
     }
 
     private void loadCurrentCharacter(String defaultAiSoul) {
@@ -485,6 +494,9 @@ public class BotApp extends Application {
             public void onSessionReady(long sessionId) {
                 FileLogger.INSTANCE.i("BotApp", "Switched to session: " + sessionId + " for character: " + character.getName());
                 NekoSession nekoSession = getApiSession();
+                if (nekoSession instanceof OpenAiSession) {
+                    ((OpenAiSession) nekoSession).setRoleplayMode(character.isRoleplay());
+                }
                 if(nekoSession instanceof RemoteChatApiSession){
                     ((RemoteChatApiSession) nekoSession).setAgentPrompt(character.getDesc());
                     ((RemoteChatApiSession) nekoSession).loadChatHistory();
