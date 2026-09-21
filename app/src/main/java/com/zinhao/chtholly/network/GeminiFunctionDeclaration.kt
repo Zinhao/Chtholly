@@ -11,52 +11,6 @@ import com.zinhao.chtholly.network.openai.ToolParameters
 import com.zinhao.chtholly.network.openai.ToolProperty
 
 
-val PrintInfo = FunctionDeclaration(
-    description = "call function when you need",
-    name = "call_function",
-    Parameters(
-        properties = mapOf(
-            Pair(
-                "name", Properties(
-                    description = "the function name",
-                    enum = listOf(
-                        "runInfo",
-                        "help",
-                        "printContext",
-                        "closeAutoAction",
-                        "openAutoAction",
-                        "printSoul",
-                        "everyDayCheck",
-                        "screenShot",
-                        "sendNewestPic",
-                        "summarize",
-                        "screenShare",
-                        "videoCall",
-                        "sendGallery",
-                        "battery",
-                        "takePhoto",
-                        "recordVideo",
-                    ),
-                    type = "string"
-                )
-            )
-        ),
-        listOf("name"),
-        "object"
-    ),
-    funImpl = object : FunImpl{
-        override fun call(
-            functionCall: FunctionCall,
-            callback: ToolCallback,
-            netAiAskAble: NetAiAskAble,
-            thoughtSignature: String?
-        ) {
-
-        }
-
-    }
-)
-
 val GEMINI_TOOLS = Tool(
     listOf(
         // 文件读写
@@ -65,7 +19,11 @@ val GEMINI_TOOLS = Tool(
         // 禁言
         MutedUserTool,
         // 提醒工具
-        CreateReminder,GetReminders,GetSystemTime
+        CreateReminder,GetReminders,GetSystemTime,
+        // 运行时设置工具
+        GetAppStatusTool,SwitchModeTool,SetModelTool,
+        ToggleRoleplayTool,ToggleSpeakerTool,
+        ClearContextTool,SwitchCharacterTool
     )
 )
 
@@ -108,7 +66,15 @@ val OPENAI_TOOLS: List<OpenAiTool> = listOf(
     // 提醒工具
     CreateReminder,
     GetReminders,
-    GetSystemTime
+    GetSystemTime,
+    // 运行时设置工具
+    GetAppStatusTool,
+    SwitchModeTool,
+    SetModelTool,
+    ToggleRoleplayTool,
+    ToggleSpeakerTool,
+    ClearContextTool,
+    SwitchCharacterTool
 ).map { it.toOpenAiTool() }
 
 data class FileInfo(val name: String, val isFile: Boolean,val size: Long,val time: Long)
@@ -153,5 +119,12 @@ fun dispatchToolCall(
         CreateReminder.name -> CreateReminder.funImpl?.call(functionCall, callback, netAiAskAble, thoughtSignature)
         GetReminders.name -> GetReminders.funImpl?.call(functionCall, callback, netAiAskAble, thoughtSignature)
         GetSystemTime.name -> GetSystemTime.funImpl?.call(functionCall, callback, netAiAskAble, thoughtSignature)
+        GetAppStatusTool.name -> GetAppStatusTool.funImpl?.call(functionCall, callback, netAiAskAble, thoughtSignature)
+        SwitchModeTool.name -> SwitchModeTool.funImpl?.call(functionCall, callback, netAiAskAble, thoughtSignature)
+        SetModelTool.name -> SetModelTool.funImpl?.call(functionCall, callback, netAiAskAble, thoughtSignature)
+        ToggleRoleplayTool.name -> ToggleRoleplayTool.funImpl?.call(functionCall, callback, netAiAskAble, thoughtSignature)
+        ToggleSpeakerTool.name -> ToggleSpeakerTool.funImpl?.call(functionCall, callback, netAiAskAble, thoughtSignature)
+        ClearContextTool.name -> ClearContextTool.funImpl?.call(functionCall, callback, netAiAskAble, thoughtSignature)
+        SwitchCharacterTool.name -> SwitchCharacterTool.funImpl?.call(functionCall, callback, netAiAskAble, thoughtSignature)
     }
 }
