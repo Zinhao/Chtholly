@@ -3,19 +3,27 @@ package com.zinhao.chtholly.entity;
 import android.view.accessibility.AccessibilityNodeInfo;
 import androidx.annotation.NonNull;
 import androidx.room.Entity;
+import androidx.room.ForeignKey;
 import androidx.room.Ignore;
+import androidx.room.Index;
 import androidx.room.PrimaryKey;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Objects;
 
-@Entity
+@Entity(foreignKeys = @ForeignKey(
+        entity = ChatSession.class,
+        parentColumns = "id",
+        childColumns = "sessionId",
+        onDelete = ForeignKey.CASCADE
+), indices = @Index("sessionId"))
 public class Message {
     @PrimaryKey(autoGenerate = true)
     public long id;
     public String message;
     public String speaker;
     public long timeStamp;
+    public long sessionId;
     @Ignore
     public AccessibilityNodeInfo nodeInfo;
     @Ignore
@@ -29,13 +37,22 @@ public class Message {
     @Ignore
     private boolean isAtMessage = false;
 
+    @Ignore
     public Message(String speaker, String message, long timeStamp) {
         this.message = message;
         this.speaker = speaker;
         this.timeStamp = timeStamp;
     }
 
-    public Message(String speaker, String message, long timeStamp,boolean other) {
+    public Message(String speaker, String message, long timeStamp, long sessionId) {
+        this.message = message;
+        this.speaker = speaker;
+        this.timeStamp = timeStamp;
+        this.sessionId = sessionId;
+    }
+
+    @Ignore
+    public Message(String speaker, String message, long timeStamp, boolean other) {
         this.message = message;
         this.speaker = speaker;
         this.timeStamp = timeStamp;
@@ -72,6 +89,14 @@ public class Message {
 
     public void setTimeStamp(long timeStamp) {
         this.timeStamp = timeStamp;
+    }
+
+    public long getSessionId() {
+        return sessionId;
+    }
+
+    public void setSessionId(long sessionId) {
+        this.sessionId = sessionId;
     }
 
     @Override

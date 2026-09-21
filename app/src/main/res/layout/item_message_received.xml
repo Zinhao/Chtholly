@@ -29,7 +29,7 @@
                 android:id="@+id/tv_message"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:textColor="@color/white"
+                android:textColor="@color/black"
                 android:textSize="16sp"
                 android:textIsSelectable="true"
                 android:enabled="true"
@@ -42,7 +42,7 @@
             android:id="@+id/tv_time"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:textColor="@color/lighter_gray"
+            android:textColor="@color/gray"
             android:text="10:08:01"
             android:textSize="11sp"
             android:layout_marginTop="4dp" />

@@ -223,6 +223,7 @@ class SetupViewModel(application: Application) : AndroidViewModel(application) {
             feishuAppId = _feishuAppId.value ?: ""
             feishuAppSecret = _feishuAppSecret.value ?: ""
             isFirstRun = false
+
         }
         // 保存到 SharedPreferences
         val prefs = BotApp.getInstance().sharedPreferences

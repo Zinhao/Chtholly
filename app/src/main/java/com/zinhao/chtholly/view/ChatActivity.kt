@@ -83,7 +83,6 @@ class ChatActivity : AppCompatActivity() {
         })
 
         viewModel.autoCompleteArr.observe(this, {
-            Log.d("TAG", "pairs lem: ${it.size}")
             val pairs = it ?: return@observe
             val adapter = PairAdapter(this, pairs)
             binding.etInput.setAdapter(adapter)

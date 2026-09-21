@@ -127,7 +127,7 @@ public class QQChatHandler extends BaseChatHandler {
         }
         int checkResult = messageCheckIn(hitMessage,BotApp.getInstance().getBotName());
         if(checkResult == CHECK_FAILED){
-            NekoSession nekoSession = BotApp.getInstance().getSession();
+            NekoSession nekoSession = BotApp.getInstance().getApiSession();
             if(nekoSession instanceof GeminiSession){
                 FileLogger.INSTANCE.i(TAG, "add to context but not answer:" + hitMessage.message);
                 Content content = new Content(

@@ -263,7 +263,7 @@ public abstract class Command{
     }
     @HelpDoc(desc = "消息上下文")
     protected boolean printContext() {
-        NekoSession nekoSession = BotApp.getInstance().getSession();
+        NekoSession nekoSession = BotApp.getInstance().getApiSession();
         boolean wait = false;
         if(nekoSession instanceof RemoteChatApiSession){
             String chatContext = ((RemoteChatApiSession) nekoSession).getContextChat();
@@ -298,7 +298,7 @@ public abstract class Command{
 
     @HelpDoc(desc = "切换模型")
     private boolean setModel() {
-        NekoSession nekoSession = BotApp.getInstance().getSession();
+        NekoSession nekoSession = BotApp.getInstance().getApiSession();
         if(nekoSession instanceof RemoteChatApiSession){
             RemoteChatApiSession  remoteChatApiSession = (RemoteChatApiSession) nekoSession;
             if(args!=null && args.length>0){
@@ -331,7 +331,7 @@ public abstract class Command{
     }
     @HelpDoc(desc = "总结对话")
     protected boolean summarize() {
-        NekoSession nekoSession = BotApp.getInstance().getSession();
+        NekoSession nekoSession = BotApp.getInstance().getApiSession();
         if(nekoSession instanceof  RemoteChatApiSession){
             RemoteChatApiSession remoteChatApiSession = (RemoteChatApiSession) nekoSession;
             int len = remoteChatApiSession.summarize();
@@ -436,7 +436,7 @@ public abstract class Command{
     }
     @HelpDoc(desc = "清除上下文")
     private boolean clearContext(){
-        NekoSession nekoSession = BotApp.getInstance().getSession();
+        NekoSession nekoSession = BotApp.getInstance().getApiSession();
         if(nekoSession instanceof RemoteChatApiSession){
             RemoteChatApiSession remoteChatApiSession = (RemoteChatApiSession) nekoSession;
             int clearLen = remoteChatApiSession.clearContext();
@@ -617,7 +617,7 @@ public abstract class Command{
         String apiKey = BotApp.getInstance().getApiKey();
         String apiKeySub = apiKey.substring(Math.max(apiKey.length()-5,0));
         stringBuilder.append("ApiKey:").append("sk-***********").append(apiKeySub).append("\n");
-        NekoSession nekoSession = BotApp.getInstance().getSession();
+        NekoSession nekoSession = BotApp.getInstance().getApiSession();
         if(nekoSession instanceof RemoteChatApiSession){
             String modelId = ((RemoteChatApiSession) nekoSession).getCurrentModel().getStr();
             stringBuilder.append("Model:").append(modelId);

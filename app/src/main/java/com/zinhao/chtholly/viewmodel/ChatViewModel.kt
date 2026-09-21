@@ -40,7 +40,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) , 
     private inner class StreamingCallback : NetAiAskAble.StreamCallback {
         override fun onStreamStart(message: NetAiAskAble) {
             _isStreaming.postValue(true)
-            val tempMessage = Message(BotApp.getInstance().botName, "", System.currentTimeMillis())
+            val tempMessage = Message(BotApp.getInstance().botName, "", System.currentTimeMillis(), BotApp.getInstance().currentSessionId)
             currentStreamMessage = tempMessage
             _streamingMessage.postValue(tempMessage)
         }
@@ -70,19 +70,23 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) , 
     }
 
     /**
-     * 加载消息列表
+     * 加载消息列表（按当前会话）
      */
     fun loadMessages() {
-        BotApp.getInstance().loadMessage(MessageDao.MessageGetAllListener { result ->
+        val sessionId = BotApp.getInstance().currentSessionId
+        loadMessages(sessionId)
+    }
+
+    /**
+     * 加载指定会话的消息列表
+     */
+    fun loadMessages(sessionId: Long) {
+        BotApp.getInstance().loadMessageBySession(sessionId, MessageDao.MessageGetAllListener { result ->
             _messages.postValue(result)
             _isMessageDialogReady.postValue(false)
         })
         val map = Command.getMethodDescMap(Command::class.java)
         _autoCompleteArr.value = map.toList()
-    }
-
-    fun deleteAllMessages() {
-        BotApp.getInstance().messageDao.
     }
 
 

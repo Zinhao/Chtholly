@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="main_color">#088395</color>
+    <color name="main_color">#91AC67</color>
     <color name="second_color">#09637E</color>
 
     <color name="purple_200">#C599FA</color>
@@ -11,4 +11,6 @@
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
     <color name="lighter_gray">#ddd</color>
+    <color name="dark_gray">#FCECD8</color>
+    <color name="gray">#808080</color>
 </resources>

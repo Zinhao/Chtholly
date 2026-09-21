@@ -153,7 +153,6 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
             startForeground(1, getNotification());
         }
         mainTimer.schedule(mainTimeTask, 0, LOOP_INTERVAL);
-        BotApp.getInstance().getSession();
         AsyncHelper.INSTANCE.doAsyncPart(new Runnable() {
             @Override
             public void run() {

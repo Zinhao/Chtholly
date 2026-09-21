@@ -51,7 +51,7 @@ data class ChatMessage(
     val role: String,     // system / user / assistant / tool
     val content: Any?,  // String 或 List<ContentPart>
     val tool_calls: List<ToolCall>? = null,
-    val tool_call_id: String? = null
+    val tool_call_id: String? = null,
 )
 
 data class ChatResponse(

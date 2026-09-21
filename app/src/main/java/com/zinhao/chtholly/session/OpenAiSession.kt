@@ -97,13 +97,9 @@ class OpenAiSession private constructor(private val chatUrl: String) : NekoSessi
         modelList.add(RemoteModel(qwen3p5_4b_uncensored))
         modelList.add(RemoteModel(mimo2p5))
         modelList.add(RemoteModel(mimo2p5pro))
-//        modelList.add(RemoteModel(qwen3p5_9b_uncensored))
+        modelList.add(RemoteModel(qwen3p5_9b_uncensored))
         modelList.add(RemoteModel(qwen3p5_4b_nsfw_ara_i1))
         currentModel = modelList.get(0)
-        loadChatHistory()
-        val botName = BotApp.getInstance().botName
-
-        charaDesc = BotApp.getInstance().aiSoul.replace("\$name",botName)
 
         scope.launch {
             rolePlayResponseFormat = loadResponseFormat("neko_schem.json")
@@ -144,7 +140,6 @@ class OpenAiSession private constructor(private val chatUrl: String) : NekoSessi
         }
     }
 
-
     override fun setAgentPrompt(charaDesc: String) {
         if(roleplayMode){
             val botName = BotApp.getInstance().botName
@@ -154,20 +149,38 @@ class OpenAiSession private constructor(private val chatUrl: String) : NekoSessi
         }
     }
 
-    override fun getAgentPrompt(): String { return charaDesc }
+    override fun getAgentPrompt(): String {
+        if(roleplayMode){
+            return charaDesc
+        }else{
+            return systemPrompt
+        }
+    }
 
     override fun getContextChat(): String {
-        return roleMessageList.toString()
+        //todo 导出当前聊天记录
+        if(roleplayMode){
+            return roleMessageList.toString()
+        }else{
+            return contextMessageList.toString()
+        }
     }
 
     override fun clearContext(): Int {
-        val len = roleMessageList.size
-        roleMessageList.clear()
-        return len
+        if(roleplayMode){
+            val len = roleMessageList.size
+            roleMessageList.clear()
+            return len
+        }else{
+            val len = contextMessageList.size
+            contextMessageList.clear()
+            return len
+        }
     }
 
     override fun loadChatHistory() {
         clearContext()
+        FileLogger.i(TAG, "loadChatHistory start" )
         BotApp.getInstance().getLastTenMessages(MessageDao.MessageGetAllListener { result ->
             if(result.isEmpty()){return@MessageGetAllListener}
             val intoContentMessage = arrayListOf<Message>()
@@ -177,10 +190,21 @@ class OpenAiSession private constructor(private val chatUrl: String) : NekoSessi
                 intoContentMessage.addAll(result.subList(result.size-10, result.size-1))
             }
             intoContentMessage.forEach { FileLogger.i(TAG, "loadChatHistory: ${it.speaker}: \"${it.message}\"") }
-            roleMessageList.addAll(intoContentMessage)
-            roleMessageList.add(Message(null,
-                "现在时间:${dateTimeFormat.format(System.currentTimeMillis())}",
-                System.currentTimeMillis(),))
+            if(roleplayMode){
+                roleMessageList.addAll(intoContentMessage)
+                roleMessageList.add(Message(null,
+                    "现在时间:${dateTimeFormat.format(System.currentTimeMillis())}",
+                    System.currentTimeMillis(),))
+            }else{
+                intoContentMessage.forEach {
+                    if(it.message.isNotBlank()){
+                        val role = if(it.speaker== BotApp.getInstance().botName)ROLE_ASSISTANT else ROLE_USER
+                        val his = it.message.toChatMessage(role)
+                        contextMessageList.add(his)
+                    }
+                }
+            }
+
         })
     }
 
@@ -324,15 +348,14 @@ class OpenAiSession private constructor(private val chatUrl: String) : NekoSessi
     }
 
     private fun defaultChatCompletions(message: NetAiAskAble): Boolean {
-        contextMessageList.add(ChatMessage(
-            role = "user",
-            content = listOf(
-                ContentPart.TextPart(
-                    type = "text",
-                    text = message.question.message,
-                )
-            ),
-        ))
+        if(message.question.message.isNotBlank()){
+            val last = message.question.message.toChatMessage(ROLE_USER)
+            contextMessageList.add(last)
+        }else{
+            FileLogger.e(TAG,"不允许空消息",NullPointerException("content must not be null"))
+            return false
+        }
+
 
         scope.launch {
             try {
@@ -349,7 +372,7 @@ class OpenAiSession private constructor(private val chatUrl: String) : NekoSessi
                     return@launch
                 }
 
-                var chatMessageResult = chatCompletion(
+                var normalResult = chatCompletion(
                     prompt = systemPrompt,
                     chatMessageList = contextMessageList,
                     model = currentModel.str,
@@ -358,15 +381,15 @@ class OpenAiSession private constructor(private val chatUrl: String) : NekoSessi
                 )
 
                 // Tool call loop
-                while (chatMessageResult != null && !chatMessageResult.tool_calls.isNullOrEmpty()) {
+                while (normalResult != null && !normalResult.tool_calls.isNullOrEmpty()) {
                     // Append assistant's tool_calls message to context
-                    contextMessageList.add(chatMessageResult)
+                    contextMessageList.add(normalResult)
 
                     // Dispatch each tool call
                     pendingToolResults.clear()
                     pendingToolCallIdMap.clear()
 
-                    for (toolCall in chatMessageResult.tool_calls) {
+                    for (toolCall in normalResult.tool_calls) {
                         val argsMap = parseToolArgs(toolCall.function.arguments)
                         val functionCall = FunctionCall(toolCall.function.name, argsMap)
                         pendingToolCallIdMap[toolCall.function.name] = toolCall.id
@@ -383,7 +406,7 @@ class OpenAiSession private constructor(private val chatUrl: String) : NekoSessi
                     contextMessageList.addAll(pendingToolResults)
 
                     // Re-call API with tool results
-                    chatMessageResult = chatCompletion(
+                    normalResult = chatCompletion(
                         prompt = systemPrompt,
                         chatMessageList = contextMessageList,
                         model = currentModel.str,
@@ -393,7 +416,7 @@ class OpenAiSession private constructor(private val chatUrl: String) : NekoSessi
                 }
 
                 // Normal text response
-                chatMessageResult?.let {
+                normalResult?.let {
                     val text = if(it.content is ContentPart.TextPart){
                         it.content.text
                     } else{
@@ -422,37 +445,26 @@ class OpenAiSession private constructor(private val chatUrl: String) : NekoSessi
         }
         roleMessageList.add(message.question)
 
-        val chatMessageList =
-            listOf(ChatMessage(
-                role = "user",
-                content = listOf(
-                    ContentPart.TextPart(
-                        type = "text",
-                        text = warpRolePlayPrompt(),
-                    )
-                ),
-            ))
+        val chatMessageList = listOf(warpRolePlayPrompt().toChatMessage(ROLE_USER))
 
         scope.launch {
             try {
-                val chatMessageResult = chatCompletion(
+                val roleplayResult = chatCompletion(
                     prompt = rolePlayPrompt,
                     chatMessageList = chatMessageList,
                     model = currentModel.str,
                     maxCompletionTokens = 80,
                     responseFormat = rolePlayResponseFormat,
                 )
-                if(roleplayMode){
-                    val nekoSchemStr = chatMessageResult!!.content.toString()
-                    val nekoReply = nekoReplyAdapter.fromJson(nekoSchemStr)
-                    nekoReply?.let {
-                        lastNekoReply = nekoReply
-                        FileLogger.d(TAG, "nekoReply: $nekoSchemStr")
-                        message.saveToDatabase(it.replyMessage)
-                        roleMessageList.add(message.answer)
-                        message.isReplyReady = true
-                        message.delayReplyCallback.onReplySuccess(message)
-                    }
+                val nekoSchemStr = roleplayResult!!.content.toString()
+                val nekoReply = nekoReplyAdapter.fromJson(nekoSchemStr)
+                nekoReply?.let {
+                    lastNekoReply = nekoReply
+                    FileLogger.d(TAG, "nekoReply: $nekoSchemStr")
+                    message.saveToDatabase(it.replyMessage)
+                    roleMessageList.add(message.answer)
+                    message.isReplyReady = true
+                    message.delayReplyCallback.onReplySuccess(message)
                 }
             }catch (e: Exception){
                 FileLogger.e(TAG,e.localizedMessage?:e.javaClass.name,e)
@@ -476,15 +488,7 @@ class OpenAiSession private constructor(private val chatUrl: String) : NekoSessi
     {
 
         val messages = arrayListOf<ChatMessage>()
-        messages.add(ChatMessage(
-            role = "system",
-            content = listOf(
-                ContentPart.TextPart(
-                    type = "text",
-                    text = prompt
-                )
-            )
-        ))
+        prompt.toChatMessage(ROLE_SYSTEM).let { messages.add(it) }
         messages.addAll(chatMessageList)
         imageBase64?.let {
             messages.add(ChatMessage(
@@ -542,10 +546,7 @@ class OpenAiSession private constructor(private val chatUrl: String) : NekoSessi
         responseFormat: ResponseFormat? = null
     ) {
         val messages = arrayListOf<ChatMessage>()
-        messages.add(ChatMessage(
-            role = "system",
-            content = listOf(ContentPart.TextPart(type = "text", text = prompt))
-        ))
+        messages.add(prompt.toChatMessage(ROLE_SYSTEM))
         messages.addAll(chatMessageList)
         val chatRequest = ChatRequest(
             model = model,
@@ -559,7 +560,6 @@ class OpenAiSession private constructor(private val chatUrl: String) : NekoSessi
         )
 
         try {
-
             lastPostTime = System.currentTimeMillis()
 
             val channel = Channel<String>(Channel.BUFFERED)
@@ -620,7 +620,11 @@ class OpenAiSession private constructor(private val chatUrl: String) : NekoSessi
                     FileLogger.e(TAG, "Stream parse error: ${e.message}")
                 }
             }
-
+            accumulated.toString().let {
+                if(it.isNotBlank()){
+                    contextMessageList.add(it.toChatMessage(ROLE_ASSISTANT))
+                }
+            }
             message.streamCallback?.onStreamComplete(message)
         } catch (e: Exception) {
             FileLogger.e(TAG, "Stream request failed: ${e.javaClass.simpleName}: ${e.message}")
@@ -634,6 +638,17 @@ class OpenAiSession private constructor(private val chatUrl: String) : NekoSessi
             return lastNekoReply!!.willingnessToChat > 70
         }
         return false
+    }
+
+    fun String.toChatMessage(role: String): ChatMessage{
+        return ChatMessage(
+            role,listOf(
+                ContentPart.TextPart(
+                    type = "text",
+                    text = this
+                )
+            )
+        )
     }
 
     companion object {

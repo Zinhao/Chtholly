@@ -132,7 +132,7 @@ public class RBChatHandler extends BaseChatHandler{
         CharSequence text = lastNodeInfo.getText();
         if(text != null){
             Message emptyMessage = new Message(null,null,System.currentTimeMillis());
-            emptyMessage.setSpeaker(BotApp.getInstance().getAdminName());
+            emptyMessage.setSpeaker(null);
             emptyMessage.setMessage(text.toString());
             return emptyMessage;
         }else {
