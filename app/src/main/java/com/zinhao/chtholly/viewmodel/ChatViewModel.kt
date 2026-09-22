@@ -5,11 +5,13 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
+import com.lark.oapi.service.application.v6.model.Bot
 import com.zinhao.chtholly.BotApp
 import com.zinhao.chtholly.db.MessageDao
 import com.zinhao.chtholly.entity.*
 import com.zinhao.chtholly.session.GeminiSession
 import com.zinhao.chtholly.session.OpenAiSession
+import com.zinhao.chtholly.session.RemoteChatApiSession
 import com.zinhao.chtholly.utils.FileLogger
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -127,6 +129,10 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) , 
         _messages.value = messageList
 
         BotApp.getInstance().updateMessage(copy)
+
+        val session = BotApp.getInstance().apiSession
+        if (session is RemoteChatApiSession) session.removeFromContext(copy)
+
         dispatch(copy)
     }
 

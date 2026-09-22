@@ -1,5 +1,6 @@
 package com.zinhao.chtholly.session
 
+import android.R.id.message
 import android.content.Context
 import com.squareup.moshi.JsonAdapter
 import com.squareup.moshi.Moshi
@@ -42,9 +43,9 @@ import java.util.concurrent.TimeUnit
 class OpenAiSession private constructor(private val chatUrl: String) : NekoSession(), RemoteChatApiSession, ToolCallback {
     private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
     private val okHttpClient: OkHttpClient =OkHttpClient.Builder()
-        .callTimeout(100, TimeUnit.SECONDS)
-        .writeTimeout(100, TimeUnit.SECONDS)
-        .readTimeout(100, TimeUnit.SECONDS) //                .sslSocketFactory()
+        .callTimeout(6*60, TimeUnit.SECONDS)
+        .writeTimeout(60, TimeUnit.SECONDS)
+        .readTimeout(5*60, TimeUnit.SECONDS) //                .sslSocketFactory()
         .addInterceptor(LoggingInterceptor())
         .build()
 
@@ -228,8 +229,36 @@ class OpenAiSession private constructor(private val chatUrl: String) : NekoSessi
     }
 
     fun addContent(message: Message) {
-
         roleMessageList.add(message)
+    }
+
+    override fun removeFromContext(message: Message) {
+        FileLogger.i(TAG, "removeFromContext $message")
+        if(roleplayMode){
+            roleMessageList.remove(message)
+        }else{
+           val index = contextMessageList.indexOfLast {
+               val isUser = it.role == ROLE_USER
+               val same = if(it.content is String){
+                   it.content == message.message
+               }else{
+                   val contentList = it.content as List<Any>
+                   val firstContent = contentList[0]
+                   if(firstContent is ContentPart.TextPart){
+                       firstContent.text == message.message
+                   }else if(firstContent is ContentPart.ImagePart){
+                       firstContent.image_url.url == message.message
+                   }else{
+                       false
+                   }
+               }
+               return@indexOfLast isUser&&same
+           }
+            if(index >= 0) {
+                FileLogger.i(TAG, "removeFromContext ${message.message} success")
+                contextMessageList.removeAt(index)
+            }
+        }
     }
 
     // Tool call state
@@ -355,7 +384,6 @@ class OpenAiSession private constructor(private val chatUrl: String) : NekoSessi
             FileLogger.e(TAG,"不允许空消息",NullPointerException("content must not be null"))
             return false
         }
-
 
         scope.launch {
             try {
@@ -498,7 +526,7 @@ class OpenAiSession private constructor(private val chatUrl: String) : NekoSessi
                 )
             ))
         }
-
+        printMessageContext()
         try {
             val request = ChatRequest(
                 model = model,
@@ -545,6 +573,7 @@ class OpenAiSession private constructor(private val chatUrl: String) : NekoSessi
         val messages = arrayListOf<ChatMessage>()
         messages.add(prompt.toChatMessage(ROLE_SYSTEM))
         messages.addAll(chatMessageList)
+        printMessageContext()
         val chatRequest = ChatRequest(
             model = model,
             messages = messages,
@@ -679,7 +708,7 @@ class OpenAiSession private constructor(private val chatUrl: String) : NekoSessi
 
                 // Append tool results to context
                 contextMessageList.addAll(pendingToolResults)
-
+                FileLogger.i(TAG, "First Tools call result: ${pendingToolResults.size}")
                 // Re-call API (non-streaming for the follow-up to handle nested tool calls)
                 val followUpResult = chatCompletion(
                     prompt = prompt,
@@ -688,7 +717,7 @@ class OpenAiSession private constructor(private val chatUrl: String) : NekoSessi
                     maxCompletionTokens = maxCompletionTokens,
                     responseFormat = responseFormat,
                 )
-                FileLogger.i(TAG, followUpResult.toString())
+
                 // Handle follow-up response (may contain more tool calls)
                 var current = followUpResult
                 while (current != null && !current.tool_calls.isNullOrEmpty()) {
@@ -702,6 +731,7 @@ class OpenAiSession private constructor(private val chatUrl: String) : NekoSessi
                         if (!message.question.isEnableCommand && tc.function.name != MutedUserTool.name) {
                             addToolErr(tc.function.name, Exception("Insufficient permissions"))
                         } else {
+                            FileLogger.i(TAG, "More tool call: ${tc.function.name}: ${tc.function.arguments}")
                             dispatchToolCall(tc.function.name, functionCall, this@OpenAiSession, message)
                         }
                     }
@@ -713,6 +743,7 @@ class OpenAiSession private constructor(private val chatUrl: String) : NekoSessi
                         maxCompletionTokens = maxCompletionTokens,
                         responseFormat = responseFormat,
                     )
+                    FileLogger.i(TAG, "Next Tools call result: ${pendingToolResults.size}")
                 }
 
                 // Final text response from tool call follow-up
@@ -764,6 +795,27 @@ class OpenAiSession private constructor(private val chatUrl: String) : NekoSessi
                 )
             )
         )
+    }
+
+    fun printMessageContext(){
+        FileLogger.i(TAG,"=============================================>")
+        val size = contextMessageList.size
+        contextMessageList.forEachIndexed { index, message ->
+            if (index < 3 || index >= size - 3) {
+                val content = message.content.toString()
+                val truncatedContent = if (content.length > 60) {
+                    content.take(60) + "...(已截断，共 ${content.length} 字符)"
+                } else {
+                    content
+                }
+                FileLogger.i(TAG, "** ${message.role}: $truncatedContent")
+            } else if (index == 3) {
+                // 只在第一次进入省略区时打印一次
+                val omittedCount = size - 6
+                FileLogger.i(TAG, "** ... 省略了 $omittedCount 条消息")
+            }
+        }
+        FileLogger.i(TAG,"<=============================================")
     }
 
     companion object {

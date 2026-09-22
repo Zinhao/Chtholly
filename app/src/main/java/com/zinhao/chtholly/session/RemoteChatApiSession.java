@@ -1,5 +1,6 @@
 package com.zinhao.chtholly.session;
 
+import com.zinhao.chtholly.entity.Message;
 import com.zinhao.chtholly.entity.NetAiAskAble;
 import org.json.JSONException;
 
@@ -22,6 +23,8 @@ public interface RemoteChatApiSession {
     void setModelIndex(int modelIndex);
     RemoteModel getCurrentModel();
     List<RemoteModel> getModelList();
+
+    void removeFromContext(Message message);
 
     class RemoteModel {
         private final String str;

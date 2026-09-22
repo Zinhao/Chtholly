@@ -112,6 +112,15 @@ class GeminiSession private constructor(chatApi: String) : NekoSession(),
         return len
     }
 
+    override fun removeFromContext(message: Message?) {
+        val index = contents.indexOfLast {
+            it.role == ROLE_USER && it.parts?.firstOrNull()?.text == message?.message
+        }
+        if(index >= 0) {
+            contents.removeAt(index)
+        }
+    }
+
     override fun loadChatHistory(){
         clearContext()
         BotApp.getInstance().getLastTenMessages(MessageDao.MessageGetAllListener { result ->
