@@ -58,7 +58,9 @@ class ChatActivity : AppCompatActivity() {
     }
 
     private fun initRecyclerView() {
-        adapter = AppChatAdapter(BotApp.getInstance().adminName)
+        adapter = AppChatAdapter(BotApp.getInstance().adminName) { message ->
+            viewModel.resendMessage(message)
+        }
         val layoutManager = LinearLayoutManager(this)
         layoutManager.stackFromEnd = true // 从底部开始显示
         binding.recyclerView.setLayoutManager(layoutManager)
@@ -96,6 +98,7 @@ class ChatActivity : AppCompatActivity() {
         // Observe streaming state
         viewModel.isStreaming.observe(this, { isStreaming ->
             binding.btnSend.setEnabled(!isStreaming)
+            adapter?.setResendEnabled(!isStreaming)
         })
 
         viewModel.streamingMessage.observe(this, { message ->

@@ -4,6 +4,7 @@ import androidx.room.Dao;
 import androidx.room.Delete;
 import androidx.room.Insert;
 import androidx.room.Query;
+import androidx.room.Update;
 
 import com.zinhao.chtholly.entity.Message;
 
@@ -16,6 +17,9 @@ public interface MessageDao {
 
     @Insert
     void insert(Message message);
+
+    @Update
+    void update(Message message);
 
     @Delete
     void delete(Message user);

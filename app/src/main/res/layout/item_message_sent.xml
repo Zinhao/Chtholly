@@ -17,39 +17,51 @@
             android:padding="6dp"
             android:textStyle="bold" />
 
-    <LinearLayout
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:maxWidth="280dp"
-        android:background="@drawable/bg_message_send"
-        android:padding="6dp">
+    <LinearLayout android:layout_width="wrap_content" android:layout_height="wrap_content" android:orientation="horizontal">
+        <ImageButton
+                android:id="@+id/btn_resend"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="8dp"
+                android:layout_gravity="bottom"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:src="@drawable/ic_resend"
+                android:visibility="visible"
+                android:contentDescription="重发" />
+        <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:maxWidth="280dp"
+                android:background="@drawable/bg_message_send"
+                android:padding="6dp">
 
 
 
-        <TextView
-            android:id="@+id/tv_message"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:textColor="@android:color/white"
-            android:textSize="16sp"
-            android:layout_marginTop="4dp"
-            android:textIsSelectable="true"
-            android:text="发出去的消息"
-            android:enabled="true"
-            android:focusable="true"
-            android:longClickable="true" />
+            <TextView
+                    android:id="@+id/tv_message"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textColor="@android:color/white"
+                    android:textSize="16sp"
+                    android:layout_marginTop="4dp"
+                    android:textIsSelectable="true"
+                    android:text="发出去的消息"
+                    android:enabled="true"
+                    android:focusable="true"
+                    android:longClickable="true" />
 
-        <TextView
-            android:id="@+id/tv_time"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:textColor="@color/lighter_gray"
-            android:textSize="11sp"
-            android:text="13:01:23"
-            android:layout_marginTop="4dp"
-            android:layout_gravity="end" />
+            <TextView
+                    android:id="@+id/tv_time"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textColor="@color/lighter_gray"
+                    android:textSize="11sp"
+                    android:text="13:01:23"
+                    android:layout_marginTop="4dp"
+                    android:layout_gravity="end" />
 
+        </LinearLayout>
     </LinearLayout>
 
 </LinearLayout>

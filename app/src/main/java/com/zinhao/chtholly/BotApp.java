@@ -438,6 +438,20 @@ public class BotApp extends Application {
         });
     }
 
+    public void updateMessage(Message message){
+        if (message.getId() == 0) {
+            // insert 尚未完成（异步插入竞态），跳过 DB 更新，仅内存生效
+            return;
+        }
+        AsyncHelper.INSTANCE.doAsyncPart(new Runnable() {
+            @Override
+            public void run() {
+                messageDao.update(message);
+                chatSessionDao.updateLastMessageTime(message.getSessionId(), message.getTimeStamp());
+            }
+        });
+    }
+
     public MessageDao getMessageDao() {
         return messageDao;
     }

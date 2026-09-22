@@ -56,7 +56,6 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) , 
             _isStreaming.postValue(false)
             currentStreamMessage?.let {
                 addBotMessage(it)
-                BotApp.getInstance().insert(it)
             }
             currentStreamMessage = null
             _streamingMessage.postValue(null)
@@ -104,13 +103,40 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) , 
         messageList.add(newMessage)
         _messages.value = messageList
 
-        val mainAskable = createAskable(newMessage)
+        BotApp.getInstance().insert(newMessage)
+        dispatch(newMessage)
+    }
+
+    /**
+     * 重发消息：原位置更新时间戳（新副本触发 DiffUtil 原位刷新），不新增、不重复插入消息
+     */
+    fun resendMessage(message: Message) {
+        if (_isStreaming.value == true) return
+
+        val copy = Message(message.speaker, message.message, System.currentTimeMillis(), message.sessionId)
+        copy.id = message.id
+        copy.isEnableCommand = true
+
+        val messageList = _messages.value?.toMutableList() ?: return
+        var index = messageList.indexOfFirst { it === message }
+        if (index == -1 && message.id != 0L) {
+            index = messageList.indexOfFirst { it.id == message.id }
+        }
+        if (index == -1) return
+        messageList[index] = copy
+        _messages.value = messageList
+
+        BotApp.getInstance().updateMessage(copy)
+        dispatch(copy)
+    }
+
+    private fun dispatch(message: Message) {
+        val mainAskable = createAskable(message)
         // Set stream callback for OpenAI session
         if (mainAskable is NetAiAskAble && !BotApp.getInstance().isRoleplay) {
             FileLogger.d(TAG,"setStreamCallback")
             mainAskable.setStreamCallback(StreamingCallback())
         }
-        BotApp.getInstance().insert(newMessage)
         viewModelScope.launch(Dispatchers.IO) {
             mainAskable.handle()
             if (mainAskable.isReplyReady){

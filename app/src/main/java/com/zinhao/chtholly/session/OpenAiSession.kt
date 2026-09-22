@@ -90,13 +90,13 @@ class OpenAiSession private constructor(private val chatUrl: String) : NekoSessi
     private val qwen3p5_4b_uncensored = "qwen3.5-4b-uncensored-hauhaucs-aggressive"
     private val qwen3p5_4b_nsfw_ara_i1 = "qwen3.5-4b-nsfw-ara-heretic-literotica-i1"
 
-    private val mimo2p5 = "mimo-v2.5"
-    private val mimo2p5pro = "mimo-v2.5-pro"
+    private val mimo_2p6_flash = "mimo-v2.6-flash"
+    private val mimo_2p6_pro = "mimo-v2.6-pro"
 
     init {
         modelList.add(RemoteModel(qwen3p5_4b_uncensored))
-        modelList.add(RemoteModel(mimo2p5))
-        modelList.add(RemoteModel(mimo2p5pro))
+        modelList.add(RemoteModel(mimo_2p6_flash))
+        modelList.add(RemoteModel(mimo_2p6_pro))
         modelList.add(RemoteModel(qwen3p5_9b_uncensored))
         modelList.add(RemoteModel(qwen3p5_4b_nsfw_ara_i1))
         currentModel = modelList.get(0)
@@ -636,6 +636,7 @@ class OpenAiSession private constructor(private val chatUrl: String) : NekoSessi
 
             // After stream: if tool calls were received, execute them
             if (toolCallAccumulators.isNotEmpty()) {
+                FileLogger.i(TAG,"tool calls — loop")
                 // Save any text content that preceded the tool calls
                 if (accumulated.isNotBlank()) {
                     contextMessageList.add(accumulated.toString().toChatMessage(ROLE_ASSISTANT))
@@ -666,9 +667,10 @@ class OpenAiSession private constructor(private val chatUrl: String) : NekoSessi
                     val argsMap = parseToolArgs(toolCall.function.arguments)
                     val functionCall = FunctionCall(toolCall.function.name, argsMap)
                     pendingToolCallIdMap[toolCall.function.name] = toolCall.id
-
                     if (!message.question.isEnableCommand && toolCall.function.name != MutedUserTool.name) {
-                        addToolErr(toolCall.function.name, Exception("Insufficient permissions"))
+                        val e = Exception("Insufficient permissions")
+                        FileLogger.e(TAG, toolCall.function.name,e)
+                        addToolErr(toolCall.function.name, e)
                     } else {
                         FileLogger.i(TAG, "Stream tool call: ${toolCall.function.name}: ${toolCall.function.arguments}")
                         dispatchToolCall(toolCall.function.name, functionCall, this@OpenAiSession, message)
@@ -686,7 +688,7 @@ class OpenAiSession private constructor(private val chatUrl: String) : NekoSessi
                     maxCompletionTokens = maxCompletionTokens,
                     responseFormat = responseFormat,
                 )
-
+                FileLogger.i(TAG, followUpResult.toString())
                 // Handle follow-up response (may contain more tool calls)
                 var current = followUpResult
                 while (current != null && !current.tool_calls.isNullOrEmpty()) {
@@ -726,6 +728,7 @@ class OpenAiSession private constructor(private val chatUrl: String) : NekoSessi
                 }
                 message.streamCallback?.onStreamComplete(message)
             } else {
+                FileLogger.i(TAG,"No tool calls — normal text response")
                 // No tool calls — normal text response
                 accumulated.toString().let {
                     if (it.isNotBlank()) {
@@ -734,6 +737,7 @@ class OpenAiSession private constructor(private val chatUrl: String) : NekoSessi
                 }
                 message.streamCallback?.onStreamComplete(message)
             }
+
         } catch (e: Exception) {
             FileLogger.e(TAG, "Stream request failed: ${e.javaClass.simpleName}: ${e.message}")
             message.streamCallback?.onStreamError(message, e)
