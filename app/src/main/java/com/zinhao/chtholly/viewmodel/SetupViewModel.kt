@@ -17,7 +17,7 @@ class SetupViewModel(application: Application) : AndroidViewModel(application) {
     // ==================== 配置数据 ====================
 
     // 步骤1: 服务器配置
-    private val _baseUrl = MutableLiveData<String>("")
+    private val _baseUrl = MutableLiveData<String>(HostConsts.LOCAL_HOST)
     val baseUrl: LiveData<String> = _baseUrl
 
     private val _apiKey = MutableLiveData<String>("")
@@ -88,7 +88,6 @@ class SetupViewModel(application: Application) : AndroidViewModel(application) {
 
     fun updateBaseUrl(url: String) {
         _baseUrl.value = url.trim()
-        BotApp.getInstance().chatUrl = _baseUrl.value
         scheduleValidation()
     }
 
@@ -184,24 +183,18 @@ class SetupViewModel(application: Application) : AndroidViewModel(application) {
     private fun validateCurrentStep() {
         val step = _currentStep.value ?: 0
         val isValid = when (step) {
-            0 -> validateServerStep()
-            1 -> validateTtsStep()
+            0 -> validateUrl(_baseUrl.value )
+            1 -> validateUrl(_ttsServerUrl.value)
             2 -> validatePersonaStep()
             else -> true
         }
         _canGoNext.value = isValid
     }
 
-    private fun validateServerStep(): Boolean {
-        val url = _baseUrl.value ?: ""
-        return url.isNotEmpty() &&
-                (url.startsWith("http://") || url.startsWith("https://"))
-    }
-
-    private fun validateTtsStep(): Boolean {
-        val url = _ttsServerUrl.value ?: ""
+    private fun validateUrl(url: String?):Boolean{
+        if(url == null) return false
         return url.isEmpty() || // TTS 可选
-                (url.startsWith("http://") || url.startsWith("https://"))
+                (url.startsWith("http://") || url.startsWith("https://") && url.length>10)
     }
 
     private fun validatePersonaStep(): Boolean {
@@ -215,8 +208,8 @@ class SetupViewModel(application: Application) : AndroidViewModel(application) {
         // 更新 BotApp 运行时配置
         BotApp.getInstance().apply {
             apiKey = _apiKey.value ?: ""
-            botName = _botName.value ?: "红豆"
-            adminName = _adminName.value ?: "Master"
+            botName = _botName.value ?: ""
+            adminName = _adminName.value ?: ""
             aiSoul = _botDescription.value
             ttsUrl = _ttsServerUrl.value
             chatUrl = _baseUrl.value

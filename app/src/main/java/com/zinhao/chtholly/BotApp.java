@@ -115,15 +115,15 @@ public class BotApp extends Application {
         sharedPreferences = getSharedPreferences("app_data", MODE_PRIVATE);
         //大概一两个小时，我的key暴露在开场合,危险！！！
         //A couple of hours ago, my key was exposed in public. Danger!!!
-        apiKey = sharedPreferences.getString(CONFIG_API_KEY,"");
+        apiKey = sharedPreferences.getString(CONFIG_API_KEY,"sk-123456789abcdefg!@#$%^&");
         setApiKey(apiKey);
         botName = sharedPreferences.getString(CONFIG_BOT_NAME,"");
         String aiSoul = sharedPreferences.getString(CONFIG_SOUL_DESC,"");
 
         adminName = sharedPreferences.getString(CONFIG_ADMIN_NAME,"");
-        chatUrl = sharedPreferences.getString(CONFIG_CHAT_URL,HostConsts.GEMINI_PROXY_API_HOST);
+        chatUrl = sharedPreferences.getString(CONFIG_CHAT_URL,HostConsts.LOCAL_HOST);
         ttsUrl = sharedPreferences.getString(CONFIG_TTS_URL, HostConsts.LOCAL_HOST);
-        withSpeaker = sharedPreferences.getBoolean(CONFIG_WITH_SPEAKER, true);
+        withSpeaker = sharedPreferences.getBoolean(CONFIG_WITH_SPEAKER, false);
         isFirstRun = sharedPreferences.getBoolean(CONFIG_IS_FIRST_RUN,true);
         //飞书配置
         feishuAppId = sharedPreferences.getString(CONFIG_FEISHU_APP_ID,"");

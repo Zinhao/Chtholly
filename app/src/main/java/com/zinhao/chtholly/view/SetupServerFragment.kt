@@ -11,7 +11,9 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.widget.addTextChangedListener
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
+import com.zinhao.chtholly.BotApp
 import com.zinhao.chtholly.databinding.FragmentSetupServerBinding
+import com.zinhao.chtholly.utils.HostConsts
 import com.zinhao.chtholly.utils.NetworkUtils
 import com.zinhao.chtholly.viewmodel.SetupViewModel
 
@@ -47,7 +49,7 @@ class SetupServerFragment : Fragment() {
         setupInputListeners()
         binding.btScan.setOnClickListener {
             val host = NetworkUtils.getLocalIpAddress(requireContext())
-            binding.etBaseUrl.setText("http://$host")
+            viewModel.updateBaseUrl("http://$host")
         }
         setupObservers()
     }
@@ -60,7 +62,7 @@ class SetupServerFragment : Fragment() {
             when (position) {
                 0 -> viewModel.applyPresetConfig(SetupViewModel.ServerPreset.OpenAI)
                 1 -> viewModel.applyPresetConfig(SetupViewModel.ServerPreset.Gemini)
-                2 -> viewModel.applyPresetConfig(SetupViewModel.ServerPreset.Custom)
+                2 -> { viewModel.updateBaseUrl(BotApp.getInstance().chatUrl) }
             }
             if(position == 2){
                 binding.btScan.visibility = View.VISIBLE

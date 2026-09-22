@@ -33,7 +33,7 @@ public class NekoSession{
             public void onCompleted(Exception e, AsyncHttpResponse asyncHttpResponse, JSONObject jsonObject) {
                 if(e!=null || jsonObject == null){
                     assert e != null;
-                    FileLogger.INSTANCE.e(TAG, Objects.requireNonNull(e.getMessage()),e);
+                    FileLogger.INSTANCE.i(TAG, "keyword_map.json not exists.");
                     return;
                 }
                 keywordAnswerMap = jsonObject;

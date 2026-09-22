@@ -3,7 +3,6 @@ package com.zinhao.chtholly.network
 import com.zinhao.chtholly.entity.NetAiAskAble
 import com.zinhao.chtholly.network.gemini.FunctionCall
 import com.zinhao.chtholly.network.gemini.Parameters
-import com.zinhao.chtholly.network.gemini.Properties
 import com.zinhao.chtholly.network.gemini.tools.*
 import com.zinhao.chtholly.network.openai.FunctionDefinition
 import com.zinhao.chtholly.network.openai.Tool as OpenAiTool
