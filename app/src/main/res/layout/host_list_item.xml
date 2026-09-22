@@ -8,28 +8,29 @@
     android:padding="15dp">
 
     <TextView
-        android:id="@+id/hostname"
+        android:id="@+id/serverAddress"
         android:layout_width="fill_parent"
         android:layout_height="wrap_content"
         android:textColor="@color/black"
-        android:textSize="16sp" />
+        android:textSize="16sp"
+        android:textStyle="bold" />
 
     <TextView
-        android:id="@+id/hostIp"
+        android:id="@+id/serverStatus"
         android:layout_width="fill_parent"
         android:layout_height="wrap_content"
         android:textColor="@color/black"
         android:textSize="14sp" />
 
     <TextView
-        android:id="@+id/hostMac"
+        android:id="@+id/serverDetail"
         android:layout_width="fill_parent"
         android:layout_height="wrap_content"
         android:textColor="@color/black"
         android:textSize="13sp" />
 
     <TextView
-        android:id="@+id/hostMacVendor"
+        android:id="@+id/serverUrl"
         android:layout_width="fill_parent"
         android:layout_height="wrap_content"
         android:textColor="@color/black"

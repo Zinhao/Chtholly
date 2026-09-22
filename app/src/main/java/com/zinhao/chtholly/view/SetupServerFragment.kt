@@ -14,7 +14,6 @@ import androidx.lifecycle.ViewModelProvider
 import com.zinhao.chtholly.BotApp
 import com.zinhao.chtholly.databinding.FragmentSetupServerBinding
 import com.zinhao.chtholly.utils.HostConsts
-import com.zinhao.chtholly.utils.NetworkUtils
 import com.zinhao.chtholly.viewmodel.SetupViewModel
 
 class SetupServerFragment : Fragment() {
@@ -48,8 +47,10 @@ class SetupServerFragment : Fragment() {
         setupPresetDropdown()
         setupInputListeners()
         binding.btScan.setOnClickListener {
-            val host = NetworkUtils.getLocalIpAddress(requireContext())
-            viewModel.updateBaseUrl("http://$host")
+            val intent = Intent(requireContext(), ScanNetActivity::class.java)
+            intent.putExtra(ScanNetActivity.EXTRA_START_PORT, 1230)
+            intent.putExtra(ScanNetActivity.EXTRA_END_PORT, 1240)
+            launcher.launch(intent)
         }
         setupObservers()
     }

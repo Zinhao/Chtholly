@@ -366,7 +366,6 @@ class OpenAiSession private constructor(private val chatUrl: String) : NekoSessi
                         chatMessageList = contextMessageList,
                         prompt = systemPrompt,
                         model = currentModel.str,
-                        maxCompletionTokens = 4096,
                         responseFormat = noneResponseFormat,
                     )
                     return@launch
@@ -376,7 +375,6 @@ class OpenAiSession private constructor(private val chatUrl: String) : NekoSessi
                     prompt = systemPrompt,
                     chatMessageList = contextMessageList,
                     model = currentModel.str,
-                    maxCompletionTokens = 4096,
                     responseFormat = noneResponseFormat,
                 )
 
@@ -410,7 +408,6 @@ class OpenAiSession private constructor(private val chatUrl: String) : NekoSessi
                         prompt = systemPrompt,
                         chatMessageList = contextMessageList,
                         model = currentModel.str,
-                        maxCompletionTokens = 4096,
                         responseFormat = noneResponseFormat,
                     )
                 }
@@ -475,14 +472,14 @@ class OpenAiSession private constructor(private val chatUrl: String) : NekoSessi
         return true
     }
 
-    private val maxTotalToken = 4096
+    private val maxTotalToken = 8192
 
     private suspend fun chatCompletion(
         imageBase64: String? = null,
         chatMessageList: List<ChatMessage>,
         prompt: String = "Describe this image in two sentences",
         model: String = modelList[0].str,
-        maxCompletionTokens: Int = 1024,
+        maxCompletionTokens: Int = maxTotalToken,
         temperature: Double = 1.05,
         responseFormat: ResponseFormat? = null): ChatMessage?
     {
@@ -541,7 +538,7 @@ class OpenAiSession private constructor(private val chatUrl: String) : NekoSessi
         chatMessageList: List<ChatMessage>,
         prompt: String = "Describe this image in two sentences",
         model: String = modelList[0].str,
-        maxCompletionTokens: Int = 1024,
+        maxCompletionTokens: Int = maxTotalToken,
         temperature: Double = 1.05,
         responseFormat: ResponseFormat? = null
     ) {

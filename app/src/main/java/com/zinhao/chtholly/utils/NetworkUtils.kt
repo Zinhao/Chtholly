@@ -179,11 +179,6 @@ object NetworkUtils {
         val dnsServers: List<String>,
         val isWifi: Boolean
     ) {
-        fun getScanRange(): Pair<Int, Int> {
-            // 通常扫描 1-254（排除网络地址和广播地址）
-            return 1 to 254
-        }
-
         override fun toString(): String {
             return """
                 IP 地址: $ipAddress

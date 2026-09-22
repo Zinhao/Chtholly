@@ -1,65 +1,41 @@
-package com.zinhao.chtholly.view.adapter;
+package com.zinhao.chtholly.view.adapter
 
-import android.content.Context;
-import android.view.LayoutInflater;
-import android.view.View;
-import android.view.ViewGroup;
-import android.widget.ArrayAdapter;
-import android.widget.TextView;
-import androidx.annotation.NonNull;
+import android.content.Context
+import android.view.LayoutInflater
+import android.view.View
+import android.view.ViewGroup
+import android.widget.ArrayAdapter
+import com.zinhao.chtholly.R
+import com.zinhao.chtholly.utils.DiscoveredServer
 
-import com.zinhao.chtholly.R;
+/**
+ * 局域网扫描结果列表适配器。
+ * 展示：IP:端口 / HTTP 状态（或 "TCP 开放"）/ Server 头 / httpUrl。
+ */
+class RemoteServerAdapter(
+    context: Context,
+    private val data: List<DiscoveredServer>
+) : ArrayAdapter<DiscoveredServer>(context, 0, data) {
 
-import personal.kola.net_scaner.RemoteServer;
+    override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
+        val rowView = convertView ?: LayoutInflater.from(context)
+            .inflate(R.layout.host_list_item, parent, false)
 
-import java.util.List;
+        val hostname = rowView.findViewById<android.widget.TextView>(R.id.serverAddress)
+        val status = rowView.findViewById<android.widget.TextView>(R.id.serverStatus)
+        val detail = rowView.findViewById<android.widget.TextView>(R.id.serverDetail)
+        val url = rowView.findViewById<android.widget.TextView>(R.id.serverUrl)
 
-public final class RemoteServerAdapter extends ArrayAdapter<RemoteServer> {
-    private final List<RemoteServer> data;
-
-    public RemoteServerAdapter(Context context, List<RemoteServer> data) {
-        super(context, 0, data);
-        this.data = data;
-    }
-
-    @NonNull
-    @Override
-    public View getView(int position, View convertView, @NonNull ViewGroup parent) {
-        View rowView = convertView;
-        ViewHolder view;
-        Context context = getContext();
-
-        if (rowView == null) {
-            LayoutInflater inflater = LayoutInflater.from(context);
-            rowView = inflater.inflate(R.layout.host_list_item, parent, false);
-
-            view = new ViewHolder();
-            view.hostname = rowView.findViewById(R.id.hostname);
-            view.hostIp = rowView.findViewById(R.id.hostIp);
-            view.hostMac = rowView.findViewById(R.id.hostMac);
-            view.hostMacVendor = rowView.findViewById(R.id.hostMacVendor);
-
-            rowView.setTag(view);
+        val item = data[position]
+        hostname.text = "${item.ip}:${item.port}"
+        status.text = if (item.isHttp && item.httpStatus != null) {
+            "HTTP ${item.httpStatus}"
         } else {
-            view = (ViewHolder) rowView.getTag();
+            "TCP 开放"
         }
+        detail.text = item.serverHeader ?: ""
+        url.text = item.httpUrl
 
-        RemoteServer item = data.get(position);
-        if(item.getHost()!=null){
-            view.hostname.setText(item.getHost().getHostname());
-            view.hostIp.setText(item.getHost().getIp());
-            view.hostMac.setText(String.valueOf(item.getPort()));
-            view.hostMacVendor.setText(item.getHttpUrl());
-        }
-
-
-        return rowView;
-    }
-
-    private static class ViewHolder {
-        private TextView hostname;
-        private TextView hostIp;
-        private TextView hostMac;
-        private TextView hostMacVendor;
+        return rowView
     }
 }
