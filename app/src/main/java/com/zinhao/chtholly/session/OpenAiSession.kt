@@ -693,7 +693,7 @@ class OpenAiSession private constructor(private val chatUrl: String) : NekoSessi
                     contextMessageList.add(current)
                     pendingToolResults.clear()
                     pendingToolCallIdMap.clear()
-                    for (tc in current.tool_calls!!) {
+                    for (tc in current.tool_calls) {
                         val argsMap = parseToolArgs(tc.function.arguments)
                         val functionCall = FunctionCall(tc.function.name, argsMap)
                         pendingToolCallIdMap[tc.function.name] = tc.id
@@ -740,6 +740,9 @@ class OpenAiSession private constructor(private val chatUrl: String) : NekoSessi
         }
     }
 
+    /**
+     * call form roleplay mode
+     */
     private var lastNekoReply: NekoReply? = null
     fun wantToTalk(): Boolean{
         if(lastNekoReply != null){
