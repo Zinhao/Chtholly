@@ -24,6 +24,8 @@ public interface RemoteChatApiSession {
     RemoteModel getCurrentModel();
     List<RemoteModel> getModelList();
 
+    void updateChatUrl(String url);
+
     void removeFromContext(Message message);
 
     class RemoteModel {

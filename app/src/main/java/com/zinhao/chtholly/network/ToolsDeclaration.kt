@@ -14,6 +14,7 @@ import com.zinhao.chtholly.network.tools.DeleteFileTool
 import com.zinhao.chtholly.network.tools.DoStepOnNode
 import com.zinhao.chtholly.network.tools.FileReaderTool
 import com.zinhao.chtholly.network.tools.FileWriterTool
+import com.zinhao.chtholly.network.tools.FinishSetupTool
 import com.zinhao.chtholly.network.tools.GetAppStatusTool
 import com.zinhao.chtholly.network.tools.GetReminders
 import com.zinhao.chtholly.network.tools.GetSystemTime
@@ -21,6 +22,7 @@ import com.zinhao.chtholly.network.tools.GetViewNode
 import com.zinhao.chtholly.network.tools.ListFilesTool
 import com.zinhao.chtholly.network.tools.MutedUserTool
 import com.zinhao.chtholly.network.tools.SendFileTool
+import com.zinhao.chtholly.network.tools.SetConfigTool
 import com.zinhao.chtholly.network.tools.SetModelTool
 import com.zinhao.chtholly.network.tools.SwitchCharacterTool
 import com.zinhao.chtholly.network.tools.SwitchModeTool
@@ -40,7 +42,9 @@ val GEMINI_TOOLS = Tool(
         // 运行时设置工具
         GetAppStatusTool, SwitchModeTool, SetModelTool,
         ToggleRoleplayTool, ToggleSpeakerTool,
-        ClearContextTool, SwitchCharacterTool
+        ClearContextTool, SwitchCharacterTool,
+        // 首启对话式配置工具
+        SetConfigTool, FinishSetupTool
     )
 )
 
@@ -92,7 +96,10 @@ val OPENAI_TOOLS: List<OpenAiTool> = listOf(
     ToggleRoleplayTool,
     ToggleSpeakerTool,
     ClearContextTool,
-    SwitchCharacterTool
+    SwitchCharacterTool,
+    // 首启对话式配置工具
+    SetConfigTool,
+    FinishSetupTool
 ).map { it.toOpenAiTool() }
 
 data class FileInfo(val name: String, val isFile: Boolean,val size: Long,val time: Long)
@@ -145,5 +152,7 @@ fun dispatchToolCall(
         ToggleSpeakerTool.name -> ToggleSpeakerTool.funImpl?.call(functionCall, callback, netAiAskAble, thoughtSignature)
         ClearContextTool.name -> ClearContextTool.funImpl?.call(functionCall, callback, netAiAskAble, thoughtSignature)
         SwitchCharacterTool.name -> SwitchCharacterTool.funImpl?.call(functionCall, callback, netAiAskAble, thoughtSignature)
+        SetConfigTool.name -> SetConfigTool.funImpl?.call(functionCall, callback, netAiAskAble, thoughtSignature)
+        FinishSetupTool.name -> FinishSetupTool.funImpl?.call(functionCall, callback, netAiAskAble, thoughtSignature)
     }
 }

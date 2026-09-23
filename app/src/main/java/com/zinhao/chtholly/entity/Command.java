@@ -355,6 +355,32 @@ public abstract class Command{
         }
         return true;
     }
+    @HelpDoc(desc = "[2 str args]设置配置 like(\"setConfig adminName 主人\")")
+    private boolean setConfig() {
+        if (args == null || args.length < 2) {
+            StringBuilder keys = new StringBuilder();
+            for (String key : AppConfigWriter.INSTANCE.getVALID_KEYS()) {
+                keys.append(key).append(' ');
+            }
+            getAnswer().setMessage("用法: /setConfig <key> <value>\n可用key: " + keys.toString().trim());
+            return true;
+        }
+        StringBuilder value = new StringBuilder(args[1]);
+        for (int i = 2; i < args.length; i++) {
+            value.append(' ').append(args[i]);
+        }
+        String err = AppConfigWriter.INSTANCE.set(args[0], value.toString());
+        getAnswer().setMessage(err == null ? NekoAskAble.OK + " => " + args[0] : err);
+        return true;
+    }
+
+    @HelpDoc(desc = "完成首次启动配置")
+    private boolean finishSetup() {
+        String err = AppConfigWriter.INSTANCE.finishSetup();
+        getAnswer().setMessage(err == null ? NekoAskAble.OK + " 首次配置完成！" : err);
+        return true;
+    }
+
     @HelpDoc(desc = "视频通话")
     protected boolean videoCall() {
         // :id/gny [:id/icon_viewPager 1->2] :id/bbt

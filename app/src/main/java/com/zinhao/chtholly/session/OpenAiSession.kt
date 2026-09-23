@@ -22,7 +22,6 @@ import com.zinhao.chtholly.utils.FileLogger
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.android.awaitFrame
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
@@ -40,7 +39,7 @@ import java.util.*
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 
-class OpenAiSession private constructor(private val chatUrl: String) : NekoSession(), RemoteChatApiSession, ToolCallback {
+class OpenAiSession private constructor(private var chatUrl: String) : NekoSession(), RemoteChatApiSession, ToolCallback {
     private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
     private val okHttpClient: OkHttpClient =OkHttpClient.Builder()
         .callTimeout(6*60, TimeUnit.SECONDS)
@@ -74,15 +73,17 @@ class OpenAiSession private constructor(private val chatUrl: String) : NekoSessi
     val nekoReplyAdapter: JsonAdapter<NekoReply> =
         moshi.adapter<NekoReply>()
 
-    val retrofit: Retrofit = Retrofit.Builder()
-        .baseUrl(chatUrl) // LM Studio / OpenAI 兼容
-        .addConverterFactory(MoshiConverterFactory.create(moshi))
-        .callbackExecutor(Executors.newSingleThreadExecutor())
-        .client(okHttpClient)
-        .build()
-
-
-    val api = retrofit.create(OpenAiApi::class.java)
+    private lateinit var retrofit: Retrofit
+    private lateinit var api: OpenAiApi
+    private fun initApi(){
+        retrofit = Retrofit.Builder()
+            .baseUrl(chatUrl) // LM Studio / OpenAI 兼容
+            .addConverterFactory(MoshiConverterFactory.create(moshi))
+            .callbackExecutor(Executors.newSingleThreadExecutor())
+            .client(okHttpClient)
+            .build()
+        api = retrofit.create(OpenAiApi::class.java)
+    }
 
     private val gemmaUncensored = "gemma-4-e4b-uncensored-hauhaucs-aggressive"
 
@@ -95,6 +96,7 @@ class OpenAiSession private constructor(private val chatUrl: String) : NekoSessi
     private val mimo_2p6_pro = "mimo-v2.6-pro"
 
     init {
+        initApi()
         modelList.add(RemoteModel(qwen3p5_4b_uncensored))
         modelList.add(RemoteModel(mimo_2p6_flash))
         modelList.add(RemoteModel(mimo_2p6_pro))
@@ -231,6 +233,13 @@ class OpenAiSession private constructor(private val chatUrl: String) : NekoSessi
 
     fun addContent(message: Message) {
         roleMessageList.add(message)
+    }
+
+    override fun updateChatUrl(url: String?) {
+        url?.let {
+            this.chatUrl = url
+            initApi()
+        }
     }
 
     override fun removeFromContext(message: Message) {
@@ -715,7 +724,7 @@ class OpenAiSession private constructor(private val chatUrl: String) : NekoSessi
                     //出错误了
                     val e = IllegalStateException("No tool calls result found")
                     FileLogger.e(TAG, "No tool calls result found",e)
-                    message.streamCallback.fireText(message,"TOOL CALL 调用为空！")
+                    message.streamCallback.fireText(message,"TOOL CALL 调用为空！\n",accumulated)
                     message.streamCallback.onStreamError(message,e)
                     return
                 }
@@ -748,11 +757,37 @@ class OpenAiSession private constructor(private val chatUrl: String) : NekoSessi
                             dispatchToolCall(tc.function.name, functionCall, this@OpenAiSession, message)
                         }
                     }
+                    if(current.content != null){
+                        val content = current.content
+                        if(content is List<*>){
+                            for (part in content){
+                                if(part is ContentPart.TextPart){
+                                    val text = part.text
+                                    if(text.isNotEmpty()){
+                                        message.streamCallback.fireText(message,text,accumulated)
+                                    }
+                                }else if(part is ContentPart.ImagePart){
+                                    val url = part.image_url
+                                    val limitUrl = if(url.url.length> 60){
+                                        url.url.take(57) + "...///省略"
+                                    }else {
+                                        url.url
+                                    }
+                                    message.streamCallback.fireText(message,limitUrl,accumulated)
+                                }
+                            }
+                        }else if(content is String){
+                            if(content.isNotEmpty()){
+                                message.streamCallback.fireText(message,content,accumulated)
+                            }
+                        }
+                    }
+
                     if(pendingToolResults.isEmpty()){
                         //出错误了
                         val e = IllegalStateException("No tool calls result found")
                         FileLogger.e(TAG, "No tool calls result found",e)
-                        message.streamCallback.fireText(message,"TOOL CALL 调用为空！")
+                        message.streamCallback.fireText(message,"TOOL CALL 调用为空！\n",accumulated)
                         message.streamCallback.onStreamError(message,e)
                         return
                     }
@@ -774,8 +809,8 @@ class OpenAiSession private constructor(private val chatUrl: String) : NekoSessi
                     } else {
                         it.content.toString()
                     }
-                    message.streamCallback.fireText(message,text)
-                    message.saveToDatabase(text)
+                    message.streamCallback.fireText(message,text,accumulated)
+                    message.saveToDatabase(accumulated.toString())
                     contextMessageList.add(it)
                 }
                 message.streamCallback?.onStreamComplete(message)
@@ -797,8 +832,7 @@ class OpenAiSession private constructor(private val chatUrl: String) : NekoSessi
         }
     }
 
-    fun NetAiAskAble.StreamCallback.fireText(message:NetAiAskAble, text: String,){
-        val sb = StringBuilder()
+    fun NetAiAskAble.StreamCallback.fireText(message:NetAiAskAble, text: String,sb: StringBuilder){
         for (char in text.toCharArray()) {
             sb.append(char)
             onStreamChunk(message,sb.toString())
@@ -878,8 +912,6 @@ class OpenAiSession private constructor(private val chatUrl: String) : NekoSessi
         const val MODEL_GPT_4_TURBO: String = "gpt-4-turbo"
         const val MODEL_GPT_4O_MINI: String = "gpt-4o-mini"
         const val MODEL_GPT_4O: String = "gpt-4o"
-
-
 
         private val dateFormat = SimpleDateFormat("yyyyMMdd", Locale.CHINA)
         private val dateTimeFormat = SimpleDateFormat("yyyy年MM月dd日 HH:mm:ss", Locale.CHINA)

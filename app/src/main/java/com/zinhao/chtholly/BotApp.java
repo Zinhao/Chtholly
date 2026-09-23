@@ -410,7 +410,15 @@ public class BotApp extends Application {
                 }
                 NekoSession nekoSession = getApiSession();
                 if(nekoSession instanceof OpenAiSession || nekoSession instanceof GeminiSession){
-                    ((RemoteChatApiSession) nekoSession).setAgentPrompt(currentCharacter.desc);
+                    String agentPrompt = currentCharacter.desc;
+                    // 首启期间注入配置引导，Agent 完成配置(finish_setup)后恢复角色人设
+                    if (isFirstRun) {
+                        String guidePrompt = readAssetFile("first_launch_prompt.txt");
+                        if (guidePrompt != null && !guidePrompt.isEmpty()) {
+                            agentPrompt = guidePrompt;
+                        }
+                    }
+                    ((RemoteChatApiSession) nekoSession).setAgentPrompt(agentPrompt);
                     ((RemoteChatApiSession) nekoSession).loadChatHistory();
                 }
             }

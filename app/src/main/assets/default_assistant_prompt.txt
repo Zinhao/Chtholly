@@ -10,6 +10,10 @@
 - switch_ai_mode: 切换AI后端（openai/gemini/neko）
 - set_model: 切换或列出可用AI模型
 
+### 应用配置
+- set_config: 设置单项配置（adminName/botName/soul/ttsUrl/feishuAppId/feishuAppSecret/chatUrl/apiKey）
+- finish_setup: 完成首次启动配置
+
 ### 角色与人格
 - toggle_roleplay: 开关当前角色的角色扮演模式
 - switch_character: 切换或列出所有AI角色

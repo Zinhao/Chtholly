@@ -14,6 +14,7 @@ import com.zinhao.chtholly.network.LoggingInterceptor
 import com.zinhao.chtholly.network.Tool
 import com.zinhao.chtholly.network.ToolCallback
 import com.zinhao.chtholly.network.gemini.*
+import com.zinhao.chtholly.network.openai.OpenAiApi
 import com.zinhao.chtholly.session.RemoteChatApiSession.RemoteModel
 import com.zinhao.chtholly.utils.AsyncHelper
 import com.zinhao.chtholly.utils.FileLogger
@@ -27,7 +28,7 @@ import java.text.SimpleDateFormat
 import java.util.*
 import java.util.concurrent.TimeUnit
 
-class GeminiSession private constructor(chatApi: String) : NekoSession(),
+class GeminiSession private constructor(private var chatApi: String) : NekoSession(),
     RemoteChatApiSession, ToolCallback {
     private var data: PostRequest
     private val tools: MutableList<Tool>  = arrayListOf()
@@ -66,14 +67,20 @@ class GeminiSession private constructor(chatApi: String) : NekoSession(),
 
     // Retrofit2
     private val baseUrl: String = if (chatApi.endsWith("/")) chatApi else "$chatApi/"
-    private val retrofit: Retrofit = Retrofit.Builder()
-        .baseUrl(baseUrl)
-        .addConverterFactory(MoshiConverterFactory.create(moshi))
-        .client(okHttpClient)
-        .build()
-    private val geminiApi: GeminiApi = retrofit.create(GeminiApi::class.java)
+    private lateinit var retrofit: Retrofit
+    private lateinit var api: GeminiApi
+
+    private fun initApi(){
+        retrofit= Retrofit.Builder()
+            .baseUrl(baseUrl)
+            .addConverterFactory(MoshiConverterFactory.create(moshi))
+            .client(okHttpClient)
+            .build()
+        api = retrofit.create(GeminiApi::class.java)
+    }
 
     init {
+        initApi()
         loadChatHistory()
         summarizeChatAgent = SummarizeChatAgent(chatApi, BotApp.getInstance().apiKey)
         systemInstruction = SystemInstruction(listOf(Part(BotApp.getInstance().aiSoul,
@@ -118,6 +125,13 @@ class GeminiSession private constructor(chatApi: String) : NekoSession(),
         }
         if(index >= 0) {
             contents.removeAt(index)
+        }
+    }
+
+    override fun updateChatUrl(url: String?) {
+        url?.let {
+            this.chatApi = url
+            initApi()
         }
     }
 
@@ -220,7 +234,7 @@ class GeminiSession private constructor(chatApi: String) : NekoSession(),
             return requestInteractionCompletions(message)
         }
         // Legacy generateContent path
-        val call = geminiApi.generateContent(
+        val call = api.generateContent(
             model = currentModel.str,
             apiKey = BotApp.getInstance().apiKey,
             body = data
@@ -351,7 +365,7 @@ class GeminiSession private constructor(chatApi: String) : NekoSession(),
         val request = buildInteractionRequest()
         FileLogger.i(TAG, "requestInteractionCompletions: model=${request.model}, steps=${(request.input as? List<*>)?.size}, previousId=${request.previousInteractionId}")
 
-        val call = geminiApi.createInteraction(
+        val call = api.createInteraction(
             apiKey = BotApp.getInstance().apiKey,
             body = request
         )
@@ -415,7 +429,7 @@ class GeminiSession private constructor(chatApi: String) : NekoSession(),
 
     suspend fun chatCompletion(): GeminiResponse? {
         return try {
-            geminiApi.generateContentSuspend(
+            api.generateContentSuspend(
                 model = currentModel.str,
                 apiKey = BotApp.getInstance().apiKey,
                 body = data
@@ -432,7 +446,7 @@ class GeminiSession private constructor(chatApi: String) : NekoSession(),
     suspend fun interactionCompletion(): InteractionResponse? {
         return try {
             val request = buildInteractionRequest()
-            val response = geminiApi.createInteractionSuspend(
+            val response = api.createInteractionSuspend(
                 apiKey = BotApp.getInstance().apiKey,
                 body = request
             )

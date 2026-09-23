@@ -177,9 +177,4 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         // 清理资源
     }
 
-    fun doFirstRun() {
-        BotApp.getInstance().isFirstRun = false
-        saveConfig()
-    }
-
 }

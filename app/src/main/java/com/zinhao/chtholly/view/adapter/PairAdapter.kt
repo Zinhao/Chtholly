@@ -37,7 +37,11 @@ class PairAdapter(
         return object : Filter() {
             override fun performFiltering(constraint: CharSequence?): FilterResults {
                 val query = constraint?.toString()?.lowercase()?.trim() ?: ""
-                val filtered = if (query.isEmpty() || query.contains('/')) {
+                val filtered = if (query.isEmpty()
+                    || query.contains('/')
+                    || query.contains("/")
+                    || query == "\\"
+                    ) {
                     items  // 空查询时返回全部原始数据
                 } else {
                     items.filter {

@@ -19,8 +19,7 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         viewModel = ViewModelProvider(this)[MainViewModel::class.java]
         if(BotApp.getInstance().isFirstRun){
-            viewModel.doFirstRun()
-            startActivity(Intent(this, SetupActivity::class.java))
+            startActivity(Intent(this, FirstLaunchActivity::class.java))
             finish()
             return
         }
