@@ -9,7 +9,6 @@ import androidx.lifecycle.MutableLiveData
 import com.zinhao.chtholly.BotApp
 import com.zinhao.chtholly.entity.AICharacter
 import com.zinhao.chtholly.utils.HostConsts
-import androidx.core.content.edit
 import com.zinhao.chtholly.view.adapter.SetupPagerAdapter
 
 class SetupViewModel(application: Application) : AndroidViewModel(application) {
@@ -75,7 +74,7 @@ class SetupViewModel(application: Application) : AndroidViewModel(application) {
         _baseUrl.value = BotApp.getInstance().chatUrl
         _apiKey.value = BotApp.getInstance().apiKey
         _adminName.value = BotApp.getInstance().adminName
-        _botName.value = BotApp.getInstance().botName
+        _botName.value = BotApp.getInstance().atBotName
         _ttsServerUrl.value = BotApp.getInstance().ttsUrl
         _botDescription.value = BotApp.getInstance().aiSoul
         _feishuAppId.value = BotApp.getInstance().feishuAppId
@@ -116,7 +115,7 @@ class SetupViewModel(application: Application) : AndroidViewModel(application) {
 
     fun updateBotName(name: String) {
         _botName.value = name.trim()
-        BotApp.getInstance().botName = _botName.value
+        BotApp.getInstance().atBotName = _botName.value
         scheduleValidation()
     }
 
@@ -208,7 +207,7 @@ class SetupViewModel(application: Application) : AndroidViewModel(application) {
         // 更新 BotApp 运行时配置
         BotApp.getInstance().apply {
             apiKey = _apiKey.value ?: ""
-            botName = _botName.value ?: ""
+            atBotName = _botName.value ?: ""
             adminName = _adminName.value ?: ""
             aiSoul = _botDescription.value
             ttsUrl = _ttsServerUrl.value

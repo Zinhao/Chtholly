@@ -30,7 +30,7 @@ class GeminiGateWayAgent(val api: String, val key: String) {
     private val tools: MutableList<Tool>  = arrayListOf()
     private val systemInstruction: SystemInstruction = SystemInstruction(listOf(
         Part(
-            BotApp.getInstance().replyGateWayAgentDesc.replace("\$name", BotApp.getInstance().botName),
+            BotApp.getInstance().replyGateWayAgentDesc.replace("\$name", BotApp.getInstance().atBotName),
             null, null, null
         )
     ))

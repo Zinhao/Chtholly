@@ -1,11 +1,11 @@
 package com.zinhao.chtholly.viewmodel
 
 import android.app.Application
+import android.widget.Toast
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
-import com.lark.oapi.service.application.v6.model.Bot
 import com.zinhao.chtholly.BotApp
 import com.zinhao.chtholly.db.MessageDao
 import com.zinhao.chtholly.entity.*
@@ -15,6 +15,7 @@ import com.zinhao.chtholly.session.RemoteChatApiSession
 import com.zinhao.chtholly.utils.FileLogger
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 
 class ChatViewModel(application: Application) : AndroidViewModel(application) , NetAiAskAble.DelayReplyCallback {
@@ -42,7 +43,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) , 
     private inner class StreamingCallback : NetAiAskAble.StreamCallback {
         override fun onStreamStart(message: NetAiAskAble) {
             _isStreaming.postValue(true)
-            val tempMessage = Message(BotApp.getInstance().botName, "", System.currentTimeMillis(), BotApp.getInstance().currentSessionId)
+            val tempMessage = Message(BotApp.getInstance().nekoName(), "", System.currentTimeMillis(), BotApp.getInstance().currentSessionId)
             currentStreamMessage = tempMessage
             _streamingMessage.postValue(tempMessage)
         }
@@ -170,5 +171,21 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) , 
         addBotMessage(message!!.answer)
         message.finishTextReply()
         message.finishStepAction()
+    }
+
+    fun clearMessageContext(){
+        viewModelScope.launch(Dispatchers.IO) {
+            val app = getApplication<BotApp>()
+            val sessionId = app.currentSessionId
+            val deleteRow = app.messageDao.deleteBySessionId(sessionId)
+            val session = BotApp.getInstance().apiSession
+            if (session is RemoteChatApiSession) {
+                val  clearLen = session.clearContext()
+            }
+            _messages.postValue(emptyList())
+            withContext(Dispatchers.Main) {
+                Toast.makeText(app, "Delete ${deleteRow} row.", Toast.LENGTH_SHORT).show()
+            }
+        }
     }
 }

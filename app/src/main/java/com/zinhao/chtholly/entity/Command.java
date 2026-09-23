@@ -112,7 +112,7 @@ public abstract class Command{
             if(getQuestion().getMessage().isEmpty()){
                 return false;
             }
-            String noAtMessage = getQuestion().getMessage().replace("@"+BotApp.getInstance().getBotName(),"").trim();
+            String noAtMessage = getQuestion().getMessage().replace("@"+BotApp.getInstance().getAtBotName(),"").trim();
             if(!noAtMessage.startsWith("/")){
                 return false;
             }
@@ -326,7 +326,7 @@ public abstract class Command{
     @HelpDoc(desc = "AI人设")
     protected boolean printSoul() {
         String chara = BotApp.getInstance().getAiSoul();
-        getAnswer().setMessage(String.format(Locale.CHINA,"这是%s的设定： %s。",BotApp.getInstance().getBotName(),chara));
+        getAnswer().setMessage(String.format(Locale.CHINA,"这是%s的设定： %s。",BotApp.getInstance().getAtBotName(),chara));
         return true;
     }
     @HelpDoc(desc = "总结对话")
@@ -335,7 +335,7 @@ public abstract class Command{
         if(nekoSession instanceof  RemoteChatApiSession){
             RemoteChatApiSession remoteChatApiSession = (RemoteChatApiSession) nekoSession;
             int len = remoteChatApiSession.summarize();
-            getAnswer().setMessage(String.format(Locale.CHINA,"%s 将为主人总结%d条对话。",BotApp.getInstance().getBotName(),len));
+            getAnswer().setMessage(String.format(Locale.CHINA,"%s 将为主人总结%d条对话。",BotApp.getInstance().getAtBotName(),len));
         }else{
             getAnswer().setMessage(NekoAskAble.DONT_SUPPORT);
         }

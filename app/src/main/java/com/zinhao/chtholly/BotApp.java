@@ -47,7 +47,7 @@ public class BotApp extends Application {
 
     private boolean isFirstRun;
     private String apiKey;
-    private String botName;
+    private String atBotName;
     private String adminName;
     // 说话人前缀，用于群聊区分说话人
     private boolean withSpeaker = true;
@@ -117,7 +117,7 @@ public class BotApp extends Application {
         //A couple of hours ago, my key was exposed in public. Danger!!!
         apiKey = sharedPreferences.getString(CONFIG_API_KEY,"sk-123456789abcdefg!@#$%^&");
         setApiKey(apiKey);
-        botName = sharedPreferences.getString(CONFIG_BOT_NAME,"");
+        atBotName = sharedPreferences.getString(CONFIG_BOT_NAME,"");
         String aiSoul = sharedPreferences.getString(CONFIG_SOUL_DESC,"");
 
         adminName = sharedPreferences.getString(CONFIG_ADMIN_NAME,"");
@@ -179,12 +179,22 @@ public class BotApp extends Application {
         return apiKey;
     }
 
-    public void setBotName(String botName) {
-        this.botName = botName;
+    public void setAtBotName(String atBotName) {
+        this.atBotName = atBotName;
     }
 
-    public String getBotName() {
-        return botName;
+    // 区分角色名 和 第三方名称 ，存在差异可能让Bot幻觉
+    // 这个是第三方App 中 @ 的 名称
+    public String getAtBotName() {
+        return atBotName;
+    }
+
+    // 这个是角色自身的名称
+    public String nekoName(){
+        if(currentCharacter == null){
+            return "";
+        }
+        return currentCharacter.name;
     }
 
     public Class<?> getMode() {
@@ -335,7 +345,7 @@ public class BotApp extends Application {
                         FileLogger.INSTANCE.i("BotApp", "Using first character from DB: " + currentCharacter.getName() + " id=" + currentCharacter.getId());
                     } else {
                         // First run, create default character
-                        currentCharacter = new AICharacter(botName, defaultAiSoul);
+                        currentCharacter = new AICharacter(atBotName, defaultAiSoul);
                         long id = aiCharacterDao.insert(currentCharacter);
                         currentCharacter.setId(id);
                         FileLogger.INSTANCE.i("BotApp", "Created default character: " + currentCharacter.getName() + " id=" + id);

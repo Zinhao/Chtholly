@@ -1,4 +1,4 @@
-package com.zinhao.chtholly.network.gemini.tools
+package com.zinhao.chtholly.network.tools
 
 import com.zinhao.chtholly.BotApp
 import com.zinhao.chtholly.db.AICharacterDao

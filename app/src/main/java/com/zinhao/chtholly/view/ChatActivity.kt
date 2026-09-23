@@ -16,6 +16,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.zinhao.chtholly.BotApp
 import com.zinhao.chtholly.databinding.ActivityChatBinding
+import com.zinhao.chtholly.utils.FileLogger
 import com.zinhao.chtholly.view.adapter.AppChatAdapter
 import com.zinhao.chtholly.view.adapter.PairAdapter
 import com.zinhao.chtholly.viewmodel.ChatViewModel
@@ -45,10 +46,14 @@ class ChatActivity : AppCompatActivity() {
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         return when (item.itemId) {
-            android.R.id.home -> {  // 返回按钮的 ID
-                finish()  // 或执行其他导航逻辑
+            Menu.FIRST -> {  // 返回按钮的 ID
+                viewModel.clearMessageContext()
                 true
             }
+            android.R.id.home -> {
+                finish()
+                true
+            }  // 或执行其他导航逻辑
             else -> super.onOptionsItemSelected(item)
         }
     }
@@ -149,7 +154,7 @@ class ChatActivity : AppCompatActivity() {
     }
 
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {
-        menu?.add(0, Menu.FIRST, Menu.NONE, "run_info")
+        menu?.add(0, Menu.FIRST, Menu.NONE, "clear")
         return super.onCreateOptionsMenu(menu)
     }
 }

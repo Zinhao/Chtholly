@@ -44,6 +44,11 @@ public class CharacterAdapter extends RecyclerView.Adapter<RecyclerView.ViewHold
             holder.tvDesc.setText(aiCharacter.getDesc());
             holder.tvTitle.setText(aiCharacter.getName());
             holder.cbRoleplay.setChecked(aiCharacter.isRoleplay());
+            if(aiCharacter.isBuiltin()){
+                holder.cbRoleplay.setVisibility(View.GONE);
+            }else{
+                holder.cbRoleplay.setVisibility(View.VISIBLE);
+            }
             holder.cbRoleplay.setOnClickListener(v -> {
                 boolean isChecked = holder.cbRoleplay.isChecked();
                 aiCharacter.setRoleplay(isChecked);

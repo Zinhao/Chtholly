@@ -130,7 +130,7 @@ class QQV13520Impl(context: Context, messageCallback: MessageCallback) : QQChatH
         if (messageCallback == null) {
             return
         }
-        val botName = BotApp.getInstance().getBotName()
+        val botName = BotApp.getInstance().getAtBotName()
         // 通过状态view判断是不是
         val isPersonal = currentPageName == CHAT_PERSON
         var hitMessage: Message? = null

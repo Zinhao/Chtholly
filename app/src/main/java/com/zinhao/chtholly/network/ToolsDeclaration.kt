@@ -3,26 +3,44 @@ package com.zinhao.chtholly.network
 import com.zinhao.chtholly.entity.NetAiAskAble
 import com.zinhao.chtholly.network.gemini.FunctionCall
 import com.zinhao.chtholly.network.gemini.Parameters
-import com.zinhao.chtholly.network.gemini.tools.*
 import com.zinhao.chtholly.network.openai.FunctionDefinition
 import com.zinhao.chtholly.network.openai.Tool as OpenAiTool
 import com.zinhao.chtholly.network.openai.ToolParameters
 import com.zinhao.chtholly.network.openai.ToolProperty
+import com.zinhao.chtholly.network.tools.AppendTextTool
+import com.zinhao.chtholly.network.tools.ClearContextTool
+import com.zinhao.chtholly.network.tools.CreateReminder
+import com.zinhao.chtholly.network.tools.DeleteFileTool
+import com.zinhao.chtholly.network.tools.DoStepOnNode
+import com.zinhao.chtholly.network.tools.FileReaderTool
+import com.zinhao.chtholly.network.tools.FileWriterTool
+import com.zinhao.chtholly.network.tools.GetAppStatusTool
+import com.zinhao.chtholly.network.tools.GetReminders
+import com.zinhao.chtholly.network.tools.GetSystemTime
+import com.zinhao.chtholly.network.tools.GetViewNode
+import com.zinhao.chtholly.network.tools.ListFilesTool
+import com.zinhao.chtholly.network.tools.MutedUserTool
+import com.zinhao.chtholly.network.tools.SendFileTool
+import com.zinhao.chtholly.network.tools.SetModelTool
+import com.zinhao.chtholly.network.tools.SwitchCharacterTool
+import com.zinhao.chtholly.network.tools.SwitchModeTool
+import com.zinhao.chtholly.network.tools.ToggleRoleplayTool
+import com.zinhao.chtholly.network.tools.ToggleSpeakerTool
 
 
 val GEMINI_TOOLS = Tool(
     listOf(
         // 文件读写
-        ListFilesTool,FileWriterTool,FileReaderTool,
-        AppendTextTool,SendFileTool,
+        ListFilesTool, FileWriterTool, FileReaderTool,
+        AppendTextTool, SendFileTool,DeleteFileTool,
         // 禁言
         MutedUserTool,
         // 提醒工具
-        CreateReminder,GetReminders,GetSystemTime,
+        CreateReminder, GetReminders, GetSystemTime,
         // 运行时设置工具
-        GetAppStatusTool,SwitchModeTool,SetModelTool,
-        ToggleRoleplayTool,ToggleSpeakerTool,
-        ClearContextTool,SwitchCharacterTool
+        GetAppStatusTool, SwitchModeTool, SetModelTool,
+        ToggleRoleplayTool, ToggleSpeakerTool,
+        ClearContextTool, SwitchCharacterTool
     )
 )
 
@@ -60,6 +78,7 @@ val OPENAI_TOOLS: List<OpenAiTool> = listOf(
     FileReaderTool,
     AppendTextTool,
     SendFileTool,
+    DeleteFileTool,
     // 禁言
     MutedUserTool,
     // 提醒工具
@@ -110,6 +129,7 @@ fun dispatchToolCall(
         FileWriterTool.name -> FileWriterTool.funImpl?.call(functionCall, callback, netAiAskAble, thoughtSignature)
         ListFilesTool.name -> ListFilesTool.funImpl?.call(functionCall, callback, netAiAskAble, thoughtSignature)
         FileReaderTool.name -> FileReaderTool.funImpl?.call(functionCall, callback, netAiAskAble, thoughtSignature)
+        DeleteFileTool.name -> DeleteFileTool.funImpl?.call(functionCall, callback, netAiAskAble, thoughtSignature)
         AppendTextTool.name -> AppendTextTool.funImpl?.call(functionCall, callback, netAiAskAble, thoughtSignature)
         SendFileTool.name -> SendFileTool.funImpl?.call(functionCall, callback, netAiAskAble, thoughtSignature)
         GetViewNode.name -> GetViewNode.funImpl?.call(functionCall, callback, netAiAskAble, thoughtSignature)

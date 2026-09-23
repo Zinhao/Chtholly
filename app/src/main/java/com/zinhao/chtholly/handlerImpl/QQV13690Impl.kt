@@ -91,12 +91,12 @@ class QQV13690Impl(context: Context, messageCallback: MessageCallback) : QQChatH
                 }
                 waitFillMessage.message = messageText
                 FileLogger.d(TAG,waitFillMessage.toString())
-                if (!isAtName(waitFillMessage, BotApp.getInstance().botName)) {
+                if (!isAtName(waitFillMessage, BotApp.getInstance().atBotName)) {
                     if (!waitFillMessage.isOther) {
                         return
                     }
                 }
-                waitFillMessage.message = messageText.replace("@" + BotApp.getInstance().botName, "").trim { it <= ' ' }
+                waitFillMessage.message = messageText.replace("@" + BotApp.getInstance().atBotName, "").trim { it <= ' ' }
                 if (checkSameList.isNotEmpty()) {
                     val last = checkSameList.last()
                     if (last.message == waitFillMessage.message && System.currentTimeMillis() - last.getTimeStamp() < 10000) {

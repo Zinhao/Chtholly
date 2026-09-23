@@ -19,7 +19,7 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         viewModel = ViewModelProvider(this)[MainViewModel::class.java]
         if(BotApp.getInstance().isFirstRun){
-            viewModel.doFirstRun(this)
+            viewModel.doFirstRun()
             startActivity(Intent(this, SetupActivity::class.java))
             finish()
             return
@@ -32,8 +32,7 @@ class MainActivity : AppCompatActivity() {
         setupUI()
 
         viewModel.refreshCurrentChara()
-        viewModel.updateBotName(BotApp.getInstance().botName)
-        viewModel.updateAdminName(BotApp.getInstance().adminName)
+        viewModel.load()
     }
 
     private fun setupObservers() {
@@ -43,7 +42,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         // 观察 Bot 名称
-        viewModel.botName.observe(this) { name ->
+        viewModel.nekoName.observe(this) { name ->
             binding.tvBotName.setText(name ?: "")
         }
 

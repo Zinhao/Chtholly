@@ -8,7 +8,6 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
-import com.zinhao.chtholly.entity.AICharacter
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
@@ -21,8 +20,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val apiKey: LiveData<String> = _apiKey
 
     // Bot 名称
-    private val _botName = MutableLiveData<String>()
-    val botName: LiveData<String> = _botName
+    private val _nekoName = MutableLiveData<String>()
+    val nekoName: LiveData<String> = _nekoName
 
     // 管理员名称
     private val _adminName = MutableLiveData<String>()
@@ -55,10 +54,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     // ==================== 初始化 ====================
 
-    init {
+    fun load(){
         // 从 BotApp 加载初始值
         _apiKey.value = BotApp.getInstance().apiKey ?: ""
-        _botName.value = BotApp.getInstance().botName ?: ""
+        _nekoName.value = BotApp.getInstance().nekoName() ?: ""
         _adminName.value = BotApp.getInstance().adminName ?: ""
         _roleplay.value = BotApp.getInstance().isRoleplay
     }
@@ -73,8 +72,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun updateBotName(newName: String) {
-        _botName.value = newName
-        BotApp.getInstance().botName = newName // 确保这是内存操作
+        _nekoName.value = newName
+        BotApp.getInstance().atBotName = newName // 确保这是内存操作
     }
 
     fun updateAdminName(newName: String) {
@@ -86,9 +85,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch(Dispatchers.IO) {
             val prefs = BotApp.getInstance().getSharedPreferences()
             prefs.edit().apply {
-                putString(BotApp.CONFIG_BOT_NAME, _botName.value ?: "")
-                putString(BotApp.CONFIG_ADMIN_NAME, _adminName.value ?: "")
-                putString(BotApp.CONFIG_API_KEY, _apiKey.value ?: "")
                 putBoolean(BotApp.CONFIG_IS_FIRST_RUN, BotApp.getInstance().isFirstRun)
                 apply()
             }
@@ -111,6 +107,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
      */
     fun refreshCurrentChara() {
         _currentSoul.value = BotApp.getInstance().aiSoul
+        _nekoName.value = BotApp.getInstance().nekoName() ?: ""
     }
 
     // ==================== 点击事件处理 ====================
@@ -180,7 +177,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         // 清理资源
     }
 
-    fun doFirstRun(context: Context) {
+    fun doFirstRun() {
         BotApp.getInstance().isFirstRun = false
         saveConfig()
     }

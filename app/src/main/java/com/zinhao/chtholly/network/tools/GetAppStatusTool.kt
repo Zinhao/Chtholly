@@ -1,4 +1,4 @@
-package com.zinhao.chtholly.network.gemini.tools
+package com.zinhao.chtholly.network.tools
 
 import android.content.Context
 import android.os.BatteryManager
@@ -65,7 +65,7 @@ val GetAppStatusTool = FunctionDeclaration(
                     put("version", BuildConfig.VERSION_NAME)
                     put("mode", modeName)
                     put("current_model", currentModel)
-                    put("bot_name", app.botName ?: "")
+                    put("bot_name", app.atBotName ?: "")
                     put("admin_name", app.adminName ?: "")
                     put("current_character_id", character?.id ?: -1)
                     put("current_character_name", character?.name ?: "none")

@@ -41,7 +41,7 @@ public class NekoAskAble extends Command {
     @Override
     protected boolean handleAsk() {
         Log.i("Command","NekoAskAble handleAsk");
-        getAnswer().setSpeaker(BotApp.getInstance().getBotName());
+        getAnswer().setSpeaker(BotApp.getInstance().getAtBotName());
         return super.handleAsk();
     }
 }

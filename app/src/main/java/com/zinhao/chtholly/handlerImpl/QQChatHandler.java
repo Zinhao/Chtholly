@@ -103,7 +103,7 @@ public class QQChatHandler extends BaseChatHandler {
         if(messageCallback == null){
             return;
         }
-        String botName = BotApp.getInstance().getBotName();
+        String botName = BotApp.getInstance().getAtBotName();
         Message hitMessage = null;
         hitMessage = id2FindGroupLastMessage(nodeInfo);
         if(hitMessage == null){
@@ -125,7 +125,7 @@ public class QQChatHandler extends BaseChatHandler {
         if (botName.equals(hitMessage.speaker)) {
             return;
         }
-        int checkResult = messageCheckIn(hitMessage,BotApp.getInstance().getBotName());
+        int checkResult = messageCheckIn(hitMessage,BotApp.getInstance().getAtBotName());
         if(checkResult == CHECK_FAILED){
             NekoSession nekoSession = BotApp.getInstance().getApiSession();
             if(nekoSession instanceof GeminiSession){
@@ -152,7 +152,7 @@ public class QQChatHandler extends BaseChatHandler {
             hitMessage.setEnableCommand(true);
         }
         if(Objects.equals(currentPageName, CHAT_PERSON)){
-            hitMessage.setMessage(hitMessage.getMessage().replace("@"+BotApp.getInstance().getBotName(),""));
+            hitMessage.setMessage(hitMessage.getMessage().replace("@"+BotApp.getInstance().getAtBotName(),""));
         }
         if(NekoChatService.getInstance()!=null){
             NekoChatService.getInstance().addLogcat(

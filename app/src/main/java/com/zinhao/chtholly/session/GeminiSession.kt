@@ -87,7 +87,7 @@ class GeminiSession private constructor(chatApi: String) : NekoSession(),
     }
 
     override fun setAgentPrompt(charaDesc: String) {
-        val agentSys = charaDesc.replace("\$name", BotApp.getInstance().getBotName())
+        val agentSys = charaDesc.replace("\$name", BotApp.getInstance().getAtBotName())
         data.systemInstruction = SystemInstruction(listOf(Part(agentSys,
             null,null,null)))
     }
@@ -137,7 +137,7 @@ class GeminiSession private constructor(chatApi: String) : NekoSession(),
                 val messageContent = "${message.speaker}:${message.message}"
                 Log.d(TAG, "loadChatHistory: ${message.speaker}:${message.message.replace('\n', ' ')}")
                 val role: String
-                if(BotApp.getInstance().botName == message.speaker){
+                if(BotApp.getInstance().atBotName == message.speaker){
                     role = ROLE_MODEL
                 }else{
                     role = ROLE_USER

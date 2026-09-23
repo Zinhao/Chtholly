@@ -24,6 +24,9 @@ public interface MessageDao {
     @Delete
     void delete(Message user);
 
+    @Query("DELETE FROM message WHERE sessionId = :sessionId")
+    int deleteBySessionId(long sessionId);
+
     @Query("SELECT * FROM message")
     List<Message> getAll();
 

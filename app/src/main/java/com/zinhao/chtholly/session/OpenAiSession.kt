@@ -1,6 +1,5 @@
 package com.zinhao.chtholly.session
 
-import android.R.id.message
 import android.content.Context
 import com.squareup.moshi.JsonAdapter
 import com.squareup.moshi.Moshi
@@ -15,7 +14,7 @@ import com.zinhao.chtholly.network.LoggingInterceptor
 import com.zinhao.chtholly.network.ToolCallback
 import com.zinhao.chtholly.network.dispatchToolCall
 import com.zinhao.chtholly.network.gemini.FunctionCall
-import com.zinhao.chtholly.network.gemini.tools.MutedUserTool
+import com.zinhao.chtholly.network.tools.MutedUserTool
 import com.zinhao.chtholly.network.openai.*
 import com.zinhao.chtholly.network.OPENAI_TOOLS
 import com.zinhao.chtholly.session.RemoteChatApiSession.RemoteModel
@@ -23,6 +22,7 @@ import com.zinhao.chtholly.utils.FileLogger
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.android.awaitFrame
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
@@ -106,9 +106,9 @@ class OpenAiSession private constructor(private val chatUrl: String) : NekoSessi
             rolePlayResponseFormat = loadResponseFormat("neko_schem.json")
             rolePlayResponseFormat?.let { rp ->
                 rp.json_schema?.schema?.properties?.let {
-                    it.replyMessage.description = "${BotApp.getInstance().botName}将要说的话，不要描写动作，仅话语"
+                    it.replyMessage.description = "${BotApp.getInstance().atBotName}将要说的话，不要描写动作，仅话语"
                     it.willingnessToChat!!.description =
-                        "聊天意愿数值，这个数值决定${BotApp.getInstance().botName}" +
+                        "聊天意愿数值，这个数值决定${BotApp.getInstance().atBotName}" +
                                 "后续继续聊天，取值范围 1 到 100，数值越高表示越愿意聊天"
                 }
             }
@@ -143,7 +143,7 @@ class OpenAiSession private constructor(private val chatUrl: String) : NekoSessi
 
     override fun setAgentPrompt(charaDesc: String) {
         if(roleplayMode){
-            val botName = BotApp.getInstance().botName
+            val botName = BotApp.getInstance().atBotName
             this.charaDesc = charaDesc.replace("\$name",botName)
         }else{
             systemPrompt = charaDesc
@@ -199,7 +199,8 @@ class OpenAiSession private constructor(private val chatUrl: String) : NekoSessi
             }else{
                 intoContentMessage.forEach {
                     if(it.message.isNotBlank()){
-                        val role = if(it.speaker== BotApp.getInstance().botName)ROLE_ASSISTANT else ROLE_USER
+                        val role = if(it.speaker== BotApp.getInstance().currentCharacter.name )ROLE_ASSISTANT else ROLE_USER
+
                         val his = it.message.toChatMessage(role)
                         contextMessageList.add(his)
                     }
@@ -373,7 +374,7 @@ class OpenAiSession private constructor(private val chatUrl: String) : NekoSessi
             }
         }
         sb.append("\n")
-        sb.append("接下来${BotApp.getInstance().botName}会说什么？")
+        sb.append("接下来${BotApp.getInstance().atBotName}会说什么？")
         return sb.toString()
     }
 
@@ -710,7 +711,14 @@ class OpenAiSession private constructor(private val chatUrl: String) : NekoSessi
                         dispatchToolCall(toolCall.function.name, functionCall, this@OpenAiSession, message)
                     }
                 }
-
+                if(pendingToolResults.isEmpty()){
+                    //出错误了
+                    val e = IllegalStateException("No tool calls result found")
+                    FileLogger.e(TAG, "No tool calls result found",e)
+                    message.streamCallback.fireText(message,"TOOL CALL 调用为空！")
+                    message.streamCallback.onStreamError(message,e)
+                    return
+                }
                 // Append tool results to context
                 contextMessageList.addAll(pendingToolResults)
                 FileLogger.i(TAG, "First Tools call result: ${pendingToolResults.size}")
@@ -740,6 +748,14 @@ class OpenAiSession private constructor(private val chatUrl: String) : NekoSessi
                             dispatchToolCall(tc.function.name, functionCall, this@OpenAiSession, message)
                         }
                     }
+                    if(pendingToolResults.isEmpty()){
+                        //出错误了
+                        val e = IllegalStateException("No tool calls result found")
+                        FileLogger.e(TAG, "No tool calls result found",e)
+                        message.streamCallback.fireText(message,"TOOL CALL 调用为空！")
+                        message.streamCallback.onStreamError(message,e)
+                        return
+                    }
                     contextMessageList.addAll(pendingToolResults)
                     current = chatCompletion(
                         prompt = prompt,
@@ -758,9 +774,9 @@ class OpenAiSession private constructor(private val chatUrl: String) : NekoSessi
                     } else {
                         it.content.toString()
                     }
+                    message.streamCallback.fireText(message,text)
                     message.saveToDatabase(text)
                     contextMessageList.add(it)
-                    message.streamCallback?.onStreamChunk(message, text)
                 }
                 message.streamCallback?.onStreamComplete(message)
             } else {
@@ -768,6 +784,7 @@ class OpenAiSession private constructor(private val chatUrl: String) : NekoSessi
                 // No tool calls — normal text response
                 accumulated.toString().let {
                     if (it.isNotBlank()) {
+                        message.saveToDatabase(it)
                         contextMessageList.add(it.toChatMessage(ROLE_ASSISTANT))
                     }
                 }
@@ -777,6 +794,14 @@ class OpenAiSession private constructor(private val chatUrl: String) : NekoSessi
         } catch (e: Exception) {
             FileLogger.e(TAG, "Stream request failed: ${e.javaClass.simpleName}: ${e.message}")
             message.streamCallback?.onStreamError(message, e)
+        }
+    }
+
+    fun NetAiAskAble.StreamCallback.fireText(message:NetAiAskAble, text: String,){
+        val sb = StringBuilder()
+        for (char in text.toCharArray()) {
+            sb.append(char)
+            onStreamChunk(message,sb.toString())
         }
     }
 
@@ -807,14 +832,29 @@ class OpenAiSession private constructor(private val chatUrl: String) : NekoSessi
         val size = contextMessageList.size
         contextMessageList.forEachIndexed { index, message ->
             if (index < 10 || index >= size - 10) {
-                val content = message.content.toString()
-                val truncatedContent = if (content.length > 60) {
-                    val toolDetail = if(message.tool_calls!=null){
-                        message.tool_calls.firstOrNull()?.function?.name.toString()
-                    }else{ "" }
-                    content.take(60) + "...(已截断，共 ${content.length} 字符), return: $toolDetail"
+                val content = if(message.content == null){
+                    ""
+                }else{
+                    message.content.toString()
+                }
+                val toolDetail = if(message.tool_calls!=null){
+                    val toolCalls = message.tool_calls
+                    val tsb = StringBuilder()
+                    toolCalls.forEach { toolCall ->
+                        tsb.append(toolCall.function.name).append(" :: ")
+                        if(toolCall.function.arguments.length > 60){
+                            tsb.append(toolCall.function.arguments.take(60))
+                        }else{
+                            tsb.append(toolCall.function.arguments)
+                        }
+                    }
+                    tsb.append("\n")
+                    tsb.toString()
+                }else{ "[]" }
+                val truncatedContent = if (content.length > 120) {
+                    content.take(120) + "...(已截断，共 ${content.length} 字符)" + ", ToolCalls:${toolDetail}"
                 } else {
-                    content
+                    content + ", ToolCalls:${toolDetail}"
                 }
                 FileLogger.i(TAG, "** ${message.role}: $truncatedContent")
             } else if (index == 10) {
