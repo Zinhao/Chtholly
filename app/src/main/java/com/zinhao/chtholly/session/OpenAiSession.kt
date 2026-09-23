@@ -242,7 +242,8 @@ class OpenAiSession private constructor(private val chatUrl: String) : NekoSessi
                val same = if(it.content is String){
                    it.content == message.message
                }else{
-                   val contentList = it.content as List<Any>
+                   val contentType = it.content ?: return@indexOfLast false
+                   val contentList = contentType as List<*>
                    val firstContent = contentList[0]
                    if(firstContent is ContentPart.TextPart){
                        firstContent.text == message.message
@@ -548,8 +549,12 @@ class OpenAiSession private constructor(private val chatUrl: String) : NekoSessi
             FileLogger.i(TAG, "completion_tokens: ${usage.completion_tokens}")
             FileLogger.i(TAG, "total_tokens: ${usage.total_tokens}")
 
-            if(usage.total_tokens >= maxTotalToken && roleMessageList.isNotEmpty()) {
-                roleMessageList.removeAt(0)
+            if(usage.total_tokens >= maxTotalToken) {
+                if(roleplayMode){
+                    if(roleMessageList.isNotEmpty()){roleMessageList.removeAt(0)}
+                }else{
+                    if(contextMessageList.isNotEmpty()){contextMessageList.removeAt(0)}
+                }
             }
 
             return response.choices.firstOrNull()?.message
@@ -801,15 +806,18 @@ class OpenAiSession private constructor(private val chatUrl: String) : NekoSessi
         FileLogger.i(TAG,"=============================================>")
         val size = contextMessageList.size
         contextMessageList.forEachIndexed { index, message ->
-            if (index < 3 || index >= size - 3) {
+            if (index < 10 || index >= size - 10) {
                 val content = message.content.toString()
                 val truncatedContent = if (content.length > 60) {
-                    content.take(60) + "...(已截断，共 ${content.length} 字符)"
+                    val toolDetail = if(message.tool_calls!=null){
+                        message.tool_calls.firstOrNull()?.function?.name.toString()
+                    }else{ "" }
+                    content.take(60) + "...(已截断，共 ${content.length} 字符), return: $toolDetail"
                 } else {
                     content
                 }
                 FileLogger.i(TAG, "** ${message.role}: $truncatedContent")
-            } else if (index == 3) {
+            } else if (index == 10) {
                 // 只在第一次进入省略区时打印一次
                 val omittedCount = size - 6
                 FileLogger.i(TAG, "** ... 省略了 $omittedCount 条消息")

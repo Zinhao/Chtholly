@@ -51,7 +51,7 @@ val FileWriterTool = FunctionDeclaration(
                         NekoChatService.FUNC_SHARE_FILE,
                         file.path)
                 }
-                callback.addToolResponse(functionCall.name,"write_result", true, thoughtSignature)
+                callback.addToolResponse(functionCall.name,"write_result", "Write text result:success", thoughtSignature)
             } catch (e: Exception) {
                 callback.addToolErr(functionCall.name,e, thoughtSignature)
             }
