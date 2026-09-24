@@ -8,10 +8,14 @@ import android.widget.ArrayAdapter
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.graphics.Insets
+import androidx.core.view.ViewCompat
 import androidx.core.widget.addTextChangedListener
 import com.zinhao.chtholly.BotApp
 import com.zinhao.chtholly.databinding.ActivityFirstLaunchBinding
 import com.zinhao.chtholly.session.RemoteChatApiSession
+import com.zinhao.chtholly.utils.ActivityTools
+import com.zinhao.chtholly.utils.ActivityTools.setSafeArea
 import com.zinhao.chtholly.utils.HostConsts
 
 /**
@@ -39,6 +43,12 @@ class FirstLaunchActivity : AppCompatActivity() {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         setContentView(binding.root)
+
+        setSafeArea(binding.root,object : ActivityTools.InsetReady{
+            override fun onInsetReady(insets: Insets) {
+
+            }
+        })
 
         setupPresetDropdown()
         setupInputListeners()

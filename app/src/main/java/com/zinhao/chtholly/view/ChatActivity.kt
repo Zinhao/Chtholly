@@ -36,10 +36,6 @@ class ChatActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityChatBinding.inflate(layoutInflater)
         setContentView(binding.root)
-        // 在 Activity 的 onCreate 中
-        supportActionBar?.apply {
-            setDisplayHomeAsUpEnabled(true)  // 显示返回箭头
-        }
 
         initViewModel()
         initRecyclerView()
@@ -195,6 +191,6 @@ class ChatActivity : AppCompatActivity() {
 
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {
         menu?.add(0, Menu.FIRST, Menu.NONE, "clear")
-        return super.onCreateOptionsMenu(menu)
+        return true
     }
 }
