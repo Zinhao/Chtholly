@@ -14,6 +14,7 @@ import android.widget.TextView.OnEditorActionListener
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import com.zinhao.chtholly.BotApp
 import com.zinhao.chtholly.databinding.ActivityChatBinding
 import com.zinhao.chtholly.utils.FileLogger
@@ -23,9 +24,13 @@ import com.zinhao.chtholly.viewmodel.ChatViewModel
 
 
 class ChatActivity : AppCompatActivity() {
+    private val TAG = "ChatActivity"
     private lateinit var binding: ActivityChatBinding
     private lateinit var viewModel: ChatViewModel
     private var adapter: AppChatAdapter? = null
+    companion object {
+        val IS_FIRST_TIME = "is_first_time"
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -42,6 +47,9 @@ class ChatActivity : AppCompatActivity() {
         setupListeners()
 
         viewModel.loadMessages()
+        if(intent.hasExtra(IS_FIRST_TIME)){
+            binding.etInput.setText("接下来应该怎么做？")
+        }
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
@@ -62,6 +70,8 @@ class ChatActivity : AppCompatActivity() {
         viewModel = ViewModelProvider(this)[ChatViewModel::class.java]
     }
 
+    private var needScroll = true
+
     private fun initRecyclerView() {
         adapter = AppChatAdapter(BotApp.getInstance().adminName) { message ->
             viewModel.resendMessage(message)
@@ -70,6 +80,21 @@ class ChatActivity : AppCompatActivity() {
         layoutManager.stackFromEnd = true // 从底部开始显示
         binding.recyclerView.setLayoutManager(layoutManager)
         binding.recyclerView.setAdapter(adapter)
+        binding.recyclerView.addOnScrollListener(object : RecyclerView.OnScrollListener() {
+            override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
+                needScroll = dy > 0
+            }
+
+            override fun onScrollStateChanged(recyclerView: RecyclerView, newState: Int) {
+                if (newState == RecyclerView.SCROLL_STATE_IDLE) {
+                    if (!recyclerView.canScrollVertically(1) && isNearBottom()) {
+                        needScroll = true
+                    }else{
+                        needScroll = false
+                    }
+                }
+            }
+        })
     }
 
     private var streamingPosition: Int = -1
@@ -119,13 +144,28 @@ class ChatActivity : AppCompatActivity() {
                 } else {
                     // Update existing streaming message directly on ViewHolder
                     adapter?.updateStreamingText(binding.recyclerView, streamingPosition, message.message)
-                    binding.recyclerView.scrollToPosition(streamingPosition)
+                    if(needScroll){
+                        binding.recyclerView.scrollToPosition(streamingPosition)
+                    }
                 }
             } else {
+                if(streamingPosition!=-1){
+                    adapter?.notifyItemChanged(streamingPosition)
+                }
                 // Streaming complete, reset position
                 streamingPosition = -1
             }
         })
+    }
+
+    /**
+     * 用户是否已经贴着列表底部：不在底部时不要抢走他的滚动位置
+     */
+    private fun isNearBottom(): Boolean {
+        val layoutManager = binding.recyclerView.layoutManager as? LinearLayoutManager ?: return true
+        if (layoutManager.itemCount == 0) return true
+        val lastVisible = layoutManager.findLastVisibleItemPosition()
+        return lastVisible >= 0 && lastVisible >= layoutManager.itemCount - 1
     }
 
     private fun setupListeners() {

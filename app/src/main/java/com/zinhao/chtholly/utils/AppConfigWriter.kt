@@ -1,6 +1,7 @@
 package com.zinhao.chtholly.utils
 
 import com.zinhao.chtholly.BotApp
+import com.zinhao.chtholly.entity.AICharacter
 import com.zinhao.chtholly.session.RemoteChatApiSession
 
 /**
@@ -12,8 +13,12 @@ object AppConfigWriter {
 
     /** 可写配置键 */
     val VALID_KEYS = listOf(
-        "adminName", "botName", "soul", "ttsUrl",
-        "feishuAppId", "feishuAppSecret", "chatUrl", "apiKey"
+        "adminName", "botName",
+        "ttsUrl",
+        "feishuAppId",
+        "feishuAppSecret",
+        "chatUrl",
+        "apiKey"
     )
 
     /**
@@ -31,12 +36,6 @@ object AppConfigWriter {
             "botName" -> {
                 app.atBotName = value
                 prefs.edit().putString(BotApp.CONFIG_BOT_NAME, value).apply()
-            }
-            "soul" -> {
-                val character = app.currentCharacter ?: return "当前没有角色，无法设置人设"
-                character.desc = value
-                prefs.edit().putString(BotApp.CONFIG_SOUL_DESC, value).apply()
-                AsyncHelper.doAsyncPart { app.characterDao.update(character) }
             }
             "ttsUrl" -> {
                 if (value.isNotEmpty() && !isHttpUrl(value)) {

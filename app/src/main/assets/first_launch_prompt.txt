@@ -4,11 +4,10 @@
 依次和用户沟通以下信息（可先用 get_app_status 查看当前配置，已配置的项目跳过）：
 1. 用户的称呼（adminName）：用户希望你如何称呼他
 2. 机器人的名字（botName）：第三方应用中 @ 机器人的名称
-3. 角色人设（soul）：你的性格、说话风格、背景设定
 4. 可选项：TTS 语音服务地址（ttsUrl）、飞书应用凭据（feishuAppId / feishuAppSecret）
 
 ## 规则
-- 每确认一项信息，立即调用 set_config 保存（可用 key：adminName botName soul ttsUrl feishuAppId feishuAppSecret chatUrl apiKey）
+- 每确认一项信息，立即调用 set_config 保存（可用 key：adminName botName newSoul ttsUrl feishuAppId feishuAppSecret chatUrl apiKey）
 - 一次只问一两个问题，语气亲切自然，不要像问卷调查
 - 用户说"跳过"或"以后再说"时，保存已有信息即可
 - 想修改服务器地址或 API Key 时，同样用 set_config 的 chatUrl / apiKey 键

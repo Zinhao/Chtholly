@@ -10,6 +10,8 @@ import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.ListAdapter;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.lark.oapi.service.application.v6.model.Bot;
+import com.zinhao.chtholly.BotApp;
 import com.zinhao.chtholly.R;
 import com.zinhao.chtholly.entity.Message;
 import com.zinhao.chtholly.utils.MessageDiffCallback;
@@ -124,7 +126,7 @@ public class AppChatAdapter extends ListAdapter<Message, AppChatAdapter.MessageV
 
     private boolean isSent(Message message) {
         if (message.speaker != null) {
-            return message.speaker.equals(currentUser);
+            return message.speaker.equals(currentUser) || message.isUserSent();
         }
         return true;
     }
@@ -132,10 +134,16 @@ public class AppChatAdapter extends ListAdapter<Message, AppChatAdapter.MessageV
     @Override
     public int getItemViewType(int position) {
         Message message = getItem(position);
-        if(message.speaker!=null){
-            return message.speaker.equals(currentUser) ? VIEW_TYPE_SENT : VIEW_TYPE_RECEIVED;
+        if(message.isUserSent()){
+            return VIEW_TYPE_SENT;
         }else {
-            return  VIEW_TYPE_SENT;
+            String speaker = message.speaker;
+            if(speaker!=null){
+                if(speaker.equals(BotApp.getInstance().getAdminName())){
+                    return VIEW_TYPE_SENT;
+                }
+            }
+            return VIEW_TYPE_RECEIVED;
         }
     }
 

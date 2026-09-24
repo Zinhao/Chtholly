@@ -55,7 +55,7 @@ class FirstLaunchActivity : AppCompatActivity() {
     private fun loadConfig() {
         val prefs = BotApp.getInstance().sharedPreferences
         binding.etBaseUrl.setText(prefs.getString(BotApp.CONFIG_CHAT_URL, HostConsts.LOCAL_HOST))
-        binding.etApiKey.setText(prefs.getString(BotApp.CONFIG_API_KEY, ""))
+        binding.etApiKey.setText(prefs.getString(BotApp.CONFIG_API_KEY, "input-your-api-key"))
     }
 
     private fun setupPresetDropdown() {
@@ -88,7 +88,7 @@ class FirstLaunchActivity : AppCompatActivity() {
         }
         val app = BotApp.getInstance()
         app.chatUrl = url
-        app.apiKey = apiKey.ifEmpty { "xxxxxxxxxxx" }
+        app.apiKey = apiKey
         app.sharedPreferences.edit()
             .putString(BotApp.CONFIG_CHAT_URL, url)
             .putString(BotApp.CONFIG_API_KEY, apiKey)
@@ -97,7 +97,7 @@ class FirstLaunchActivity : AppCompatActivity() {
         if(apiSession is RemoteChatApiSession){
             apiSession.updateChatUrl(url)
         }
-        startActivity(Intent(this, ChatActivity::class.java))
+        startActivity(Intent(this, ChatActivity::class.java).putExtra(ChatActivity.IS_FIRST_TIME, true))
         finish()
     }
 
