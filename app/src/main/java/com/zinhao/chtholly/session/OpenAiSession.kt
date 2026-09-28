@@ -38,6 +38,7 @@ import java.text.SimpleDateFormat
 import java.util.*
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
+import kotlin.text.filterNot
 
 class OpenAiSession private constructor(private var chatUrl: String) : NekoSession(), RemoteChatApiSession, ToolCallback {
     private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
@@ -192,7 +193,9 @@ class OpenAiSession private constructor(private var chatUrl: String) : NekoSessi
             }else{
                 intoContentMessage.addAll(result.subList(result.size-10, result.size-1))
             }
-            intoContentMessage.forEach { FileLogger.i(TAG, "loadChatHistory: ${it.speaker}: \"${it.message}\"") }
+            intoContentMessage.forEach {
+                FileLogger.i(TAG, "loadChatHistory: ${it.speaker}: \"${it.message}\"".filterNot{ it == '\r' || it == '\n' })
+            }
             if(roleplayMode){
                 roleMessageList.addAll(intoContentMessage)
                 roleMessageList.add(Message(null,
@@ -201,7 +204,9 @@ class OpenAiSession private constructor(private var chatUrl: String) : NekoSessi
             }else{
                 intoContentMessage.forEach {
                     if(it.message.isNotBlank()){
-                        val role = if(it.speaker== BotApp.getInstance().currentCharacter.name )ROLE_ASSISTANT else ROLE_USER
+                        val atName = BotApp.getInstance().atBotName
+                        val charaName = BotApp.getInstance().currentCharacter.name
+                        val role = if(it.speaker == atName || it.speaker == charaName) ROLE_ASSISTANT else ROLE_USER
 
                         val his = it.message.toChatMessage(role)
                         contextMessageList.add(his)
@@ -753,34 +758,11 @@ class OpenAiSession private constructor(private var chatUrl: String) : NekoSessi
                         if (!message.question.isEnableCommand && tc.function.name != MutedUserTool.name) {
                             addToolErr(tc.function.name, Exception("Insufficient permissions"))
                         } else {
-                            FileLogger.i(TAG, "More tool call: ${tc.function.name}: ${tc.function.arguments}")
                             dispatchToolCall(tc.function.name, functionCall, this@OpenAiSession, message)
                         }
                     }
                     if(current.content != null){
-                        val content = current.content
-                        if(content is List<*>){
-                            for (part in content){
-                                if(part is ContentPart.TextPart){
-                                    val text = part.text
-                                    if(text.isNotEmpty()){
-                                        message.streamCallback.fireText(message,text,accumulated)
-                                    }
-                                }else if(part is ContentPart.ImagePart){
-                                    val url = part.image_url
-                                    val limitUrl = if(url.url.length> 60){
-                                        url.url.take(57) + "...///省略"
-                                    }else {
-                                        url.url
-                                    }
-                                    message.streamCallback.fireText(message,limitUrl,accumulated)
-                                }
-                            }
-                        }else if(content is String){
-                            if(content.isNotEmpty()){
-                                message.streamCallback.fireText(message,content,accumulated)
-                            }
-                        }
+                        printMessage(current)
                     }
 
                     if(pendingToolResults.isEmpty()){
@@ -799,7 +781,6 @@ class OpenAiSession private constructor(private var chatUrl: String) : NekoSessi
                         maxCompletionTokens = maxCompletionTokens,
                         responseFormat = responseFormat,
                     )
-                    FileLogger.i(TAG, "Next Tools call result: ${pendingToolResults.size}")
                 }
 
                 // Final text response from tool call follow-up
@@ -815,7 +796,6 @@ class OpenAiSession private constructor(private var chatUrl: String) : NekoSessi
                 }
                 message.streamCallback?.onStreamComplete(message)
             } else {
-                FileLogger.i(TAG,"No tool calls — normal text response")
                 // No tool calls — normal text response
                 accumulated.toString().let {
                     if (it.isNotBlank()) {
@@ -862,42 +842,46 @@ class OpenAiSession private constructor(private var chatUrl: String) : NekoSessi
     }
 
     fun printMessageContext(){
-        FileLogger.i(TAG,"=============================================>")
+        FileLogger.i(TAG,"=============================================>>")
         val size = contextMessageList.size
         contextMessageList.forEachIndexed { index, message ->
             if (index < 10 || index >= size - 10) {
-                val content = if(message.content == null){
-                    ""
-                }else{
-                    message.content.toString()
-                }
-                val toolDetail = if(message.tool_calls!=null){
-                    val toolCalls = message.tool_calls
-                    val tsb = StringBuilder()
-                    toolCalls.forEach { toolCall ->
-                        tsb.append(toolCall.function.name).append(" :: ")
-                        if(toolCall.function.arguments.length > 60){
-                            tsb.append(toolCall.function.arguments.take(60))
-                        }else{
-                            tsb.append(toolCall.function.arguments)
-                        }
-                    }
-                    tsb.append("\n")
-                    tsb.toString()
-                }else{ "[]" }
-                val truncatedContent = if (content.length > 120) {
-                    content.take(120) + "...(已截断，共 ${content.length} 字符)" + ", ToolCalls:${toolDetail}"
-                } else {
-                    content + ", ToolCalls:${toolDetail}"
-                }
-                FileLogger.i(TAG, "** ${message.role}: $truncatedContent")
+                printMessage(message)
             } else if (index == 10) {
                 // 只在第一次进入省略区时打印一次
                 val omittedCount = size - 6
-                FileLogger.i(TAG, "** ... 省略了 $omittedCount 条消息")
+                FileLogger.i(TAG, "|| ... 省略了 $omittedCount 条消息")
             }
         }
-        FileLogger.i(TAG,"<=============================================")
+        FileLogger.i(TAG,"<<=============================================^")
+    }
+
+    fun printMessage(message:ChatMessage){
+        val content = if(message.content == null){
+            ""
+        }else{
+            message.content.toString()
+        }
+        val toolDetail = if(message.tool_calls!=null){
+            val toolCalls = message.tool_calls
+            val tsb = StringBuilder()
+            toolCalls.forEach { toolCall ->
+                tsb.append(toolCall.function.name).append(" :: ")
+                if(toolCall.function.arguments.length > 60){
+                    tsb.append(toolCall.function.arguments.take(60))
+                }else{
+                    tsb.append(toolCall.function.arguments)
+                }
+            }
+            tsb.append("\n")
+            tsb.toString()
+        }else{ "[]" }
+        val truncatedContent = if (content.length > 120) {
+            content.take(120) + "...(已截断，共 ${content.length} 字符)" + ", ToolCalls:${toolDetail}"
+        } else {
+            content + ", ToolCalls:${toolDetail}"
+        }.filterNot { it == '\r' || it == '\n' }
+        FileLogger.i(TAG, "|| ${message.role}: $truncatedContent")
     }
 
     companion object {

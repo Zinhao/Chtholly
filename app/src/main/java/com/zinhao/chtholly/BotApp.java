@@ -115,7 +115,7 @@ public class BotApp extends Application {
         sharedPreferences = getSharedPreferences("app_data", MODE_PRIVATE);
         //大概一两个小时，我的key暴露在开场合,危险！！！
         //A couple of hours ago, my key was exposed in public. Danger!!!
-        apiKey = sharedPreferences.getString(CONFIG_API_KEY,"sk-123456789abcdefg!@#$%^&");
+        apiKey = sharedPreferences.getString(CONFIG_API_KEY,"input-your-api-key");
         setApiKey(apiKey);
         atBotName = sharedPreferences.getString(CONFIG_BOT_NAME,"");
         String aiSoul = sharedPreferences.getString(CONFIG_SOUL_DESC,"");
@@ -299,7 +299,7 @@ public class BotApp extends Application {
         if (currentCharacter != null) {
             return currentCharacter.isRoleplay();
         }
-        return true;
+        return false;
     }
 
     public long getCurrentSessionId() {
@@ -346,6 +346,7 @@ public class BotApp extends Application {
                     } else {
                         // First run, create default character
                         currentCharacter = new AICharacter(atBotName, defaultAiSoul);
+                        currentCharacter.setRoleplay(false);
                         long id = aiCharacterDao.insert(currentCharacter);
                         currentCharacter.setId(id);
                         FileLogger.INSTANCE.i("BotApp", "Created default character: " + currentCharacter.getName() + " id=" + id);

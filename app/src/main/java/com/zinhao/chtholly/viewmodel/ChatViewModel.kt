@@ -101,6 +101,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) , 
     fun sendMessage(currentUser: String, content: String) {
         val newMessage = Message(currentUser, content, System.currentTimeMillis())
         newMessage.isEnableCommand = true
+        newMessage.isUserSent = true
 
         val messageList = _messages.value?.toMutableList()?: return
         messageList.add(newMessage)

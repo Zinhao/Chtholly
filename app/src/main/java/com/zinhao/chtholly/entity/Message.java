@@ -36,6 +36,8 @@ public class Message {
     private boolean enableCommand = false;
     @Ignore
     private boolean isAtMessage = false;
+    @Ignore
+    private boolean isUserSent = false;
 
     @Ignore
     public Message(String speaker, String message, long timeStamp) {
@@ -165,5 +167,13 @@ public class Message {
 
     public void setAtMessage(boolean atMessage) {
         isAtMessage = atMessage;
+    }
+
+    public void setUserSent(boolean userSent) {
+        isUserSent = userSent;
+    }
+
+    public boolean isUserSent() {
+        return isUserSent;
     }
 }

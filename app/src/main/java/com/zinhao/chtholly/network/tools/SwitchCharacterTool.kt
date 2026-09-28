@@ -56,7 +56,7 @@ val SwitchCharacterTool = FunctionDeclaration(
 
                     val currentId = app.currentCharacter?.id ?: -1
                     val array = JSONArray()
-                    for (c in characters!!) {
+                    for (c in characters) {
                         array.put(JSONObject().apply {
                             put("id", c.id)
                             put("name", c.name)
