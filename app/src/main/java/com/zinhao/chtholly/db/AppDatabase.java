@@ -37,12 +37,14 @@ public abstract class AppDatabase extends RoomDatabase {
         @Override
         public void migrate(@NonNull @NotNull SupportSQLiteDatabase database) {
             // 1. Create ChatSession table
-            database.execSQL("CREATE TABLE IF NOT EXISTS `ChatSession` ("
-                    + "`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, "
-                    + "`characterId` INTEGER NOT NULL, "
-                    + "`title` TEXT, "
-                    + "`createdAt` INTEGER NOT NULL, "
-                    + "`lastMessageAt` INTEGER NOT NULL)");
+            database.execSQL("CREATE TABLE IF NOT EXISTS `ChatSession` (" +
+                    "    `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL," +
+                    "    `characterId` INTEGER NOT NULL," +
+                    "    `title` TEXT," +
+                    "    `createdAt` INTEGER NOT NULL," +
+                    "    `lastMessageAt` INTEGER NOT NULL," +
+                    "    FOREIGN KEY(`characterId`) REFERENCES `AICharacter`(`id`) ON DELETE CASCADE" +
+                    ")");
             database.execSQL("CREATE INDEX IF NOT EXISTS `index_ChatSession_characterId` ON `ChatSession` (`characterId`)");
 
             // 2. Create a ChatSession for each existing AICharacter

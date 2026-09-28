@@ -97,8 +97,8 @@ class OpenAiSession private constructor(private var chatUrl: String) : NekoSessi
 
     init {
         initApi()
-        modelList.add(RemoteModel(qwen3p5_4b_uncensored))
         modelList.add(RemoteModel(mimo_2p6_flash))
+        modelList.add(RemoteModel(qwen3p5_4b_uncensored))
         modelList.add(RemoteModel(mimo_2p6_pro))
         modelList.add(RemoteModel(qwen3p5_9b_uncensored))
         modelList.add(RemoteModel(qwen3p5_4b_nsfw_ara_i1))
@@ -331,7 +331,7 @@ class OpenAiSession private constructor(private var chatUrl: String) : NekoSessi
     }
 
     /**
-     * 判断是否发送请求太频繁（5秒内）
+     * 判断是否发送请求太频繁（2秒内）
      */
     private fun isTooFrequent(): Boolean {
         return System.currentTimeMillis() - lastPostTime < 2000L
