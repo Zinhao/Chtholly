@@ -17,7 +17,7 @@ Chtholly 是一个 **Android Agent 自动化框架**。
 
 ## 🛠️ 技术架构
 *   **界面交互**：Android Accessibility Service（获取界面 UI 树）。
-*   **AI 推理**：支持 Gemini API（原生支持函数调用），OpenAI 模型适配中。
+*   **AI 推理**：支持 OpenAI API
 *   **音频反馈**：集成 TTS 引擎，支持网络流式语音播放。
 
 ---

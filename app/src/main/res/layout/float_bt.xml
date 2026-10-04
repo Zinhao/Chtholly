@@ -19,7 +19,7 @@
                     android:id="@+id/testBt"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="测试"/>
+                    android:text="back to"/>
             <CheckBox
                     android:id="@+id/b1"
                     android:layout_width="match_parent"
@@ -41,12 +41,19 @@
                     android:text="前缀"
                     android:padding="10dp"
                     />
+            <CheckBox
+                    android:id="@+id/btPause"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="暂停"
+                    android:padding="10dp"
+            />
 
         </LinearLayout>
     </LinearLayout>
     <ImageView
             android:layout_height="50dp"
-            android:layout_width="50dp"
+            android:layout_width="match_parent"
             android:background="@drawable/circle_shape_main_color"
             android:id="@+id/ctrl"
             android:src="@mipmap/ic_launcher_foreground"

@@ -74,9 +74,11 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
     private WindowManager.LayoutParams floatMenuParam;
     FloatBlackScreenBinding floatBlackScreenBinding;
     private WindowManager.LayoutParams blackScreenParams;
+
     private long nextShowBlackScreen = 160;
     private boolean floatInit;
     private boolean blackScreenShow = false;
+    private boolean pause = false;
 
     private void showBlackScreen() {
         if(!floatInit) {
@@ -326,6 +328,7 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
             helperBinding.acbv.setNodeInfo(root);
             helperBinding.acbv.postInvalidate();
         }
+
         if (logcatBinding.getRoot().getVisibility() == View.VISIBLE) {
             if(waitQAs.isEmpty()){
                 logcatBinding.callApiProgress.setVisibility(View.GONE);
@@ -740,6 +743,10 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
 
     @Override
     public void onFind(Message message) {
+        if(pause){
+            FileLogger.INSTANCE.i(TAG,"Bot Status: Pause!"+message.toString());
+            return;
+        }
         addToQAList(message);
         mHandler.post(()->{
             logcatBinding.callApiProgress.setVisibility(View.VISIBLE);
@@ -816,6 +823,14 @@ public class NekoChatService extends AccessibilityService implements NetAiAskAbl
         floatMenuBinding.b2.setChecked(logcatBinding.getRoot().getVisibility()==View.VISIBLE);
 
         floatMenuBinding.saySwitch.setChecked(BotApp.getInstance().isWithSpeaker());
+
+        floatMenuBinding.btPause.setChecked(pause);
+        floatMenuBinding.btPause.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                pause = isChecked;
+            }
+        });
 
         floatMenuBinding.b1.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
