@@ -613,6 +613,7 @@ class OpenAiSession private constructor(private var chatUrl: String) : NekoSessi
                 authorization = "Bearer ${BotApp.getInstance().apiKey}",
                 request = chatRequest
             )
+            message.streamCallback?.onStreamStart(message)
             call.enqueue(object : Callback<ResponseBody> {
                 override fun onResponse(
                     call: Call<ResponseBody>,
@@ -621,10 +622,12 @@ class OpenAiSession private constructor(private var chatUrl: String) : NekoSessi
                     try {
                         if (!response.isSuccessful) {
                             channel.close(IOException("HTTP ${response.code()}"))
+                            message.streamCallback.onStreamError(message,IOException("HTTP ${response.code()}"))
                             return
                         }
                         val body = response.body() ?: run {
                             channel.close(IOException("Empty body"))
+                            message.streamCallback.onStreamError(message,IOException("Empty body"))
                             return
                         }
                         val source = body.source()
@@ -637,19 +640,20 @@ class OpenAiSession private constructor(private var chatUrl: String) : NekoSessi
                         channel.close()
                     } catch (e: Exception) {
                         FileLogger.e(TAG, e.message.toString(),e)
+                        message.streamCallback.onStreamError(message,e)
                         channel.close(e)
                     }
                 }
 
                 override fun onFailure(call: Call<ResponseBody>, t: Throwable) {
-                    FileLogger.e(TAG, "Stream onFailure: ${t.javaClass.simpleName}: ${t.message}")
+                    FileLogger.e(TAG, "Stream onFailure: ${t.javaClass.simpleName}: ${t.message}",t as? Exception ?: IOException(t.message))
+                    message.streamCallback.onStreamError(message, t as? Exception ?: IOException(t.message))
                     channel.close(t as? Exception ?: IOException(t.message))
                 }
             })
 
             val accumulated = StringBuilder()
             val streamAdapter = moshi.adapter(StreamChunk::class.java)
-            message.streamCallback?.onStreamStart(message)
 
             // Tool call accumulators: index -> (id, name, arguments)
             val toolCallAccumulators = mutableMapOf<Int, Triple<StringBuilder, StringBuilder, StringBuilder>>()

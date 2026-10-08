@@ -45,6 +45,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) , 
             _isStreaming.postValue(true)
             val tempMessage = Message(BotApp.getInstance().nekoName(), "", System.currentTimeMillis(), BotApp.getInstance().currentSessionId)
             currentStreamMessage = tempMessage
+            currentStreamMessage?.isLoading = true
             _streamingMessage.postValue(tempMessage)
         }
 
@@ -60,6 +61,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) , 
             currentStreamMessage?.let {
                 addBotMessage(it)
             }
+            currentStreamMessage?.isLoading = false
             currentStreamMessage = null
             _streamingMessage.postValue(null)
         }
