@@ -13,6 +13,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.lark.oapi.service.application.v6.model.Bot;
 import com.zinhao.chtholly.BotApp;
 import com.zinhao.chtholly.R;
+import com.zinhao.chtholly.customview.LoadingTextView;
 import com.zinhao.chtholly.entity.Message;
 import com.zinhao.chtholly.utils.MessageDiffCallback;
 
@@ -161,13 +162,22 @@ public class AppChatAdapter extends ListAdapter<Message, AppChatAdapter.MessageV
             message.setMessage(text);
             RecyclerView.ViewHolder holder = recyclerView.findViewHolderForAdapterPosition(position);
             if (holder instanceof MessageViewHolder) {
-                ((MessageViewHolder) holder).tvMessage.setText(text);
+                LoadingTextView tvMessage = ((MessageViewHolder) holder).tvMessage;
+                tvMessage.setText(text);
+
+                int len = text.length();
+                int size = 15;
+                if(len>size){
+                    tvMessage.setCharPool(text.substring(len-size, len));
+                }else {
+                    tvMessage.setCharPool("请等待...");
+                }
             }
         }
     }
 
     static class MessageViewHolder extends RecyclerView.ViewHolder {
-        private final TextView tvMessage;
+        private final LoadingTextView tvMessage;
         private final TextView tvTime;
         private final TextView tvSpeaker;
         private final ImageButton btnResend;
@@ -182,6 +192,11 @@ public class AppChatAdapter extends ListAdapter<Message, AppChatAdapter.MessageV
 
         public void bind(Message message) {
             tvMessage.setText(message.message);
+            if(message.isLoading()){
+                tvMessage.startLoading();
+            }else {
+                tvMessage.stopLoading();
+            }
             tvSpeaker.setText(message.speaker);
 
             SimpleDateFormat sdf = new SimpleDateFormat("HH:mm", Locale.getDefault());

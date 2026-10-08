@@ -38,6 +38,8 @@ public class Message {
     private boolean isAtMessage = false;
     @Ignore
     private boolean isUserSent = false;
+    @Ignore
+    private boolean loading = false;
 
     @Ignore
     public Message(String speaker, String message, long timeStamp) {
@@ -175,5 +177,13 @@ public class Message {
 
     public boolean isUserSent() {
         return isUserSent;
+    }
+
+    public void setLoading(boolean loading) {
+        this.loading = loading;
+    }
+
+    public boolean isLoading() {
+        return loading;
     }
 }
