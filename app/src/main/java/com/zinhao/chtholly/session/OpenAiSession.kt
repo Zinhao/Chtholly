@@ -2,6 +2,7 @@ package com.zinhao.chtholly.session
 
 import android.content.Context
 import com.squareup.moshi.JsonAdapter
+import com.squareup.moshi.JsonEncodingException
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.adapter
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
@@ -489,15 +490,16 @@ class OpenAiSession private constructor(private var chatUrl: String) : NekoSessi
         val chatMessageList = listOf(warpRolePlayPrompt().toChatMessage(ROLE_USER))
 
         scope.launch {
+            var nekoSchemStr: String? = null
             try {
                 val roleplayResult = chatCompletion(
                     prompt = rolePlayPrompt,
                     chatMessageList = chatMessageList,
                     model = currentModel.str,
-                    maxCompletionTokens = 80,
+                    maxCompletionTokens = 180,
                     responseFormat = rolePlayResponseFormat,
                 )
-                val nekoSchemStr = roleplayResult!!.content.toString()
+                nekoSchemStr = roleplayResult!!.content.toString()
                 val nekoReply = nekoReplyAdapter.fromJson(nekoSchemStr)
                 nekoReply?.let {
                     lastNekoReply = nekoReply
@@ -508,6 +510,14 @@ class OpenAiSession private constructor(private var chatUrl: String) : NekoSessi
                     message.delayReplyCallback.onReplySuccess(message)
                 }
             }catch (e: Exception){
+                if(e is JsonEncodingException){
+                    nekoSchemStr?.let {
+                        message.saveToDatabase("$it...")
+                        roleMessageList.add(message.answer)
+                        message.isReplyReady = true
+                        message.delayReplyCallback.onReplySuccess(message)
+                    }
+                }
                 FileLogger.e(TAG,e.localizedMessage?:e.javaClass.name,e)
             }finally {
 

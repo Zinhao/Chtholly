@@ -9,7 +9,7 @@
     },
     "replyMessage": {
       "type": "string",
-      "description": "回复的话"
+      "description": "回复的话,拟人对话,简短表达,一句话"
     }
   },
   "required": ["willingnessToChat", "replyMessage"],
